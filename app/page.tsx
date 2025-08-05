@@ -94,63 +94,64 @@ export default function Home() {
       VERDAD: Evitamos promesas no verificables, usamos "conecta" en lugar de "revoluciona"
       // TODO: Validar que el mock-up del producto sea comprensible sin explicación
       */}
-      <Section id="hero" className="pt-12 pb-20 relative overflow-hidden">
-        {/* Background decorative elements */}
+      <Section id="hero" className="pt-8 md:pt-12 pb-16 md:pb-20 relative overflow-hidden">
+        {/* Background decorative elements - Optimized for mobile */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-gentle" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/8 rounded-full blur-3xl animate-pulse-gentle" style={{animationDelay: '2s'}} />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/8 to-secondary/6 rounded-full blur-3xl animate-bounce-gentle" />
-          {/* Additional red accents */}
-          <div className="absolute top-10 right-1/4 w-32 h-32 bg-primary/15 rounded-full blur-2xl animate-pulse-gentle" style={{animationDelay: '3s'}} />
-          <div className="absolute bottom-10 left-1/4 w-48 h-48 bg-primary/12 rounded-full blur-2xl animate-pulse-gentle" style={{animationDelay: '1s'}} />
+          <div className="absolute top-10 md:top-20 left-5 md:left-10 w-48 md:w-72 h-48 md:h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-gentle" />
+          <div className="absolute bottom-10 md:bottom-20 right-5 md:right-10 w-64 md:w-96 h-64 md:h-96 bg-secondary/8 rounded-full blur-3xl animate-pulse-gentle" style={{animationDelay: '2s'}} />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-gradient-to-r from-primary/8 to-secondary/6 rounded-full blur-3xl animate-bounce-gentle" />
+          {/* Additional red accents - Smaller on mobile */}
+          <div className="absolute top-5 md:top-10 right-1/4 w-16 md:w-32 h-16 md:h-32 bg-primary/15 rounded-full blur-2xl animate-pulse-gentle" style={{animationDelay: '3s'}} />
+          <div className="absolute bottom-5 md:bottom-10 left-1/4 w-24 md:w-48 h-24 md:h-48 bg-primary/12 rounded-full blur-2xl animate-pulse-gentle" style={{animationDelay: '1s'}} />
         </div>
 
-        <div className="text-center relative z-10">
+        <div className="text-center relative z-10 px-4">
           <AnimatedElement direction="up" delay={300}>
-            <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-gray-900 via-primary to-gray-900 bg-clip-text text-transparent animate-pulse-gentle">
+            <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-gray-900 via-primary to-gray-900 bg-clip-text text-transparent animate-pulse-gentle block">
                 Donde las historias cobran vida
               </span>
-              <br />
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent block mt-2">
                 en comunidad
               </span>
             </h2>
           </AnimatedElement>
           
           <AnimatedElement direction="up" delay={500}>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto leading-relaxed px-2">
               Únete a una comunidad vibrante de escritores que 
               <span className="text-primary font-semibold"> comparten</span>, 
               <span className="text-secondary font-semibold"> colaboran</span> y 
               <span className="text-primary font-semibold"> crecen juntos</span>. 
-              Ficción, ensayos y newsletters en un solo lugar.
+              <span className="block sm:inline mt-2 sm:mt-0">
+                Ficción, ensayos y newsletters en un solo lugar.
+              </span>
             </p>
           </AnimatedElement>
           
-          {/* Mock-up visual del producto */}
+          {/* Mock-up visual del producto - Mobile Optimized */}
           <AnimatedElement direction="scale" delay={700}>
-            <div className="mb-10 group">
-              <div className="relative bg-gradient-to-br from-primary to-secondary p-8 rounded-3xl shadow-2xl max-w-4xl mx-auto hover:shadow-primary/25 transition-all duration-500 hover:-translate-y-2">
+            <div className="mb-8 md:mb-10 group mx-2">
+              <div className="relative bg-gradient-to-br from-primary to-secondary p-4 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-4xl mx-auto hover:shadow-primary/25 transition-all duration-500 hover:-translate-y-1 md:hover:-translate-y-2">
                 {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 -z-10" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-2xl md:rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 -z-10" />
                 
-                <div className="bg-white rounded-2xl p-6 shadow-lg relative overflow-hidden">
-                  {/* Decorative gradient overlay */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
+                <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg relative overflow-hidden">
+                  {/* Decorative gradient overlay - Smaller on mobile */}
+                  <div className="absolute top-0 right-0 w-16 md:w-32 h-16 md:h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
                   
                   <AnimatedElement direction="left" delay={900}>
-                    <div className="flex items-center space-x-4 mb-6">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                        <span className="text-white font-bold text-lg">IF</span>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4 md:mb-6">
+                      <div className="w-10 md:w-12 h-10 md:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+                        <span className="text-white font-bold text-sm md:text-lg">IF</span>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">Mi Comunidad</h3>
-                        <div className="flex items-center space-x-2">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-base md:text-lg">Mi Comunidad</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary w-fit">
                             Miembro fundador #47
                           </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary w-fit">
                             Beta tester activo
                           </span>
                         </div>
@@ -158,37 +159,37 @@ export default function Home() {
                     </div>
                   </AnimatedElement>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                     <AnimatedElement direction="up" delay={1100}>
-                      <div className="bg-gradient-to-br from-pastel to-primary/5 p-4 rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                      <div className="bg-gradient-to-br from-pastel to-primary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-primary">Historias</h4>
-                          <span className="text-2xl">📚</span>
+                          <h4 className="font-medium text-primary text-sm md:text-base">Historias</h4>
+                          <span className="text-xl md:text-2xl">📚</span>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">15</p>
-                        <p className="text-sm text-gray-600">comentarios</p>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">15</p>
+                        <p className="text-xs md:text-sm text-gray-600">comentarios</p>
                       </div>
                     </AnimatedElement>
                     
                     <AnimatedElement direction="up" delay={1200}>
-                      <div className="bg-gradient-to-br from-pastel to-secondary/5 p-4 rounded-xl border border-secondary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                      <div className="bg-gradient-to-br from-pastel to-secondary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-secondary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-secondary">Conexiones</h4>
-                          <span className="text-2xl">🤝</span>
+                          <h4 className="font-medium text-secondary text-sm md:text-base">Conexiones</h4>
+                          <span className="text-xl md:text-2xl">🤝</span>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">8</p>
-                        <p className="text-sm text-gray-600">colaboradores</p>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">8</p>
+                        <p className="text-xs md:text-sm text-gray-600">colaboradores</p>
                       </div>
                     </AnimatedElement>
                     
                     <AnimatedElement direction="up" delay={1300}>
-                      <div className="bg-gradient-to-br from-pastel to-primary/5 p-4 rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                      <div className="bg-gradient-to-br from-pastel to-primary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation sm:col-span-1">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-primary">Feedback</h4>
-                          <span className="text-2xl">💬</span>
+                          <h4 className="font-medium text-primary text-sm md:text-base">Feedback</h4>
+                          <span className="text-xl md:text-2xl">💬</span>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">23</p>
-                        <p className="text-sm text-gray-600">intercambios</p>
+                        <p className="text-xl md:text-2xl font-bold text-gray-900">23</p>
+                        <p className="text-xs md:text-sm text-gray-600">intercambios</p>
                       </div>
                     </AnimatedElement>
                   </div>
@@ -198,13 +199,14 @@ export default function Home() {
           </AnimatedElement>
 
           <AnimatedElement direction="up" delay={1500}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+            <div className="flex flex-col gap-3 md:gap-4 justify-center items-center mb-6 px-4">
               <Button 
                 variant="gradient"
                 size="xl"
                 data-analytics="cta_register_click_hero"
                 aria-label="Registrarse gratis en InkFusion - Sin tarjeta requerida"
                 icon={<span>🚀</span>}
+                className="w-full sm:w-auto min-w-[280px] sm:min-w-0 text-center"
               >
                 Ser miembro fundador
               </Button>
@@ -213,6 +215,7 @@ export default function Home() {
                 size="lg"
                 data-analytics="cta_login_click_hero"
                 aria-label="Iniciar sesión en InkFusion"
+                className="w-full sm:w-auto min-w-[280px] sm:min-w-0"
               >
                 Ya tengo cuenta
               </Button>
@@ -220,17 +223,17 @@ export default function Home() {
           </AnimatedElement>
           
           <AnimatedElement direction="fade" delay={1700}>
-            <div className="flex items-center justify-center space-x-6 text-sm text-gray-500">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500 px-4">
               <div className="flex items-center space-x-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500 text-base">✓</span>
                 <span>Acceso beta gratuito</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500 text-base">✓</span>
                 <span>Configuración en 2 minutos</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-green-500">✓</span>
+                <span className="text-green-500 text-base">✓</span>
                 <span>Comunidad en español</span>
               </div>
             </div>
@@ -262,14 +265,14 @@ export default function Home() {
           </div>
         </AnimatedElement>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 px-4">
           <AnimatedElement direction="up" delay={400}>
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300">
-                <span className="text-white text-2xl font-bold">1</span>
+            <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
+              <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300 touch-manipulation">
+                <span className="text-white text-xl md:text-2xl font-bold">1</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4 group-hover:text-primary transition-colors duration-300">Lee</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 group-hover:text-primary transition-colors duration-300">Lee</h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                 Descubre ficción, newsletters y artículos de una comunidad diversa de escritores. 
                 Filtra por género, temática o formato.
               </p>
@@ -277,12 +280,12 @@ export default function Home() {
           </AnimatedElement>
 
           <AnimatedElement direction="up" delay={600}>
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-secondary/25 transition-all duration-300">
-                <span className="text-white text-2xl font-bold">2</span>
+            <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
+              <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-secondary/25 transition-all duration-300 touch-manipulation">
+                <span className="text-white text-xl md:text-2xl font-bold">2</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4 group-hover:text-secondary transition-colors duration-300">Escribe</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 group-hover:text-secondary transition-colors duration-300">Escribe</h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                 Publica ficción por capítulos, newsletters semanales o artículos profundos. 
                 Editor integrado con herramientas de formato.
               </p>
@@ -290,12 +293,12 @@ export default function Home() {
           </AnimatedElement>
 
           <AnimatedElement direction="up" delay={800}>
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300">
-                <span className="text-white text-2xl font-bold">3</span>
+            <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
+              <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300 touch-manipulation">
+                <span className="text-white text-xl md:text-2xl font-bold">3</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4 group-hover:text-primary transition-colors duration-300">Conecta</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 group-hover:text-primary transition-colors duration-300">Conecta</h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                 Construye relaciones auténticas con otros escritores. Colabora, recibe feedback 
                 y forma parte de una comunidad que te apoya.
               </p>
