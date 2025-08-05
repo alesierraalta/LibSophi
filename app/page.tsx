@@ -106,7 +106,7 @@ export default function Home() {
         </div>
 
         <div className="text-center relative z-10 px-4">
-          <AnimatedElement direction="up" delay={300}>
+          <AnimatedElement direction="up" delay={0}>
             <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
               <span className="bg-gradient-to-r from-gray-900 via-primary to-gray-900 bg-clip-text text-transparent animate-pulse-gentle block">
                 Donde las historias cobran vida
@@ -117,7 +117,7 @@ export default function Home() {
             </h2>
           </AnimatedElement>
           
-          <AnimatedElement direction="up" delay={500}>
+          <AnimatedElement direction="up" delay={100}>
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto leading-relaxed px-2">
               Únete a una comunidad vibrante de escritores que 
               <span className="text-primary font-semibold"> comparten</span>, 
@@ -130,7 +130,7 @@ export default function Home() {
           </AnimatedElement>
           
           {/* Mock-up visual del producto - Mobile Optimized */}
-          <AnimatedElement direction="scale" delay={700}>
+          <AnimatedElement direction="scale" delay={200}>
             <div className="mb-8 md:mb-10 group mx-2">
               <div className="relative bg-gradient-to-br from-primary to-secondary p-4 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-4xl mx-auto hover:shadow-primary/25 transition-all duration-500 hover:-translate-y-1 md:hover:-translate-y-2">
                 {/* Glow effect */}
@@ -140,7 +140,7 @@ export default function Home() {
                   {/* Decorative gradient overlay - Smaller on mobile */}
                   <div className="absolute top-0 right-0 w-16 md:w-32 h-16 md:h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
                   
-                  <AnimatedElement direction="left" delay={900}>
+                  <AnimatedElement direction="left" delay={250}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4 md:mb-6">
                       <div className="w-10 md:w-12 h-10 md:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
                         <span className="text-white font-bold text-sm md:text-lg">IF</span>
@@ -160,7 +160,7 @@ export default function Home() {
                   </AnimatedElement>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                    <AnimatedElement direction="up" delay={1100}>
+                    <AnimatedElement direction="up" delay={300}>
                       <div className="bg-gradient-to-br from-pastel to-primary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-primary text-sm md:text-base">Historias</h4>
@@ -171,7 +171,7 @@ export default function Home() {
                       </div>
                     </AnimatedElement>
                     
-                    <AnimatedElement direction="up" delay={1200}>
+                    <AnimatedElement direction="up" delay={350}>
                       <div className="bg-gradient-to-br from-pastel to-secondary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-secondary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-secondary text-sm md:text-base">Conexiones</h4>
@@ -182,7 +182,7 @@ export default function Home() {
                       </div>
                     </AnimatedElement>
                     
-                    <AnimatedElement direction="up" delay={1300}>
+                    <AnimatedElement direction="up" delay={400}>
                       <div className="bg-gradient-to-br from-pastel to-primary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation sm:col-span-1">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-primary text-sm md:text-base">Feedback</h4>
@@ -198,7 +198,7 @@ export default function Home() {
             </div>
           </AnimatedElement>
 
-          <AnimatedElement direction="up" delay={1500}>
+          <AnimatedElement direction="up" delay={450}>
             <div className="flex flex-col gap-3 md:gap-4 justify-center items-center mb-6 px-4">
               <Button 
                 variant="gradient"
@@ -222,7 +222,7 @@ export default function Home() {
             </div>
           </AnimatedElement>
           
-          <AnimatedElement direction="fade" delay={1700}>
+          <AnimatedElement direction="fade" delay={500}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500 px-4">
               <div className="flex items-center space-x-2">
                 <span className="text-green-500 text-base">✓</span>
@@ -254,7 +254,7 @@ export default function Home() {
         {/* Red accent decorations */}
         <div className="absolute top-10 right-10 w-24 h-24 bg-primary/10 rounded-full blur-xl animate-pulse-gentle" />
         <div className="absolute bottom-10 left-10 w-32 h-32 bg-secondary/8 rounded-full blur-xl animate-pulse-gentle" style={{animationDelay: '2s'}} />
-        <AnimatedElement direction="up" delay={200}>
+        <AnimatedElement direction="up" delay={100}>
           <div className="text-center mb-16">
             <h2 id="como-funciona-title" className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Cómo funciona
@@ -266,7 +266,7 @@ export default function Home() {
         </AnimatedElement>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 px-4">
-          <AnimatedElement direction="up" delay={400}>
+          <AnimatedElement direction="up" delay={200}>
             <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
               <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300 touch-manipulation">
                 <span className="text-white text-xl md:text-2xl font-bold">1</span>
@@ -279,7 +279,7 @@ export default function Home() {
             </div>
           </AnimatedElement>
 
-          <AnimatedElement direction="up" delay={600}>
+          <AnimatedElement direction="up" delay={250}>
             <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
               <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-secondary/25 transition-all duration-300 touch-manipulation">
                 <span className="text-white text-xl md:text-2xl font-bold">2</span>
@@ -292,7 +292,7 @@ export default function Home() {
             </div>
           </AnimatedElement>
 
-          <AnimatedElement direction="up" delay={800}>
+          <AnimatedElement direction="up" delay={300}>
             <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
               <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300 touch-manipulation">
                 <span className="text-white text-xl md:text-2xl font-bold">3</span>

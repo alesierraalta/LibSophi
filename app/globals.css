@@ -11,6 +11,8 @@
   
   body {
     font-family: 'Inter', sans-serif;
+    background-color: #ffffff;
+    color: #111827;
   }
   
   /* Focus styles for accessibility */
