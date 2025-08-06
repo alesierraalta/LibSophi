@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://inkfusion.com' // TODO: Replace with actual domain
+  const baseUrl = 'https://palabreo.com' // TODO: Replace with actual domain
   
   return [
     {

@@ -23,7 +23,7 @@ export default function Section({
   return (
     <section
       id={id}
-      className={`section-padding ${backgroundClasses[background]} ${className}`}
+      className={`py-12 sm:py-16 md:py-20 ${backgroundClasses[background]} ${className}`}
       aria-labelledby={ariaLabelledBy}
     >
       <div className="container-max">

@@ -5,7 +5,7 @@ import React, { useState } from 'react'
 export default function InteractiveDemo() {
   const [content, setContent] = useState(`Érase una vez en un pequeño pueblo...
 
-Escribe aquí tu historia y ve cómo se vería en InkFusion. 
+Escribe aquí tu historia y ve cómo se vería en Palabreo. 
 
 ✨ Prueba escribir algo sobre:
 • Una aventura inesperada
@@ -28,7 +28,7 @@ Escribe aquí tu historia y ve cómo se vería en InkFusion.
             <div className="w-7 md:w-8 h-7 md:h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <span className="text-xs md:text-sm font-bold">IF</span>
             </div>
-            <span className="font-medium text-sm md:text-base">Editor InkFusion</span>
+            <span className="font-medium text-sm md:text-base">Editor Palabreo</span>
           </div>
           <div className="text-xs md:text-sm opacity-90">
             Demo interactivo
@@ -140,7 +140,7 @@ Escribe aquí tu historia y ve cómo se vería en InkFusion.
 
       <div className="bg-gray-100 px-4 md:px-6 py-3 md:py-4">
         <p className="text-xs md:text-sm text-gray-600 text-center leading-relaxed">
-          ✨ <strong>Esto es solo una demo.</strong> En InkFusion real tendrás herramientas avanzadas de formato, 
+          ✨ <strong>Esto es solo una demo.</strong> En Palabreo real tendrás herramientas avanzadas de formato, 
           colaboración en tiempo real, y feedback de la comunidad.
         </p>
       </div>

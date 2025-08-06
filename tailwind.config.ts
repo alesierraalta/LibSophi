@@ -9,22 +9,50 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: '#FF3366',
-        secondary: '#FF99AA',
-        pastel: '#FFE6E6',
+        primary: '#DC2626',
+        secondary: '#EF4444',
+        pastel: '#FEE2E2',
         white: '#FFFFFF',
+        // Red variants for evaluation
+        'red-variant-1': {
+          primary: '#B91C1C',    // Darker red
+          secondary: '#DC2626',
+          pastel: '#FEE2E2',
+          dark: '#7F1D1D',
+          bg: '#1C1917',
+        },
+        'red-variant-2': {
+          primary: '#DC2626',    // Current red
+          secondary: '#EF4444',
+          pastel: '#FEE2E2',
+          dark: '#991B1B',
+          bg: '#0C0A09',
+        },
+        'red-variant-3': {
+          primary: '#EF4444',    // Brighter red
+          secondary: '#F87171',
+          pastel: '#FEE2E2',
+          dark: '#B91C1C',
+          bg: '#1F1917',
+        },
+        'red-variant-4': {
+          primary: '#F87171',    // Light red
+          secondary: '#FCA5A5',
+          pastel: '#FEE2E2',
+          dark: '#DC2626',
+          bg: '#292524',
+        },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
       },
+      // Using default Tailwind breakpoints for better compatibility
+      // screens: sm: '640px', md: '768px', lg: '1024px', xl: '1280px'
+      // Optimized animations - only essential ones
       animation: {
-        'fade-in': 'fadeIn 0.6s ease-in-out',
-        'slide-up': 'slideUp 0.6s ease-out',
-        'slide-in-left': 'slideInLeft 0.6s ease-out',
-        'slide-in-right': 'slideInRight 0.6s ease-out',
-        'scale-in': 'scaleIn 0.5s ease-out',
-        'bounce-gentle': 'bounceGentle 2s infinite',
-        'pulse-gentle': 'pulseGentle 3s infinite',
+        'fade-in': 'fadeIn 0.4s ease-out',
+        'slide-up': 'slideUp 0.4s ease-out',
+        'pulse-gentle': 'pulseGentle 2s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -32,28 +60,12 @@ const config: Config = {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { transform: 'translateY(30px)', opacity: '0' },
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        slideInLeft: {
-          '0%': { transform: 'translateX(-30px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        slideInRight: {
-          '0%': { transform: 'translateX(30px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        scaleIn: {
-          '0%': { transform: 'scale(0.9)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        bounceGentle: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-5px)' },
         },
         pulseGentle: {
           '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.8' },
+          '50%': { opacity: '0.9' },
         },
       },
     },

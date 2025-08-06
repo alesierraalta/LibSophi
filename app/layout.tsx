@@ -47,29 +47,29 @@ PRIORIDAD DE VERDAD:
 */
 
 export const metadata: Metadata = {
-  title: 'InkFusion - Donde las historias cobran vida en comunidad',
+  title: 'Palabreo - Donde las palabras cobran vida en comunidad',
   description: 'Únete a la comunidad de escritores pioneros que están construyendo el futuro literario. Ficción, ensayos y newsletters en un hogar digital auténtico para escritores.',
   keywords: 'escritura, comunidad, ficción, ensayos, newsletters, escritores, colaboración, beta, startup literaria',
-  authors: [{ name: 'InkFusion Team' }],
-  creator: 'InkFusion',
-  publisher: 'InkFusion',
+  authors: [{ name: 'Palabreo Team' }],
+  creator: 'Palabreo',
+  publisher: 'Palabreo',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   openGraph: {
-    title: 'InkFusion - Donde las historias cobran vida en comunidad',
+    title: 'Palabreo - Donde las palabras cobran vida en comunidad',
     description: 'Únete a los escritores pioneros que están construyendo la comunidad literaria del futuro.',
     type: 'website',
     locale: 'es_ES',
-    siteName: 'InkFusion',
+    siteName: 'Palabreo',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'InkFusion - Donde las historias cobran vida en comunidad',
+    title: 'Palabreo - Donde las palabras cobran vida en comunidad',
     description: 'Únete a los escritores pioneros que están construyendo la comunidad literaria del futuro.',
-    creator: '@inkfusion',
+    creator: '@palabreo',
   },
   robots: {
     index: true,
@@ -89,10 +89,12 @@ export const metadata: Metadata = {
 
 export const viewport = {
   width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
+  initialScale: 1.0,
+  minimumScale: 1.0,
+  maximumScale: 5.0,
   userScalable: true,
-  themeColor: '#FF3366',
+  themeColor: '#DC2626',
+  colorScheme: 'light',
 }
 
 export default function RootLayout({

@@ -30,7 +30,7 @@ export default function OptimizedImage({
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="#FFE6E6"/>
       <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#FF3366" font-family="system-ui" font-size="14">
-        InkFusion
+        Palabreo
       </text>
     </svg>`
   ).toString('base64')}`

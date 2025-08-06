@@ -4,306 +4,307 @@ import FAQ from '../components/FAQ'
 import InteractiveDemo from '../components/InteractiveDemo'
 import AnimatedElement from '../components/AnimatedElement'
 import { FeatureCard } from '../components/Card'
+import ThemeSelector from '../components/ThemeSelector'
 
 export default function Home() {
   return (
-    <main id="main-content">
-      {/* HEADER */}
+    <main id="main-content" className="w-full min-h-screen">
+      {/* Theme Selector for Red Evaluation */}
+      <ThemeSelector />
+      
+      {/* HEADER - MOBILE FIRST REDESIGN */}
       {/*
-      MARCO CRÍTICO - HEADER:
-      SUPUESTO: El logo tipográfico será suficiente para generar reconocimiento
-      CONTRAARGUMENTO: Puede perderse entre tanto texto sin elemento visual distintivo
-      PRUEBA: El contraste de colores y tamaño debe ser suficiente para destacar
-      PERSPECTIVA ALTERNATIVA: Para lectores casuales, puede necesitar más contexto visual
-      VERDAD: Mantenemos simplicidad para carga rápida y foco en CTAs
+      MARCO CRÍTICO - HEADER MÓVIL:
+      REDISEÑO: Prioridad mobile-first con navegación limpia y directa
+      MEJORAS: Mejor uso del espacio, interacciones táctiles optimizadas, UX móvil nativa
+      ENFOQUE: CTAs esenciales en móvil, sin menú complejo, experiencia directa
       */}
-      <header className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-primary/10">
+      <header className="bg-white backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-primary/10">
         <div className="container-max">
-          <div className="flex items-center justify-between py-4 px-4 sm:px-6 lg:px-8">
-            <AnimatedElement direction="left" delay={100}>
-              <div className="flex items-center group">
-                <div className="relative">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300">
-                    InkFusion
-                  </h1>
-                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm" />
-                </div>
-              </div>
-            </AnimatedElement>
+          <div className="flex items-center justify-between py-4 sm:py-5 md:py-6">
+            <div className="flex items-center">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Palabreo
+              </h1>
+            </div>
             
-            <AnimatedElement direction="right" delay={200}>
-              <div className="flex items-center space-x-3">
-                {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center space-x-6" role="navigation" aria-label="Navegación principal">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    data-analytics="cta_login_click_header"
-                    aria-label="Iniciar sesión en InkFusion"
-                    className="text-gray-600 hover:text-primary"
-                  >
-                    Inicia sesión
-                  </Button>
-                  <Button 
-                    variant="gradient"
-                    size="sm"
-                    data-analytics="cta_register_click_header"
-                    aria-label="Registrarse gratis en InkFusion"
-                    icon={<span>✨</span>}
-                  >
-                    Regístrate
-                  </Button>
-                </nav>
-                
-                {/* Mobile Navigation */}
-                <div className="md:hidden flex items-center space-x-2">
-                  <Button 
-                    variant="ghost"
-                    size="sm"
-                    data-analytics="cta_login_click_mobile_header"
-                    aria-label="Iniciar sesión en InkFusion"
-                    className="text-gray-600"
-                  >
-                    Entrar
-                  </Button>
-                  <Button 
-                    variant="gradient"
-                    size="sm"
-                    data-analytics="cta_register_click_mobile_header"
-                    aria-label="Registrarse gratis en InkFusion"
-                    icon={<span>✨</span>}
-                  >
-                    Regístrate
-                  </Button>
-                </div>
+            <div className="flex items-center">
+              {/* Desktop Navigation */}
+              <nav className="hidden md:flex items-center space-x-6" role="navigation" aria-label="Navegación principal">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  data-analytics="cta_login_click_header"
+                  aria-label="Iniciar sesión en Palabreo"
+                  className="text-gray-600 hover:text-primary"
+                >
+                  Inicia sesión
+                </Button>
+                <Button 
+                  variant="gradient"
+                  size="sm"
+                  data-analytics="cta_register_click_header"
+                  aria-label="Registrarse gratis en Palabreo"
+                  icon={<span>✨</span>}
+                >
+                  Regístrate
+                </Button>
+              </nav>
+              
+              {/* Mobile Navigation - Clean and Simple */}
+              <div className="md:hidden flex items-center space-x-2">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  data-analytics="cta_login_click_mobile_header"
+                  aria-label="Iniciar sesión"
+                  className="text-gray-600 hover:text-primary text-sm px-3 py-2 touch-manipulation"
+                >
+                  Entrar
+                </Button>
+                <Button 
+                  variant="gradient"
+                  size="sm"
+                  data-analytics="cta_register_click_mobile_header"
+                  aria-label="Únete como miembro fundador"
+                  className="text-sm px-4 py-2 touch-manipulation"
+                >
+                  Únete
+                </Button>
               </div>
-            </AnimatedElement>
+            </div>
           </div>
         </div>
+
       </header>
 
-      {/* HERO SECTION */}
+      {/* HERO SECTION - MOBILE FIRST REDESIGN */}
       {/*
-      MARCO CRÍTICO - HERO:
-      SUPUESTO: Los visitantes entenderán inmediatamente la propuesta de fusión de plataformas
-      CONTRAARGUMENTO: Puede ser demasiado complejo para procesar en 5 segundos
-      PRUEBA: Usamos subtítulo específico y visual de producto para clarificar
-      PERSPECTIVA ALTERNATIVA: 
-        - Autores: Enfocarían en "monetiza tu escritura"
-        - Lectores: Enfocarían en "descubre historias únicas"
-      VERDAD: Evitamos promesas no verificables, usamos "conecta" en lugar de "revoluciona"
-      // TODO: Validar que el mock-up del producto sea comprensible sin explicación
+      MARCO CRÍTICO - HERO MÓVIL:
+      REDISEÑO: Contenido más conciso y directo para pantallas pequeñas
+      MEJORAS: Jerarquía visual clara, menos texto, CTAs más prominentes
+      ENFOQUE: Mensaje principal en una línea, beneficios clave destacados
       */}
-      <Section id="hero" className="pt-8 md:pt-12 pb-16 md:pb-20 relative overflow-hidden">
-        {/* Background decorative elements - Optimized for mobile */}
+      <Section id="hero" className="pt-6 sm:pt-8 md:pt-12 pb-12 sm:pb-16 md:pb-20 relative overflow-hidden">
+        {/* Optimized background - minimal effects */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-10 md:top-20 left-5 md:left-10 w-48 md:w-72 h-48 md:h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-gentle" />
-          <div className="absolute bottom-10 md:bottom-20 right-5 md:right-10 w-64 md:w-96 h-64 md:h-96 bg-secondary/8 rounded-full blur-3xl animate-pulse-gentle" style={{animationDelay: '2s'}} />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-gradient-to-r from-primary/8 to-secondary/6 rounded-full blur-3xl animate-bounce-gentle" />
-          {/* Additional red accents - Smaller on mobile */}
-          <div className="absolute top-5 md:top-10 right-1/4 w-16 md:w-32 h-16 md:h-32 bg-primary/15 rounded-full blur-2xl animate-pulse-gentle" style={{animationDelay: '3s'}} />
-          <div className="absolute bottom-5 md:bottom-10 left-1/4 w-24 md:w-48 h-24 md:h-48 bg-primary/12 rounded-full blur-2xl animate-pulse-gentle" style={{animationDelay: '1s'}} />
+          <div className="absolute top-10 left-10 w-48 h-48 bg-primary/5 rounded-full blur-2xl opacity-60" />
+          <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary/4 rounded-full blur-2xl opacity-60" />
         </div>
 
-        <div className="text-center relative z-10 px-4">
-          <AnimatedElement direction="up" delay={0}>
-            <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-gray-900 via-primary to-gray-900 bg-clip-text text-transparent animate-pulse-gentle block">
-                Donde las historias cobran vida
-              </span>
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent block mt-2">
-                en comunidad
-              </span>
-            </h2>
-          </AnimatedElement>
+        <div className="text-center relative z-10">
+          {/* Mobile-first headline - More concise */}
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-3 sm:mb-4 md:mb-6 leading-tight">
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent block">
+              Tu comunidad de escritores
+            </span>
+            <span className="text-gray-900 block mt-1 sm:mt-2 text-xl sm:text-2xl md:text-3xl lg:text-5xl">
+              está aquí
+            </span>
+          </h2>
           
-          <AnimatedElement direction="up" delay={100}>
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto leading-relaxed px-2">
+          {/* Simplified mobile description */}
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed">
+            <span className="block sm:hidden">
+              Comparte, colabora y crece con otros escritores. 
+              <span className="text-primary font-semibold"> Ficción, ensayos y newsletters</span> en un solo lugar.
+            </span>
+            <span className="hidden sm:block">
               Únete a una comunidad vibrante de escritores que 
               <span className="text-primary font-semibold"> comparten</span>, 
               <span className="text-secondary font-semibold"> colaboran</span> y 
               <span className="text-primary font-semibold"> crecen juntos</span>. 
-              <span className="block sm:inline mt-2 sm:mt-0">
-                Ficción, ensayos y newsletters en un solo lugar.
-              </span>
-            </p>
-          </AnimatedElement>
+              Ficción, ensayos y newsletters en un solo lugar.
+            </span>
+          </p>
           
-          {/* Mock-up visual del producto - Mobile Optimized */}
-          <AnimatedElement direction="scale" delay={200}>
-            <div className="mb-8 md:mb-10 group mx-2">
-              <div className="relative bg-gradient-to-br from-primary to-secondary p-4 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl max-w-4xl mx-auto hover:shadow-primary/25 transition-all duration-500 hover:-translate-y-1 md:hover:-translate-y-2">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-2xl md:rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 -z-10" />
-                
-                <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg relative overflow-hidden">
-                  {/* Decorative gradient overlay - Smaller on mobile */}
-                  <div className="absolute top-0 right-0 w-16 md:w-32 h-16 md:h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
+          {/* Optimized Product Preview */}
+          <div className="mb-6 sm:mb-8 md:mb-10 mx-1 sm:mx-2">
+            {/* Simplified preview card */}
+            <div className="bg-gradient-to-br from-primary to-secondary p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl max-w-4xl mx-auto shadow-lg">
+              <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-sm">
+                {/* Mobile-first header */}
+                <div className="flex items-center space-x-3 mb-4 sm:mb-6">
+                  <div className="w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+                                            <span className="text-white font-bold text-xs sm:text-sm md:text-lg">PB</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base md:text-lg">Mi Dashboard</h3>
+                    <div className="flex flex-wrap gap-1 sm:gap-2 mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        <span className="hidden sm:inline">Miembro fundador</span>
+                        <span className="sm:hidden">Fundador</span>
+                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
+                        Beta
+                      </span>
+                    </div>
+                  </div>
+                </div>
                   
-                  <AnimatedElement direction="left" delay={250}>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4 md:mb-6">
-                      <div className="w-10 md:w-12 h-10 md:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-                        <span className="text-white font-bold text-sm md:text-lg">IF</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 text-base md:text-lg">Mi Comunidad</h3>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary w-fit">
-                            Miembro fundador #47
-                          </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary w-fit">
-                            Beta tester activo
-                          </span>
-                        </div>
+                  {/* Optimized stats grid */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                    <div className="bg-gradient-to-br from-pastel to-primary/5 p-2 sm:p-3 md:p-4 rounded-lg border border-primary/10 text-center">
+                      <div className="flex flex-col items-center space-y-1">
+                        <span className="text-lg sm:text-xl md:text-2xl">📚</span>
+                        <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">15</p>
+                        <p className="text-xs text-gray-600">historias</p>
                       </div>
                     </div>
-                  </AnimatedElement>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                    <AnimatedElement direction="up" delay={300}>
-                      <div className="bg-gradient-to-br from-pastel to-primary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-primary text-sm md:text-base">Historias</h4>
-                          <span className="text-xl md:text-2xl">📚</span>
-                        </div>
-                        <p className="text-xl md:text-2xl font-bold text-gray-900">15</p>
-                        <p className="text-xs md:text-sm text-gray-600">comentarios</p>
-                      </div>
-                    </AnimatedElement>
                     
-                    <AnimatedElement direction="up" delay={350}>
-                      <div className="bg-gradient-to-br from-pastel to-secondary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-secondary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-secondary text-sm md:text-base">Conexiones</h4>
-                          <span className="text-xl md:text-2xl">🤝</span>
-                        </div>
-                        <p className="text-xl md:text-2xl font-bold text-gray-900">8</p>
-                        <p className="text-xs md:text-sm text-gray-600">colaboradores</p>
+                    <div className="bg-gradient-to-br from-pastel to-secondary/5 p-2 sm:p-3 md:p-4 rounded-lg border border-secondary/10 text-center">
+                      <div className="flex flex-col items-center space-y-1">
+                        <span className="text-lg sm:text-xl md:text-2xl">🤝</span>
+                        <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">8</p>
+                        <p className="text-xs text-gray-600">conexiones</p>
                       </div>
-                    </AnimatedElement>
+                    </div>
                     
-                    <AnimatedElement direction="up" delay={400}>
-                      <div className="bg-gradient-to-br from-pastel to-primary/5 p-3 md:p-4 rounded-lg md:rounded-xl border border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 touch-manipulation sm:col-span-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-primary text-sm md:text-base">Feedback</h4>
-                          <span className="text-xl md:text-2xl">💬</span>
-                        </div>
-                        <p className="text-xl md:text-2xl font-bold text-gray-900">23</p>
-                        <p className="text-xs md:text-sm text-gray-600">intercambios</p>
+                    <div className="bg-gradient-to-br from-pastel to-primary/5 p-2 sm:p-3 md:p-4 rounded-lg border border-primary/10 text-center">
+                      <div className="flex flex-col items-center space-y-1">
+                        <span className="text-lg sm:text-xl md:text-2xl">💬</span>
+                        <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">23</p>
+                        <p className="text-xs text-gray-600">feedback</p>
                       </div>
-                    </AnimatedElement>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </AnimatedElement>
 
-          <AnimatedElement direction="up" delay={450}>
-            <div className="flex flex-col gap-3 md:gap-4 justify-center items-center mb-6 px-4">
-              <Button 
-                variant="gradient"
-                size="xl"
-                data-analytics="cta_register_click_hero"
-                aria-label="Registrarse gratis en InkFusion - Sin tarjeta requerida"
-                icon={<span>🚀</span>}
-                className="w-full sm:w-auto min-w-[280px] sm:min-w-0 text-center"
-              >
-                Ser miembro fundador
-              </Button>
+          {/* Optimized CTAs */}
+          <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+            {/* Primary CTA - Full width on mobile */}
+            <Button 
+              variant="gradient"
+              size="xl"
+              data-analytics="cta_register_click_hero"
+              aria-label="Únete como miembro fundador - Acceso beta gratuito"
+              icon={<span>🚀</span>}
+              className="w-full sm:w-auto sm:min-w-[300px] text-center font-semibold py-4 sm:py-3 text-base sm:text-lg"
+            >
+              <span className="block sm:inline">Ser miembro fundador</span>
+              <span className="block sm:hidden text-sm opacity-90 mt-1">Acceso beta gratuito</span>
+            </Button>
+            
+            {/* Secondary CTA - Less prominent on mobile */}
+            <div className="flex justify-center">
               <Button 
                 variant="ghost" 
-                size="lg"
+                size="md"
                 data-analytics="cta_login_click_hero"
-                aria-label="Iniciar sesión en InkFusion"
-                className="w-full sm:w-auto min-w-[280px] sm:min-w-0"
+                aria-label="Iniciar sesión en Palabreo"
+                className="text-gray-600 hover:text-primary text-sm sm:text-base px-6 py-2"
               >
                 Ya tengo cuenta
               </Button>
             </div>
-          </AnimatedElement>
+          </div>
           
-          <AnimatedElement direction="fade" delay={500}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500 px-4">
+          {/* Optimized benefits */}
+          <div>
+            {/* Mobile: Stack vertically, Desktop: Horizontal */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-500">
               <div className="flex items-center space-x-2">
-                <span className="text-green-500 text-base">✓</span>
+                <span className="text-green-500 text-sm">✓</span>
                 <span>Acceso beta gratuito</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-green-500 text-base">✓</span>
-                <span>Configuración en 2 minutos</span>
+                <span className="text-green-500 text-sm">✓</span>
+                <span>Setup en 2 minutos</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-green-500 text-base">✓</span>
+                <span className="text-green-500 text-sm">✓</span>
                 <span>Comunidad en español</span>
               </div>
             </div>
-          </AnimatedElement>
+            
+            {/* Mobile-specific additional benefit */}
+            <div className="block sm:hidden mt-3 text-center">
+              <div className="inline-flex items-center space-x-2 text-xs text-primary bg-primary/5 px-3 py-1 rounded-full">
+                <span>💡</span>
+                <span>Optimizado para móvil</span>
+              </div>
+            </div>
+          </div>
         </div>
       </Section>
 
-      {/* CÓMO FUNCIONA */}
+      {/* CÓMO FUNCIONA - MOBILE FIRST */}
       {/*
-      MARCO CRÍTICO - CÓMO FUNCIONA:
-      SUPUESTO: 3 pasos serán suficientes para explicar la complejidad de la plataforma
-      CONTRAARGUMENTO: Puede simplificar demasiado el proceso real
-      PRUEBA: Cada paso debe ser autoexplicativo con iconografía clara
-      PERSPECTIVA ALTERNATIVA: Diferentes usuarios priorizarán diferentes pasos
-      VERDAD: Usamos verbos de acción específicos, no promesas vagas
+      MARCO CRÍTICO - CÓMO FUNCIONA MÓVIL:
+      REDISEÑO: Pasos más concisos, iconografía más clara, mejor spacing móvil
+      MEJORAS: Cards más compactas, texto simplificado, interacciones táctiles mejoradas
+      ENFOQUE: Proceso visual claro en móvil, menos texto, más iconos
       */}
-      <Section id="como-funciona" background="pastel" aria-labelledby="como-funciona-title" className="relative">
-        {/* Red accent decorations */}
-        <div className="absolute top-10 right-10 w-24 h-24 bg-primary/10 rounded-full blur-xl animate-pulse-gentle" />
-        <div className="absolute bottom-10 left-10 w-32 h-32 bg-secondary/8 rounded-full blur-xl animate-pulse-gentle" style={{animationDelay: '2s'}} />
-        <AnimatedElement direction="up" delay={100}>
-          <div className="text-center mb-16">
-            <h2 id="como-funciona-title" className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Cómo funciona
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Tres pasos simples para empezar a publicar, conectar y monetizar tu escritura
-            </p>
-          </div>
-        </AnimatedElement>
+      <Section id="como-funciona" background="pastel" aria-labelledby="como-funciona-title">
+        
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 id="como-funciona-title" className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+            Cómo funciona
+          </h2>
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+            <span className="block sm:hidden">Tres pasos simples para empezar</span>
+            <span className="hidden sm:block">Tres pasos simples para empezar a publicar, conectar y monetizar tu escritura</span>
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 px-4">
-          <AnimatedElement direction="up" delay={200}>
-            <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
-              <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300 touch-manipulation">
-                <span className="text-white text-xl md:text-2xl font-bold">1</span>
-              </div>
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 group-hover:text-primary transition-colors duration-300">Lee</h3>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
-                Descubre ficción, newsletters y artículos de una comunidad diversa de escritores. 
-                Filtra por género, temática o formato.
+        {/* Optimized grid layout */}
+        <div className="space-y-6 sm:space-y-0 sm:grid sm:grid-cols-1 md:grid-cols-3 sm:gap-6 md:gap-8">
+          <div className="text-center p-4 sm:p-6 rounded-xl bg-white/30">
+            {/* Simplified step indicator */}
+            <div className="w-14 sm:w-16 md:w-20 h-14 sm:h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-6 shadow-md">
+              <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">1</span>
+            </div>
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 md:mb-4">
+              📚 Lee
+            </h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                <span className="block sm:hidden">
+                  Descubre historias, newsletters y artículos de escritores diversos.
+                </span>
+                <span className="hidden sm:block">
+                  Descubre ficción, newsletters y artículos de una comunidad diversa de escritores. 
+                  Filtra por género, temática o formato.
+                </span>
               </p>
             </div>
-          </AnimatedElement>
 
-          <AnimatedElement direction="up" delay={250}>
-            <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
-              <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-secondary/25 transition-all duration-300 touch-manipulation">
-                <span className="text-white text-xl md:text-2xl font-bold">2</span>
-              </div>
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 group-hover:text-secondary transition-colors duration-300">Escribe</h3>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+          <div className="text-center p-4 sm:p-6 rounded-xl bg-white/30">
+            <div className="w-14 sm:w-16 md:w-20 h-14 sm:h-16 md:h-20 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-6 shadow-md">
+              <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">2</span>
+            </div>
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 md:mb-4">
+              ✍️ Escribe
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+              <span className="block sm:hidden">
+                Publica ficción, newsletters o artículos con nuestro editor integrado.
+              </span>
+              <span className="hidden sm:block">
                 Publica ficción por capítulos, newsletters semanales o artículos profundos. 
                 Editor integrado con herramientas de formato.
-              </p>
-            </div>
-          </AnimatedElement>
+              </span>
+            </p>
+          </div>
 
-          <AnimatedElement direction="up" delay={300}>
-            <div className="text-center group p-4 rounded-2xl hover:bg-white/50 transition-all duration-300">
-              <div className="w-16 md:w-20 h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg group-hover:scale-110 group-hover:shadow-primary/25 transition-all duration-300 touch-manipulation">
-                <span className="text-white text-xl md:text-2xl font-bold">3</span>
-              </div>
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 group-hover:text-primary transition-colors duration-300">Conecta</h3>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+          <div className="text-center p-4 sm:p-6 rounded-xl bg-white/30">
+            <div className="w-14 sm:w-16 md:w-20 h-14 sm:h-16 md:h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-6 shadow-md">
+              <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">3</span>
+            </div>
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 md:mb-4">
+              🤝 Conecta
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+              <span className="block sm:hidden">
+                Construye relaciones con otros escritores y recibe feedback valioso.
+              </span>
+              <span className="hidden sm:block">
                 Construye relaciones auténticas con otros escritores. Colabora, recibe feedback 
                 y forma parte de una comunidad que te apoya.
-              </p>
-            </div>
-          </AnimatedElement>
+              </span>
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -323,7 +324,7 @@ export default function Home() {
               Pruébalo ahora mismo
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Experimenta cómo se siente escribir en InkFusion. Escribe algo y ve cómo tu historia cobra vida.
+              Experimenta cómo se siente escribir en Palabreo. Escribe algo y ve cómo tu historia cobra vida.
             </p>
           </div>
         </AnimatedElement>
@@ -484,7 +485,7 @@ export default function Home() {
                 no solo una plataforma que lo monetice. Estamos construyendo 
                 el hogar digital de los escritores."
               </p>
-              <p className="text-sm text-primary font-semibold">— Equipo InkFusion</p>
+              <p className="text-sm text-primary font-semibold">— Equipo Palabreo</p>
             </div>
           </AnimatedElement>
 
@@ -539,7 +540,7 @@ export default function Home() {
             Preguntas frecuentes
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Resolvemos las dudas más comunes sobre InkFusion y nuestra comunidad
+            Resolvemos las dudas más comunes sobre Palabreo y nuestra comunidad
           </p>
         </div>
 
@@ -549,7 +550,7 @@ export default function Home() {
             answer: "Precisamente porque estás en beta tienes una oportunidad única de influir en el desarrollo. Como miembro fundador, tu feedback moldea directamente las funcionalidades. Además, obtienes acceso gratuito de por vida a funciones premium y un badge especial de pionero."
           },
           {
-            question: "¿Cómo se diferencia InkFusion de Wattpad o Medium?",
+            question: "¿Cómo se diferencia Palabreo de Wattpad o Medium?",
             answer: "Mientras otras plataformas se enfocan en algoritmos o monetización, nosotros priorizamos la comunidad real. Facilitamos colaboraciones genuinas, feedback constructivo y conexiones duraderas entre escritores. No somos una red social, somos un hogar para escritores."
           },
           {
@@ -596,7 +597,7 @@ export default function Home() {
                 variant="secondary" 
                 size="xl"
                 data-analytics="cta_register_click_final"
-                aria-label="Únete como miembro fundador de InkFusion"
+                aria-label="Únete como miembro fundador de Palabreo"
                 className="bg-white text-primary hover:bg-gray-50 hover:text-red-600 border-0 shadow-lg hover:shadow-xl"
                 icon={<span>✨</span>}
               >
@@ -606,7 +607,7 @@ export default function Home() {
                 variant="ghost" 
                 size="lg"
                 data-analytics="cta_login_click_final"
-                aria-label="Iniciar sesión en InkFusion"
+                aria-label="Iniciar sesión en Palabreo"
                 className="text-white border-white/50 hover:bg-white/10 hover:border-white"
               >
                 Ya tengo cuenta
@@ -639,11 +640,11 @@ export default function Home() {
       PERSPECTIVA ALTERNATIVA: Algunos usuarios buscan información detallada en footer
       VERDAD: Placeholders son válidos para MVP pero deben ser funcionales en producción
       */}
-      <footer className="bg-gray-50 border-t border-gray-200">
-        <div className="container-max py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-gray-50 border-t border-gray-200 mt-8 sm:mt-12 md:mt-16">
+        <div className="container-max py-12 sm:py-16 md:py-20">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="col-span-1 md:col-span-2">
-              <h3 className="text-2xl font-bold text-primary mb-4">InkFusion</h3>
+              <h3 className="text-2xl font-bold text-primary mb-4">Palabreo</h3>
               <p className="text-gray-600 mb-4 max-w-md">
                 La plataforma que conecta ficción, newsletters y artículos en una comunidad 
                 vibrante de escritores y lectores.
@@ -676,7 +677,7 @@ export default function Home() {
             <div>
               <h4 className="font-semibold text-gray-900 mb-4">Contacto</h4>
               <ul className="space-y-2">
-                <li><a href="mailto:hola@inkfusion.com" className="text-gray-600 hover:text-primary transition-colors">hola@inkfusion.com</a></li>
+                <li><a href="mailto:hola@palabreo.com" className="text-gray-600 hover:text-primary transition-colors">hola@palabreo.com</a></li>
                 <li><a href="#" className="text-gray-600 hover:text-primary transition-colors">Centro de ayuda</a></li>
                 <li><a href="#" className="text-gray-600 hover:text-primary transition-colors">Blog</a></li>
               </ul>
@@ -685,7 +686,7 @@ export default function Home() {
           
           <div className="border-t border-gray-200 mt-8 pt-8 text-center">
             <p className="text-gray-500 text-sm">
-              © 2024 InkFusion. Todos los derechos reservados. 
+              © 2024 Palabreo. Todos los derechos reservados. 
               <span className="block mt-1">
                 // TODO: Actualizar con información legal real antes del lanzamiento
               </span>
@@ -693,6 +694,8 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+
     </main>
   )
 }
