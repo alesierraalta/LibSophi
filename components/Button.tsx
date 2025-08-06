@@ -15,6 +15,7 @@ interface ButtonProps {
   loading?: boolean
   icon?: React.ReactNode
   iconPosition?: 'left' | 'right'
+  type?: 'button' | 'submit' | 'reset'
 }
 
 export default function Button({
@@ -30,6 +31,7 @@ export default function Button({
   loading = false,
   icon,
   iconPosition = 'left',
+  type = 'button',
 }: ButtonProps) {
   const [isPressed, setIsPressed] = useState(false)
   const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([])
@@ -142,7 +144,7 @@ export default function Button({
       data-analytics={dataAnalytics}
       aria-label={ariaLabel}
       disabled={disabled || loading}
-      type="button"
+      type={type}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}

@@ -1,3 +1,7 @@
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Button from '../components/Button'
 import Section from '../components/Section'
 import FAQ from '../components/FAQ'
@@ -5,8 +9,10 @@ import InteractiveDemo from '../components/InteractiveDemo'
 import AnimatedElement from '../components/AnimatedElement'
 import { FeatureCard } from '../components/Card'
 import ThemeSelector from '../components/ThemeSelector'
+import WritingSocialPreview from '../components/WritingSocialPreview'
 
 export default function Home() {
+  const router = useRouter()
   return (
     <main id="main-content" className="w-full min-h-screen">
       {/* Theme Selector for Red Evaluation */}
@@ -37,6 +43,7 @@ export default function Home() {
                   data-analytics="cta_login_click_header"
                   aria-label="Iniciar sesión en Palabreo"
                   className="text-gray-600 hover:text-primary"
+                  onClick={() => router.push('/login')}
                 >
                   Inicia sesión
                 </Button>
@@ -46,6 +53,7 @@ export default function Home() {
                   data-analytics="cta_register_click_header"
                   aria-label="Registrarse gratis en Palabreo"
                   icon={<span>✨</span>}
+                  onClick={() => router.push('/register')}
                 >
                   Regístrate
                 </Button>
@@ -59,6 +67,7 @@ export default function Home() {
                   data-analytics="cta_login_click_mobile_header"
                   aria-label="Iniciar sesión"
                   className="text-gray-600 hover:text-primary text-sm px-3 py-2 touch-manipulation"
+                  onClick={() => router.push('/login')}
                 >
                   Entrar
                 </Button>
@@ -68,6 +77,7 @@ export default function Home() {
                   data-analytics="cta_register_click_mobile_header"
                   aria-label="Únete como miembro fundador"
                   className="text-sm px-4 py-2 touch-manipulation"
+                  onClick={() => router.push('/register')}
                 >
                   Únete
                 </Button>
@@ -118,59 +128,10 @@ export default function Home() {
             </span>
           </p>
           
-          {/* Optimized Product Preview */}
+          {/* Enhanced Social Writing Network Preview */}
           <div className="mb-6 sm:mb-8 md:mb-10 mx-1 sm:mx-2">
-            {/* Simplified preview card */}
-            <div className="bg-gradient-to-br from-primary to-secondary p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl max-w-4xl mx-auto shadow-lg">
-              <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-sm">
-                {/* Mobile-first header */}
-                <div className="flex items-center space-x-3 mb-4 sm:mb-6">
-                  <div className="w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-md flex-shrink-0">
-                                            <span className="text-white font-bold text-xs sm:text-sm md:text-lg">PB</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base md:text-lg">Mi Dashboard</h3>
-                    <div className="flex flex-wrap gap-1 sm:gap-2 mt-1">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        <span className="hidden sm:inline">Miembro fundador</span>
-                        <span className="sm:hidden">Fundador</span>
-                      </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
-                        Beta
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                  
-                  {/* Optimized stats grid */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                    <div className="bg-gradient-to-br from-pastel to-primary/5 p-2 sm:p-3 md:p-4 rounded-lg border border-primary/10 text-center">
-                      <div className="flex flex-col items-center space-y-1">
-                        <span className="text-lg sm:text-xl md:text-2xl">📚</span>
-                        <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">15</p>
-                        <p className="text-xs text-gray-600">historias</p>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-pastel to-secondary/5 p-2 sm:p-3 md:p-4 rounded-lg border border-secondary/10 text-center">
-                      <div className="flex flex-col items-center space-y-1">
-                        <span className="text-lg sm:text-xl md:text-2xl">🤝</span>
-                        <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">8</p>
-                        <p className="text-xs text-gray-600">conexiones</p>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-pastel to-primary/5 p-2 sm:p-3 md:p-4 rounded-lg border border-primary/10 text-center">
-                      <div className="flex flex-col items-center space-y-1">
-                        <span className="text-lg sm:text-xl md:text-2xl">💬</span>
-                        <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">23</p>
-                        <p className="text-xs text-gray-600">feedback</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <WritingSocialPreview />
+          </div>
 
           {/* Optimized CTAs */}
           <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
@@ -182,6 +143,7 @@ export default function Home() {
               aria-label="Únete como miembro fundador - Acceso beta gratuito"
               icon={<span>🚀</span>}
               className="w-full sm:w-auto sm:min-w-[300px] text-center font-semibold py-4 sm:py-3 text-base sm:text-lg"
+              onClick={() => router.push('/register')}
             >
               <span className="block sm:inline">Ser miembro fundador</span>
               <span className="block sm:hidden text-sm opacity-90 mt-1">Acceso beta gratuito</span>
@@ -195,6 +157,7 @@ export default function Home() {
                 data-analytics="cta_login_click_hero"
                 aria-label="Iniciar sesión en Palabreo"
                 className="text-gray-600 hover:text-primary text-sm sm:text-base px-6 py-2"
+                onClick={() => router.push('/login')}
               >
                 Ya tengo cuenta
               </Button>
