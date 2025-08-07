@@ -52,7 +52,7 @@ const redThemes: RedTheme[] = [
 ]
 
 export default function ThemeSelector() {
-  const [currentTheme, setCurrentTheme] = useState<string>('variant-2')
+  const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false)
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
@@ -197,82 +197,8 @@ export default function ThemeSelector() {
   }, [currentTheme, isDarkMode])
 
   return (
-    <div className="fixed top-20 right-4 z-50">
-      {/* Toggle Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-primary text-white p-3 rounded-full shadow-lg hover:scale-105 transition-transform touch-manipulation"
-        aria-label="Selector de temas rojos"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v6a2 2 0 002 2h4a2 2 0 002-2V5z" />
-        </svg>
-      </button>
-
-      {/* Theme Panel - Simplified */}
-      {isOpen && (
-        <div className="absolute top-14 right-0 bg-white border border-gray-200 rounded-xl shadow-xl p-3 w-64">
-          <h3 className="font-bold text-sm mb-3 text-gray-900">🔴 Tonos de Rojo</h3>
-          
-          {/* Dark Mode Toggle */}
-          <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-lg">
-            <span className="text-xs font-medium text-gray-700">Oscuro</span>
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`relative w-10 h-5 rounded-full transition-colors ${
-                isDarkMode ? 'bg-red-600' : 'bg-gray-300'
-              }`}
-            >
-              <div
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                  isDarkMode ? 'translate-x-5' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Theme Options - Compact */}
-          <div className="space-y-2">
-            {redThemes.map((theme) => (
-              <div
-                key={theme.id}
-                className={`p-2 rounded-lg border cursor-pointer transition-all ${
-                  currentTheme === theme.id
-                    ? 'border-red-600 bg-red-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => setCurrentTheme(theme.id)}
-              >
-                <div className="flex items-center space-x-2">
-                  {/* Color Preview */}
-                  <div className="flex space-x-1">
-                    <div 
-                      className="w-3 h-3 rounded-full border border-gray-300"
-                      style={{ backgroundColor: theme.primary }}
-                    />
-                    <div 
-                      className="w-3 h-3 rounded-full border border-gray-300"
-                      style={{ backgroundColor: theme.secondary }}
-                    />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h4 className="font-medium text-xs text-gray-900">{theme.name}</h4>
-                  </div>
-                  
-                  {currentTheme === theme.id && (
-                    <div className="text-red-600">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+    <div style={{ display: 'none' }}>
+      {/* Hidden - Theme automatically applied */}
     </div>
   )
 }

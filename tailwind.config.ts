@@ -9,8 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: '#DC2626',
-        secondary: '#EF4444',
+        primary: '#B91C1C',
+        secondary: '#DC2626',
         pastel: '#FEE2E2',
         white: '#FFFFFF',
         // Red variants for evaluation
@@ -34,6 +34,13 @@ const config: Config = {
           pastel: '#FEE2E2',
           dark: '#B91C1C',
           bg: '#1F1917',
+        },
+        'red-variant-4': {
+          primary: '#F87171',    // Light red
+          secondary: '#FCA5A5',
+          pastel: '#FEE2E2',
+          dark: '#DC2626',
+          bg: '#292524',
         },
         'red-variant-4': {
           primary: '#F87171',    // Light red
