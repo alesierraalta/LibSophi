@@ -181,38 +181,92 @@ Un día, el viento le susurró sobre un misterioso libro perdido en la bibliotec
               </div>
             </div>
 
-            <div className="border-t border-gray-200 pt-4 md:pt-6">
-              <div className="space-y-4">
-                {/* Preview actions - appropriate for draft */}
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <button className="flex items-center space-x-1 text-gray-400 px-2 py-1 rounded-lg text-sm cursor-not-allowed">
-                    <span>🤍</span>
-                    <span className="font-medium">0</span>
-                    <span className="text-xs opacity-75">(tras publicar)</span>
-                  </button>
-                  <button className="flex items-center space-x-1 text-gray-400 px-2 py-1 rounded-lg text-sm cursor-not-allowed">
-                    <span>💬</span>
-                    <span>0</span>
-                    <span className="text-xs opacity-75">(tras publicar)</span>
-                  </button>
-                  <button className="flex items-center space-x-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition-all touch-manipulation text-sm">
+            <div className="border-t border-gray-200 pt-6">
+              <div className="space-y-6">
+                {/* Engagement Preview */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <span className="text-lg">📊</span>
+                      Vista previa de engagement
+                    </h4>
+                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">Estimado</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-lg font-bold text-red-500">❤️</div>
+                      <div className="text-xs text-gray-600">15-25 likes</div>
+                    </div>
+                    <div className="text-center bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-lg font-bold text-blue-500">💬</div>
+                      <div className="text-xs text-gray-600">3-8 comentarios</div>
+                    </div>
+                    <div className="text-center bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-lg font-bold text-green-500">📤</div>
+                      <div className="text-xs text-gray-600">2-5 shares</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Publishing Options */}
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="text-lg">⚙️</span>
+                    Opciones de publicación
+                  </h4>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" defaultChecked />
+                      <span className="text-sm text-gray-700">Permitir comentarios</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" defaultChecked />
+                      <span className="text-sm text-gray-700">Notificar a seguidores</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
+                      <span className="text-sm text-gray-700">Programar publicación</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all touch-manipulation text-sm border border-blue-200 hover:border-blue-300">
                     <span>👁️</span>
-                    <span className="hidden sm:inline">Vista previa</span>
+                    <span>Vista previa</span>
                   </button>
-                  <button className="flex items-center space-x-1 text-green-500 hover:text-green-600 hover:bg-green-50 px-2 py-1 rounded-lg transition-all touch-manipulation text-sm">
+                  <button className="flex items-center space-x-2 text-green-600 hover:text-green-700 hover:bg-green-50 px-3 py-2 rounded-lg transition-all touch-manipulation text-sm border border-green-200 hover:border-green-300">
                     <span>📤</span>
-                    <span className="hidden sm:inline">Compartir borrador</span>
+                    <span>Compartir borrador</span>
+                  </button>
+                  <button className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-3 py-2 rounded-lg transition-all touch-manipulation text-sm border border-purple-200 hover:border-purple-300">
+                    <span>🔗</span>
+                    <span>Copiar enlace</span>
                   </button>
                 </div>
                 
-                {/* Action buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 w-full">
-                  <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium touch-manipulation">
-                    💾 Borrador
+                {/* Main Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  <button className="flex-1 px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-all text-sm font-semibold touch-manipulation border-2 border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md flex items-center justify-center gap-2">
+                    <span className="text-lg">💾</span>
+                    <span>Guardar borrador</span>
                   </button>
-                  <button className="flex-1 px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all text-sm font-medium touch-manipulation shadow-md hover:shadow-lg">
-                    🚀 Publicar
+                  <button className="flex-1 px-6 py-3 bg-gradient-to-r from-primary via-red-500 to-secondary text-white rounded-xl hover:from-red-600 hover:via-red-600 hover:to-red-700 transition-all text-sm font-semibold touch-manipulation shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <span className="text-lg">🚀</span>
+                    <span>Publicar ahora</span>
                   </button>
+                </div>
+
+                {/* Publishing Tips */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-yellow-600 text-lg">💡</span>
+                    <div>
+                      <p className="text-xs text-yellow-800 font-medium mb-1">Tip para mejor alcance:</p>
+                      <p className="text-xs text-yellow-700">Las historias publicadas entre 7-9 PM tienen 40% más engagement</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

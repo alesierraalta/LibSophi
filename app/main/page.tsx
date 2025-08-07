@@ -445,43 +445,98 @@ export default function MainPage() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="space-y-6">
-              {/* Create Post Card */}
+              {/* Create Post Card - Consistent with Design Philosophy */}
               <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden">
-                <CardContent className="p-6 pt-8">
-                  <div className="flex items-start space-x-4">
+                <CardContent className="p-6">
+                  {/* Header Section */}
+                  <div className="flex items-start space-x-4 mb-6">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src="/api/placeholder/40/40" />
-                      <AvatarFallback className="text-sm">TU</AvatarFallback>
+                      <AvatarFallback className="text-sm bg-gradient-to-br from-red-50 to-pink-50 text-red-700">TU</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <textarea
-                        placeholder="¿Qué historia quieres contar hoy?"
-                        className="w-full p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white text-sm"
-                        rows={3}
-                      />
-                      <div className="flex items-center justify-between mt-6">
-                        <div className="flex gap-3 flex-wrap">
-                          <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-primary/40 text-primary hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10 hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
-                            📝 Cuento
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-primary/40 text-primary hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10 hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
-                            📖 Novela
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-primary/40 text-primary hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10 hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
-                            🎭 Teatro
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-primary/40 text-primary hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10 hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
-                            🎵 Poesía
-                          </Button>
-                        </div>
-                        <div className="flex gap-3">
-                          <Button variant="outline" className="bg-white/80 backdrop-blur-sm border-2 border-primary/30 text-primary hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 hover:border-primary/50 px-6 py-2 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                            ✍️ Modo Escritor
-                          </Button>
-                          <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white px-8 py-2 text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                            Publicar
-                          </Button>
-                        </div>
+                      <h3 className="font-semibold text-gray-900 mb-1">¿Qué historia quieres contar hoy?</h3>
+                      <p className="text-sm text-gray-500">Comparte tu creatividad con la comunidad</p>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Text Area */}
+                  <div className="relative mb-6">
+                    <textarea
+                      placeholder="Escribe tu historia aquí... Deja volar tu imaginación y comparte tu mundo con nosotros."
+                      className="w-full p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300/50 focus:border-red-300 bg-white text-sm transition-all duration-300 hover:border-red-200 min-h-[100px]"
+                      rows={4}
+                    />
+                    <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-full border border-gray-200">
+                      0/2000
+                    </div>
+                  </div>
+
+                  {/* Genre Selection - Consistent with Page Style */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Selecciona el género</h4>
+                    <div className="flex gap-3 flex-wrap">
+                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
+                        📝 Cuento
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
+                        📖 Novela
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
+                        🎭 Teatro
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
+                        🎵 Poesía
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Publishing Options - Matching Page Design */}
+                  <div className="mb-6 p-4 bg-gradient-to-r from-red-50/80 to-pink-50/60 rounded-lg border border-red-100/40">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Opciones de publicación</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <label className="flex items-center space-x-2 cursor-pointer group">
+                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
+                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">📢 Publicar en feed</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer group">
+                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
+                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">💬 Permitir comentarios</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer group">
+                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
+                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">🔄 Permitir compartir</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Consistent with Page Philosophy */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="bg-white/80 backdrop-blur-sm border-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 px-6 py-2 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+                        ✍️ Modo Escritor
+                      </Button>
+                      <Button variant="outline" className="bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+                        💾 Guardar
+                      </Button>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+                        Vista previa
+                      </Button>
+                      <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white px-8 py-2 text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                        🚀 Publicar Historia
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Quick Tips - Matching Design Language */}
+                  <div className="mt-6 p-3 bg-gradient-to-r from-red-50/80 to-pink-50/60 rounded-lg border border-red-100/40">
+                    <div className="flex items-start space-x-2">
+                      <span className="text-red-500 text-sm mt-0.5">💡</span>
+                      <div>
+                        <h5 className="text-sm font-medium text-red-800 mb-1">Consejos para una mejor publicación</h5>
+                        <p className="text-xs text-red-700">Usa un título atractivo, incluye etiquetas relevantes y revisa la ortografía antes de publicar.</p>
                       </div>
                     </div>
                   </div>
