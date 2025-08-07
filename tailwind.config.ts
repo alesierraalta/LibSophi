@@ -42,13 +42,6 @@ const config: Config = {
           dark: '#DC2626',
           bg: '#292524',
         },
-        'red-variant-4': {
-          primary: '#F87171',    // Light red
-          secondary: '#FCA5A5',
-          pastel: '#FEE2E2',
-          dark: '#DC2626',
-          bg: '#292524',
-        },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
