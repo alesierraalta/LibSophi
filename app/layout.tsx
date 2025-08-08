@@ -1,12 +1,22 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Poppins, Rubik } from 'next/font/google'
 import StructuredData from '../components/StructuredData'
 import './globals.css'
 
-const inter = Inter({
+const poppins = Poppins({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-poppins',
+  weight: ['300', '400', '500', '600', '700'],
+  preload: true,
+  fallback: ['system-ui', 'arial'],
+})
+
+const rubik = Rubik({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-rubik',
+  weight: ['300', '400', '500', '600', '700'],
   preload: true,
   fallback: ['system-ui', 'arial'],
 })
@@ -104,7 +114,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="scroll-smooth">
-      <body className={`${inter.variable} font-sans antialiased bg-white text-gray-900`}>
+      <body className={`${poppins.variable} ${rubik.variable} font-sans antialiased bg-white text-gray-900`}>
         <StructuredData />
         <a href="#main-content" className="skip-link">
           Saltar al contenido principal

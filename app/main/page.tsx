@@ -67,8 +67,8 @@ export default function MainPage() {
         variant={isActive ? 'default' : 'ghost'}
         className={`w-full justify-start text-sm transition-all duration-200 ${
           isActive 
-            ? 'bg-gradient-to-r from-primary to-secondary text-white hover:from-secondary hover:to-primary shadow-lg' 
-            : 'text-gray-700 hover:text-primary hover:bg-red-50'
+            ? 'bg-red-600 text-white hover:bg-red-700'
+        : 'text-gray-700 hover:text-red-700 hover:bg-red-50'
         }`}
         onClick={onClick}
       >
@@ -85,23 +85,28 @@ export default function MainPage() {
 
   // Memoized trending topics data
   const trendingTopics = useMemo(() => [
-    { tag: '#NovelasLargas', count: '2.1k', bgClass: 'bg-gradient-to-r from-primary/10 to-red-100/50', textClass: 'text-primary', hoverClass: 'group-hover:text-red-700', maxWidth: 'max-w-[160px]' },
-    { tag: '#EnsayosLiterarios', count: '1.8k', bgClass: 'bg-gradient-to-r from-red-100/50 to-red-200/30', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-700', maxWidth: 'max-w-[160px]' },
-    { tag: '#CuentosCortos', count: '3.2k', bgClass: 'bg-gradient-to-r from-primary/15 to-red-100/60', textClass: 'text-primary', hoverClass: 'group-hover:text-red-700', maxWidth: 'max-w-[160px]' },
-    { tag: '#NewslettersSemanales', count: '850', bgClass: 'bg-gradient-to-r from-blue-100/50 to-blue-200/30', textClass: 'text-blue-700', hoverClass: 'group-hover:text-blue-700', maxWidth: 'max-w-[180px]' },
-    { tag: '#PoesíaNarrativa', count: '1.5k', bgClass: 'bg-gradient-to-r from-red-100/60 to-red-200/40', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-700', maxWidth: 'max-w-[160px]' }
+    { tag: '#NovelasLargas', count: '2.1k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' },
+    { tag: '#EnsayosLiterarios', count: '1.8k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' },
+    { tag: '#CuentosCortos', count: '3.2k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' },
+    { tag: '#NewslettersSemanales', count: '850', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[180px]' },
+    { tag: '#PoesíaNarrativa', count: '1.5k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' }
   ], [])
 
   // Memoized trending topic component
   const TrendingTopic = memo(({ topic }: { topic: any }) => (
-    <div className="group flex items-center justify-between gap-3 p-3 hover:bg-gradient-to-r hover:from-red-50/40 hover:to-pink-50/30 rounded-xl transition-all duration-300 cursor-pointer hover:shadow-sm">
-      <MemoizedBadge 
-        variant="secondary" 
-        className={`${topic.bgClass} ${topic.textClass} border-none rounded-full px-3 py-1.5 text-xs font-medium overflow-hidden text-ellipsis whitespace-nowrap flex-shrink-0 ${topic.maxWidth} group-hover:shadow-sm group-hover:scale-105 transition-all duration-300`}
-      >
-        {topic.tag}
-      </MemoizedBadge>
-      <span className={`text-xs text-gray-600 font-semibold flex-shrink-0 ${topic.hoverClass} transition-colors duration-300`}>{topic.count}</span>
+    <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+          <MemoizedBadge 
+            variant="outline" 
+            className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5"
+          >
+            {topic.tag}
+          </MemoizedBadge>
+        </div>
+        <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{topic.count}</span>
+      </div>
     </div>
   ))
 
@@ -200,16 +205,16 @@ export default function MainPage() {
 
   // Memoized post card component
   const PostCard = memo(({ post }: { post: any }) => (
-    <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden mb-6">
+    <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mb-6">
       <CardContent className="p-6 pt-8">
         {/* Post Header */}
         <div className="flex items-start space-x-4 mb-5">
           <div className="relative">
             <MemoizedAvatar className="h-12 w-12 ring-2 ring-red-100/60 hover:ring-red-200/80 transition-all duration-300">
               <AvatarImage src={post.author.avatar} />
-              <AvatarFallback className="text-sm bg-gradient-to-br from-red-50 to-pink-50 text-red-700 font-semibold">{post.author.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+              <AvatarFallback className="text-sm bg-red-50 text-red-700 font-semibold">{post.author.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
             </MemoizedAvatar>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-white"></div>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
@@ -218,14 +223,14 @@ export default function MainPage() {
                 <span className="text-gray-500 text-xs hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{post.author.username}</span>
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0">
-                <div className="w-2 h-2 bg-gradient-to-r from-orange-400 to-red-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                 <span className="text-xs text-gray-500 font-medium">{post.timestamp}</span>
               </div>
             </div>
             <div className="flex items-center space-x-3 mb-3">
               <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-gradient-to-r from-red-400 to-pink-400 rounded-full flex-shrink-0"></div>
-                <MemoizedBadge variant="outline" className="text-xs bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200/50 px-2 py-0.5 font-medium">
+                <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+            <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 font-medium">
                   {post.genre}
                 </MemoizedBadge>
               </div>
@@ -251,7 +256,7 @@ export default function MainPage() {
                 alt={post.title}
                 className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
           )}
         </div>
@@ -303,7 +308,7 @@ export default function MainPage() {
 
   // Memoized sidebar trend component
   const SidebarTrend = memo(({ trend }: { trend: any }) => (
-    <div className="group flex items-center justify-between p-2 hover:bg-gradient-to-r hover:from-red-50/30 hover:to-pink-50/30 rounded-xl transition-all duration-200 cursor-pointer">
+    <div className="group flex items-center justify-between p-2 hover:bg-red-50 rounded-xl transition-all duration-200 cursor-pointer">
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
         <span className="w-1.5 h-1.5 bg-primary rounded-full group-hover:scale-125 transition-transform duration-200 flex-shrink-0"></span>
         <span className="font-medium text-gray-900 group-hover:text-primary transition-colors duration-200 text-sm overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">{trend.tag}</span>
@@ -314,7 +319,7 @@ export default function MainPage() {
 
   // Memoized suggested author component
   const SuggestedAuthor = memo(({ author }: { author: any }) => (
-    <div className="group p-3 hover:bg-gradient-to-r hover:from-red-50/30 hover:to-pink-50/30 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-100/40 hover:shadow-md">
+    <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           <div className="relative flex-shrink-0">
@@ -334,14 +339,14 @@ export default function MainPage() {
             </div>
             <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap mb-1">{author.username}</p>
             <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-gradient-to-r from-red-400 to-pink-400 rounded-full flex-shrink-0"></div>
-              <MemoizedBadge variant="outline" className="text-xs bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200/50 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px]">
+              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+          <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px]">
                 {author.genre}
               </MemoizedBadge>
             </div>
           </div>
         </div>
-        <MemoizedButton size="sm" variant="outline" className="text-xs px-3 py-1.5 border-red-200/60 text-red-600 hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white hover:border-red-400 transition-all duration-300 rounded-full font-medium shadow-sm hover:shadow-md flex-shrink-0 ml-3">
+        <MemoizedButton size="sm" variant="outline" className="text-xs px-3 py-1.5 border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400 transition-all duration-300 rounded-full font-medium flex-shrink-0 ml-3">
           Seguir
         </MemoizedButton>
       </div>
@@ -349,22 +354,22 @@ export default function MainPage() {
   ))
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Theme Selector for Red Palette */}
       <Suspense fallback={<div className="h-0" />}>
         <ThemeSelector />
       </Suspense>
       
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200/60 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-full mx-auto px-2 lg:px-3">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-primary to-secondary text-white rounded-lg p-2.5 shadow-lg">
+              <div className="bg-gray-800 text-white rounded-lg p-2.5">
                 <Edit3 className="h-5 w-5" />
               </div>
-              <h1 className="text-xl font-serif font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <h1 className="text-xl font-serif font-bold text-gray-800">
                 Palabreo
               </h1>
             </div>
@@ -387,32 +392,53 @@ export default function MainPage() {
                 <Search className="h-4 w-4" />
               </MemoizedButton>
               
-              <MemoizedButton variant="ghost" size="sm" className="relative text-gray-600 hover:text-primary hover:bg-red-50">
+              <MemoizedButton variant="ghost" size="sm" className="relative text-gray-600 hover:text-red-600 hover:bg-red-50">
                 <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-primary to-secondary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                   3
                 </span>
               </MemoizedButton>
               
-              <MemoizedButton className="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white px-4 py-2 text-sm shadow-lg">
+              <MemoizedButton className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Escribir
               </MemoizedButton>
               
               <MemoizedAvatar className="h-8 w-8">
                 <AvatarImage src="/api/placeholder/32/32" />
-                <AvatarFallback className="text-xs bg-slate-100">TU</AvatarFallback>
+                <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
               </MemoizedAvatar>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-full mx-auto px-2 lg:px-3 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden">
+      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+          {/* Left Sidebar - Mobile Navigation */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
+            {/* Mobile Navigation - Horizontal scroll */}
+            <div className="lg:hidden mb-4">
+              <div className="flex overflow-x-auto space-x-2 pb-2 scrollbar-hide">
+                {navigationItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabChange(item.id)}
+                    className={`flex-shrink-0 flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      activeTab === item.id
+                        ? 'bg-red-600 text-white'
+                        : 'bg-white/80 text-gray-600 hover:bg-red-50 hover:text-red-600 border border-gray-200'
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop Navigation */}
+            <Card className="hidden lg:block bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden">
               <CardContent className="p-6 pt-6">
                 <nav className="space-y-1">
                   {navigationItems.map((item) => (
@@ -428,9 +454,9 @@ export default function MainPage() {
             </Card>
 
             {/* Trending Topics - Hidden on mobile */}
-            <Card className="hidden lg:block bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden mt-6">
-              <CardHeader className="bg-gradient-to-r from-red-50/80 to-pink-50/60 border-b border-red-100/30 p-6">
-                <CardTitle className="text-lg font-semibold bg-gradient-to-r from-red-700 to-pink-600 bg-clip-text text-transparent">Tendencias</CardTitle>
+            <Card className="hidden lg:block bg-white border border-gray-200 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300 overflow-hidden mt-6">
+          <CardHeader className="bg-red-50 border-b border-red-200 p-6">
+            <CardTitle className="text-lg font-semibold text-red-800">Tendencias</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-3">
@@ -443,19 +469,19 @@ export default function MainPage() {
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2">
-            <div className="space-y-6">
-              {/* Create Post Card - Consistent with Design Philosophy */}
-              <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden">
+          <div className="md:col-span-2 lg:col-span-2 order-1 lg:order-2">
+            <div className="space-y-4 sm:space-y-6">
+              {/* Create Post Card - Consistent with Design Philosophy - Hidden on mobile */}
+              <Card className="hidden sm:block bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden">
                 <CardContent className="p-6">
                   {/* Header Section */}
                   <div className="flex items-start space-x-4 mb-6">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-10 w-10 mt-4">
                       <AvatarImage src="/api/placeholder/40/40" />
-                      <AvatarFallback className="text-sm bg-gradient-to-br from-red-50 to-pink-50 text-red-700">TU</AvatarFallback>
+                      <AvatarFallback className="text-sm bg-gray-100 text-gray-700">TU</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">¿Qué historia quieres contar hoy?</h3>
+                      <h3 className="font-semibold text-gray-900 mb-1 mt-4">¿Qué historia quieres contar hoy?</h3>
                       <p className="text-sm text-gray-500">Comparte tu creatividad con la comunidad</p>
                     </div>
                   </div>
@@ -467,32 +493,29 @@ export default function MainPage() {
                       className="w-full p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300/50 focus:border-red-300 bg-white text-sm transition-all duration-300 hover:border-red-200 min-h-[100px]"
                       rows={4}
                     />
-                    <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-full border border-gray-200">
-                      0/2000
-                    </div>
                   </div>
 
                   {/* Genre Selection - Consistent with Page Style */}
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Selecciona el género</h4>
                     <div className="flex gap-3 flex-wrap">
-                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
-                        📝 Cuento
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
-                        📖 Novela
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
-                        🎭 Teatro
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 transition-all duration-300 shadow-sm hover:shadow-md rounded-lg">
+                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
+                  📝 Cuento
+                </Button>
+                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
+                  📖 Novela
+                </Button>
+                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
+                  🎭 Teatro
+                </Button>
+                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
                         🎵 Poesía
                       </Button>
                     </div>
                   </div>
 
                   {/* Publishing Options - Matching Page Design */}
-                  <div className="mb-6 p-4 bg-gradient-to-r from-red-50/80 to-pink-50/60 rounded-lg border border-red-100/40">
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Opciones de publicación</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <label className="flex items-center space-x-2 cursor-pointer group">
@@ -510,28 +533,28 @@ export default function MainPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons - Consistent with Page Philosophy */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="bg-white/80 backdrop-blur-sm border-2 border-red-200/60 text-red-700 hover:bg-gradient-to-r hover:from-red-50/80 hover:to-pink-50/60 hover:border-red-300 px-6 py-2 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+                  {/* Action Buttons - Mobile Responsive */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 px-4 sm:px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300">
                         ✍️ Modo Escritor
                       </Button>
-                      <Button variant="outline" className="bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+                      <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300">
                         💾 Guardar
                       </Button>
                     </div>
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 text-sm font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300">
                         Vista previa
                       </Button>
-                      <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white px-8 py-2 text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                      <Button className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 py-2 text-sm font-medium rounded-lg transition-all duration-300">
                         🚀 Publicar Historia
                       </Button>
                     </div>
                   </div>
 
                   {/* Quick Tips - Matching Design Language */}
-                  <div className="mt-6 p-3 bg-gradient-to-r from-red-50/80 to-pink-50/60 rounded-lg border border-red-100/40">
+                  <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-start space-x-2">
                       <span className="text-red-500 text-sm mt-0.5">💡</span>
                       <div>
@@ -552,28 +575,16 @@ export default function MainPage() {
             </div>
           </div>
 
-          {/* Right Sidebar - Hidden on mobile and tablet */}
-          <div className="hidden lg:block lg:col-span-1">
-            {/* Trending Topics */}
-            <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-red-50/80 to-pink-50/60 border-b border-red-100/30 p-6">
-                <CardTitle className="text-lg font-semibold bg-gradient-to-r from-red-700 to-pink-600 bg-clip-text text-transparent">Tendencias</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 pt-6">
-                <div className="space-y-3">
-                  {sidebarTrends.map((trend, index) => (
-                    <SidebarTrend key={index} trend={trend} />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          {/* Right Sidebar - Hidden on mobile, visible on tablet and desktop */}
+          <div className="hidden md:block lg:col-span-1 md:col-span-1 lg:col-span-1 order-3">
+
 
             {/* Suggested Authors */}
-            <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden mt-6">
-              <CardHeader className="bg-gradient-to-r from-red-50/80 to-pink-50/60 border-b border-red-100/30 p-6">
-                <CardTitle className="text-lg font-semibold bg-gradient-to-r from-red-700 to-pink-600 bg-clip-text text-transparent">Autores Sugeridos</CardTitle>
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mt-4 md:mt-6">
+              <CardHeader className="bg-red-50 border-b border-red-200 p-3 md:p-4 lg:p-6">
+                <CardTitle className="text-sm md:text-base lg:text-lg font-semibold text-red-800">Autores Sugeridos</CardTitle>
               </CardHeader>
-              <CardContent className="p-6 pt-6">
+              <CardContent className="p-3 md:p-4 lg:p-6 pt-3 md:pt-4 lg:pt-6">
                 <div className="space-y-3">
                   {suggestedAuthors.map((author, index) => (
                     <SuggestedAuthor key={index} author={author} />
@@ -583,34 +594,34 @@ export default function MainPage() {
             </Card>
 
             {/* Newsletter Spotlight */}
-            <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden mt-6">
-              <CardHeader className="bg-gradient-to-r from-red-50/80 to-pink-50/60 border-b border-red-100/30 p-6">
-                <CardTitle className="text-lg font-semibold flex items-center bg-gradient-to-r from-red-700 to-pink-600 bg-clip-text text-transparent">
-                  <span className="mr-2 text-xl">📧</span>
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mt-4 md:mt-6">
+              <CardHeader className="bg-red-50 border-b border-red-200 p-3 md:p-4 lg:p-6">
+                <CardTitle className="text-sm md:text-base lg:text-lg font-semibold flex items-center text-red-800">
+                  <span className="mr-2 text-lg md:text-xl">📧</span>
                   Newsletters Destacados
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-6">
+              <CardContent className="p-3 md:p-4 lg:p-4 pt-3 md:pt-4 lg:pt-6">
                 <div className="space-y-3">
                   {[
                     { title: "El Arte de la Escritura", author: "Alejandra Ruiz", subscribers: "2.3k", frequency: "Semanal", genre: "Escritura Creativa" },
                     { title: "Ficción y Realidad", author: "Miguel Santos", subscribers: "1.8k", frequency: "Quincenal", genre: "Análisis Literario" },
                     { title: "Cuentos de Medianoche", author: "Carmen López", subscribers: "3.1k", frequency: "Mensual", genre: "Cuentos Originales" },
                   ].map((newsletter, index) => (
-                    <div key={index} className="group p-3 hover:bg-gradient-to-r hover:from-red-50/30 hover:to-pink-50/30 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-100/40 hover:shadow-md">
+                    <div key={index} className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-sm mb-1 text-gray-900 group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{newsletter.title}</h4>
                           <p className="text-gray-500 text-xs mb-2 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">por {newsletter.author}</p>
                         </div>
-                        <Button variant="outline" size="sm" className="text-xs px-3 py-1.5 border-red-200/60 text-red-600 hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white hover:border-red-400 transition-all duration-300 rounded-full font-medium shadow-sm hover:shadow-md flex-shrink-0 ml-2">
+                        <Button variant="outline" size="sm" className="text-xs px-3 py-1.5 border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400 transition-all duration-300 rounded-full font-medium flex-shrink-0 ml-2">
                           Suscribirse
                         </Button>
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-gradient-to-r from-red-400 to-pink-400 rounded-full flex-shrink-0"></div>
-                          <Badge variant="outline" className="text-xs bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200/50 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
+                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
                             {newsletter.genre}
                           </Badge>
                         </div>
@@ -630,32 +641,32 @@ export default function MainPage() {
             </Card>
 
             {/* Popular Stories */}
-            <Card className="bg-white/90 backdrop-blur-md border border-red-100/40 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-red-200/60 overflow-hidden mt-6">
-              <CardHeader className="bg-gradient-to-r from-red-50/80 to-pink-50/60 border-b border-red-100/30 p-6">
-                <CardTitle className="text-lg font-semibold bg-gradient-to-r from-red-700 to-pink-600 bg-clip-text text-transparent">Obras Destacadas</CardTitle>
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mt-4 md:mt-6">
+              <CardHeader className="bg-red-50 border-b border-red-200 p-3 md:p-4 lg:p-6">
+                <CardTitle className="text-sm md:text-base lg:text-lg font-semibold text-red-800">Obras Destacadas</CardTitle>
               </CardHeader>
-              <CardContent className="p-6 pt-6">
+              <CardContent className="p-3 md:p-4 lg:p-6 pt-3 md:pt-4 lg:pt-6">
                 <div className="space-y-3">
                   {[
                     { title: "El último guardián - Novela completa", author: "Laura Martín", reads: "12.5k", genre: "Fantasía Épica" },
                     { title: "Códigos del futuro - Serie", author: "Roberto Silva", reads: "8.3k", genre: "Ciencia Ficción" },
                     { title: "Memorias de una generación perdida", author: "Elena García", reads: "15.2k", genre: "Ensayo Autobiográfico" },
                   ].map((story, index) => (
-                    <div key={index} className="group p-3 hover:bg-gradient-to-r hover:from-red-50/30 hover:to-pink-50/30 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-100/40 hover:shadow-md">
+                    <div key={index} className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-sm mb-1 text-gray-900 group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{story.title}</h4>
                           <p className="text-gray-500 text-xs mb-2 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">por {story.author}</p>
                         </div>
                         <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
-                          <div className="w-2 h-2 bg-gradient-to-r from-orange-400 to-red-400 rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                           <span className="text-xs text-orange-600 font-medium">Popular</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-gradient-to-r from-red-400 to-pink-400 rounded-full flex-shrink-0"></div>
-                          <Badge variant="outline" className="text-xs bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200/50 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
+                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
                             {story.genre}
                           </Badge>
                         </div>

@@ -44,7 +44,10 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
+        subheading: ['var(--font-rubik)', 'Rubik', 'system-ui', 'sans-serif'],
+        body: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
       },
       // Using default Tailwind breakpoints for better compatibility
       // screens: sm: '640px', md: '768px', lg: '1024px', xl: '1280px'
