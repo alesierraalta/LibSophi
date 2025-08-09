@@ -95,7 +95,7 @@ export default function Home() {
       MEJORAS: Jerarquía visual clara, menos texto, CTAs más prominentes
       ENFOQUE: Mensaje principal en una línea, beneficios clave destacados
       */}
-      <Section id="hero" className="pt-6 sm:pt-8 md:pt-12 pb-12 sm:pb-16 md:pb-20 relative overflow-hidden">
+      <Section id="hero" className="pt-12 sm:pt-16 md:pt-24 pb-12 sm:pb-16 md:pb-20 relative overflow-hidden">
         {/* Optimized background - minimal effects */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-10 left-10 w-48 h-48 bg-primary/5 rounded-full blur-2xl opacity-60" />
@@ -104,7 +104,7 @@ export default function Home() {
 
         <div className="text-center relative z-10">
           {/* Mobile-first headline - More concise */}
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-3 sm:mb-4 md:mb-6 leading-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-1 sm:mb-2 md:mb-3 leading-tight">
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent block">
               Tu comunidad de escritores
             </span>
@@ -114,7 +114,7 @@ export default function Home() {
           </h2>
           
           {/* Simplified mobile description */}
-          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mb-3 sm:mb-4 max-w-2xl mx-auto leading-relaxed">
             <span className="block sm:hidden">
               Comparte, colabora y crece con otros escritores. 
               <span className="text-primary font-semibold"> Ficción, ensayos y newsletters</span> en un solo lugar.
@@ -129,9 +129,9 @@ export default function Home() {
           </p>
           
           {/* Enhanced Social Writing Network Preview */}
-          <div className="mb-6 sm:mb-8 md:mb-10 mx-1 sm:mx-2">
+          <div className="mb-2 sm:mb-3 md:mb-4 mx-1 sm:mx-2">
             <WritingSocialPreview 
-              laptopScreenImage="/api/placeholder/832/544"
+              laptopDeviceImage="/macbook.png"
               mobileScreenImage="/iphone.png"
             />
           </div>
