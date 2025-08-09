@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ export default function WriterPage() {
   const [previewWholeWork, setPreviewWholeWork] = useState(false)
   const [useChapters, setUseChapters] = useState<boolean>(genre === 'novela')
   const [focusMode, setFocusMode] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [undoStack, setUndoStack] = useState<{ title: string; content: string }[]>([])
   const [redoStack, setRedoStack] = useState<{ title: string; content: string }[]>([])
 
@@ -66,6 +68,19 @@ export default function WriterPage() {
     }, 800)
     return () => clearTimeout(id)
   }, [title, content, genre, coverUrl, tags, chapters, currentWorkId, currentChapterIndex])
+
+  // Detect mobile viewport to tune UX for a native-app-like feel
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (isMobile) setFocusMode(true)
+  }, [isMobile])
 
   useEffect(() => {
     // Restaurar borrador
@@ -543,11 +558,36 @@ export default function WriterPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-12 sm:h-16">
             <div className="flex items-center space-x-3">
-              <h1 className="text-xl md:text-2xl font-bold text-red-600">Modo Escritor</h1>
+              <div
+                onClick={() => router.push('/main')}
+                className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 overflow-hidden rounded-md flex items-center justify-center bg-transparent cursor-pointer"
+                title="Ir al inicio"
+                aria-label="Ir al inicio"
+                role="link"
+              >
+                <div className="relative h-[200%] w-[200%] -m-[50%]">
+                  <Image
+                    src="/1.png"
+                    alt="Palabreo logo"
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              </div>
+              <h1
+                className="text-xl md:text-2xl font-bold text-red-600 cursor-pointer hover:text-red-700"
+                onClick={() => router.push('/main')}
+                title="Regresar al feed"
+                aria-label="Regresar al feed"
+              >
+                Modo Escritor
+              </h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-3">
               <div className="hidden sm:flex items-center text-xs text-gray-500">
                 {isSaving ? (
                   <span className="flex items-center gap-1">Guardando…</span>
@@ -566,13 +606,13 @@ export default function WriterPage() {
         </div>
       </header>
 
-      <main className={`max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-5 sm:gap-6`}>
+      <main className={`max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-16 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
         <section className={`${focusMode ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
-          <Card className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden">
-            <CardContent className="p-4 sm:p-6 space-y-4">
+          <Card className="bg-white border-none shadow-none rounded-none sm:border sm:shadow-sm sm:rounded-lg overflow-hidden">
+            <CardContent className="p-0 sm:p-6 space-y-4">
               {/* Cover image */}
               {coverUrl && (
-                <div className="relative group rounded-lg overflow-hidden border border-gray-200">
+                <div className="relative group rounded-none sm:rounded-lg overflow-hidden border-0 sm:border sm:border-gray-200">
                   <img src={coverUrl} alt="Cover" className="w-full h-48 object-cover"/>
                   <div className="absolute top-2 right-2 flex gap-2">
                     <Button size="sm" variant="outline" className="bg-white/80 backdrop-blur" onClick={() => setCoverUrl('')}>Quitar</Button>
@@ -584,7 +624,7 @@ export default function WriterPage() {
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Título de tu obra"
-                className="w-full text-2xl md:text-3xl font-bold text-gray-900 placeholder:text-gray-400 bg-transparent outline-none"
+                className="w-full px-4 sm:px-0 pt-4 sm:pt-0 text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 placeholder:text-gray-400 bg-transparent outline-none"
               />
               {/* Chapter title (solo si usa capítulos) */}
               {useChapters ? (
@@ -593,11 +633,11 @@ export default function WriterPage() {
                   value={chapters[currentChapterIndex]?.title ?? ''}
                   onChange={(e) => updateChapterTitle(currentChapterIndex, e.target.value)}
                   placeholder={`Título del capítulo ${currentChapterIndex + 1}`}
-                  className="w-full text-base md:text-lg font-semibold text-gray-800 placeholder:text-gray-400 bg-transparent outline-none"
+                  className="hidden sm:block w-full text-base md:text-lg font-semibold text-gray-800 placeholder:text-gray-400 bg-transparent outline-none"
                 />
               ) : null}
               {/* Toolbar */}
-              <div className="flex flex-wrap items-center gap-1.5 border border-gray-200 rounded-md p-2 bg-gray-50">
+              <div className="hidden sm:flex flex-wrap items-center gap-1.5 border border-gray-200 rounded-md p-2 bg-gray-50">
                 <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Negrita (Ctrl+B)" onClick={() => wrapSelection('**')}><Bold className="h-4 w-4"/></Button>
                 <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Cursiva (Ctrl+I)" onClick={() => wrapSelection('*')}><Italic className="h-4 w-4"/></Button>
                 <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Subrayado (Ctrl+Shift+U)" onClick={() => wrapSelection('<u>', '</u>')}><Underline className="h-4 w-4"/></Button>
@@ -641,14 +681,16 @@ export default function WriterPage() {
                     onChange={(e) => handleContentChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Escribe aquí... Usa párrafos cortos, ritmo y voz propia."
-                    className="w-full min-h-[240px] sm:min-h-[300px] bg-white text-gray-800 leading-relaxed outline-none resize-none text-[15px] sm:text-base"
+                    className="w-full min-h-[240px] sm:min-h-[300px] bg-white text-gray-800 leading-relaxed outline-none resize-none text-[17px] sm:text-base px-4 sm:px-0"
                     style={{ fontFamily: '"Times New Roman", Times, serif' }}
+                    autoFocus={isMobile}
+                    style-index={undefined}
                   />
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
                   {/* Preview mode toggle */}
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="hidden sm:flex items-center justify-end gap-2">
                     <button
                       onClick={() => setPreviewWholeWork(false)}
                       className={`${!previewWholeWork ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300'} px-2 py-1 rounded-md text-xs sm:text-sm border`}
@@ -702,7 +744,7 @@ export default function WriterPage() {
               )}
 
               {/* Status bar */}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-600">
+              <div className="hidden sm:flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-600">
                 <div className="flex gap-4">
                   <span>Palabras: <strong className="text-gray-900">{wordCount}</strong></span>
                   <span>Tiempo de lectura: <strong className="text-gray-900">{readingTimeMinutes} min</strong></span>
@@ -829,6 +871,28 @@ export default function WriterPage() {
           )}
         </aside>
       </main>
+
+      {/* Mobile bottom toolbar for a native-like experience */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+          <div className="flex items-center gap-2">
+            <button className="p-2 text-gray-700" aria-label="Negrita" onClick={() => wrapSelection('**')}><Bold className="h-5 w-5"/></button>
+            <button className="p-2 text-gray-700" aria-label="Cursiva" onClick={() => wrapSelection('*')}><Italic className="h-5 w-5"/></button>
+            <button className="p-2 text-gray-700" aria-label="H1" onClick={() => insertHeading(1)}><Heading1 className="h-5 w-5"/></button>
+            <button className="p-2 text-gray-700" aria-label="Lista" onClick={() => toggleLinePrefix('- ')}><List className="h-5 w-5"/></button>
+            <button className="p-2 text-gray-700" aria-label="Enlace" onClick={insertLink}><LinkIcon className="h-5 w-5"/></button>
+            <button className="p-2 text-gray-700" aria-label="Imagen" onClick={() => editorRef.current && wrapSelection('![alt](', ')')}><ImageIcon className="h-5 w-5"/></button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" onClick={() => setIsPreview(v => !v)} aria-label="Vista previa">
+              {isPreview ? 'Editar' : 'Vista previa'}
+            </button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-4 text-sm" onClick={handlePublish} disabled={isPublishDisabled} aria-label="Publicar">
+              Publicar
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Overlay de selección de obra */}
       {!hasSelectedWork && (
