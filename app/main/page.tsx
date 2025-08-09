@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useCallback, useMemo, memo, lazy, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3 } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, BookOpen, Repeat } from 'lucide-react'
 
 // Lazy load ThemeSelector for better performance
 const ThemeSelector = lazy(() => import('@/components/ThemeSelector'))
@@ -20,24 +21,156 @@ const MemoizedAvatar = memo(Avatar)
 const initialPosts = [
   {
     id: 1,
-    author: {
-      name: "María González",
-      username: "@mariagonzalez",
-      avatar: "/api/placeholder/40/40"
-    },
-    title: "El susurro del viento - Capítulo 3",
-    content: "En las montañas de los Andes, donde el viento susurra secretos ancestrales, una joven escritora descubre que las palabras tienen el poder de cambiar el destino. El manuscrito que había encontrado en la biblioteca de su abuela no era solo una colección de cuentos, sino un grimorio de historias que cobraban vida cuando eran leídas en voz alta...",
-    genre: "Fantasía",
-    readTime: "12 min",
+    author: { name: 'María González', username: '@mariagonzalez', avatar: '/api/placeholder/40/40' },
+    title: 'El susurro del viento - Capítulo 3',
+    content: 'En las montañas de los Andes, donde el viento susurra secretos ancestrales... ',
+    genre: 'Fantasía',
+    readTime: '12 min',
     likes: 24,
     comments: 8,
     shares: 3,
     isLiked: false,
-    timestamp: "hace 2 horas"
+    isBookmarked: false,
+    timestamp: 'hace 2 horas',
+    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop'
+  },
+  {
+    id: 2,
+    author: { name: 'Carlos Mendoza', username: '@carlosmendoza', avatar: '/api/placeholder/40/40' },
+    title: 'Versos al amanecer',
+    content: 'Cuando la luz toca las montañas y el silencio se vuelve canción... ',
+    genre: 'Poesía',
+    readTime: '3 min',
+    likes: 18,
+    comments: 5,
+    shares: 2,
+    isLiked: true,
+    isBookmarked: false,
+    timestamp: 'hace 4 horas',
+    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop'
+  },
+  {
+    id: 3,
+    author: { name: 'Ana Rodríguez', username: '@anarodriguez', avatar: '/api/placeholder/40/40' },
+    title: 'Capítulo 1: El último tren',
+    content: 'La estación estaba desierta a esa hora de la madrugada. Solo el eco de mis pasos... ',
+    genre: 'Novela',
+    readTime: '8 min',
+    likes: 42,
+    comments: 15,
+    shares: 8,
+    isLiked: false,
+    isBookmarked: true,
+    timestamp: 'hace 6 horas',
+    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=400&fit=crop'
+  },
+  {
+    id: 4,
+    author: { name: 'Diego Herrera', username: '@diegoherrera', avatar: '/api/placeholder/40/40' },
+    title: 'Monólogo del tiempo perdido',
+    content: '¿Cuántas veces hemos dejado que el tiempo se escurra entre nuestros dedos como arena?...',
+    genre: 'Teatro',
+    readTime: '5 min',
+    likes: 31,
+    comments: 12,
+    shares: 6,
+    isLiked: true,
+    isBookmarked: false,
+    timestamp: 'hace 8 horas'
+  },
+  {
+    id: 5,
+    author: { name: 'Sofía Martín', username: '@sofiamartin', avatar: '/api/placeholder/40/40' },
+    title: 'Reflexiones semanales: El arte de la paciencia',
+    content: 'Queridos lectores, esta semana he estado reflexionando sobre el arte de la paciencia... ',
+    genre: 'Newsletter',
+    readTime: '6 min',
+    likes: 67,
+    comments: 23,
+    shares: 15,
+    isLiked: false,
+    isBookmarked: false,
+    timestamp: 'hace 12 horas',
+    image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop'
+  },
+  {
+    id: 6,
+    author: { name: 'Laura Pérez', username: '@laurap', avatar: '/api/placeholder/40/40' },
+    title: 'Cartas desde el sur',
+    content: 'Hoy el mar tenía un color distinto, como si guardara un secreto... ',
+    genre: 'Crónica',
+    readTime: '4 min',
+    likes: 12,
+    comments: 3,
+    shares: 1,
+    isLiked: false,
+    isBookmarked: false,
+    timestamp: 'ayer',
+    image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&h=400&fit=crop'
+  },
+  {
+    id: 7,
+    author: { name: 'Miguel Santos', username: '@miguels', avatar: '/api/placeholder/40/40' },
+    title: 'Ciudad de neón',
+    content: 'Las luces reflejaban promesas en los charcos, y nadie recordaba el nombre del último héroe...',
+    genre: 'Ciencia Ficción',
+    readTime: '10 min',
+    likes: 54,
+    comments: 11,
+    shares: 7,
+    isLiked: false,
+    isBookmarked: false,
+    timestamp: 'hace 1 día',
+    image: 'https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=800&h=400&fit=crop'
+  },
+  {
+    id: 8,
+    author: { name: 'Elena García', username: '@egarcia', avatar: '/api/placeholder/40/40' },
+    title: 'Memorias de una generación perdida',
+    content: 'Nos prometieron un futuro brillante, pero olvidaron enseñarnos a encontrar la puerta...',
+    genre: 'Ensayo',
+    readTime: '7 min',
+    likes: 76,
+    comments: 18,
+    shares: 9,
+    isLiked: true,
+    isBookmarked: true,
+    timestamp: 'hace 2 días',
+    image: 'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?w=800&h=400&fit=crop'
+  },
+  {
+    id: 9,
+    author: { name: 'Carmen López', username: '@clopez', avatar: '/api/placeholder/40/40' },
+    title: 'Cuentos de medianoche',
+    content: 'A esa hora, el mundo suspira más lento, y las palabras encuentran huecos insospechados...',
+    genre: 'Cuento',
+    readTime: '5 min',
+    likes: 29,
+    comments: 6,
+    shares: 4,
+    isLiked: false,
+    isBookmarked: false,
+    timestamp: 'hace 3 días'
+  },
+  {
+    id: 10,
+    author: { name: 'Roberto Silva', username: '@rsilva', avatar: '/api/placeholder/40/40' },
+    title: 'Códigos del futuro - Serie',
+    content: 'El algoritmo no fallaba: predecía deseos con precisión inquietante... ',
+    genre: 'Serie',
+    readTime: '9 min',
+    likes: 33,
+    comments: 9,
+    shares: 5,
+    isLiked: false,
+    isBookmarked: false,
+    timestamp: 'hace 4 días',
+    image: 'https://images.unsplash.com/photo-1518779578993-ec3579fee39f?w=800&h=400&fit=crop'
   }
 ]
 
 export default function MainPage() {
+  const router = useRouter()
   const [posts, setPosts] = useState(initialPosts)
   const [activeTab, setActiveTab] = useState('feed')
   const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
@@ -47,6 +180,22 @@ export default function MainPage() {
     setPosts(prevPosts => prevPosts.map(post => 
       post.id === postId 
         ? { ...post, likes: post.isLiked ? post.likes - 1 : post.likes + 1, isLiked: !post.isLiked }
+        : post
+    ))
+  }, [])
+
+  const handleBookmark = useCallback((postId: number) => {
+    setPosts(prevPosts => prevPosts.map(post => 
+      post.id === postId 
+        ? { ...post, isBookmarked: !post.isBookmarked }
+        : post
+    ))
+  }, [])
+
+  const handleShare = useCallback((postId: number) => {
+    setPosts(prevPosts => prevPosts.map(post => 
+      post.id === postId 
+        ? { ...post, shares: post.shares + 1 }
         : post
     ))
   }, [])
@@ -207,11 +356,11 @@ export default function MainPage() {
   ], [])
 
   // Memoized post card component
-  const PostCard = memo(({ post }: { post: any }) => (
+  const PostCard = memo(({ post, onLike, onBookmark, onShare }: { post: any, onLike: (id: number) => void, onBookmark: (id: number) => void, onShare: (id: number) => void }) => (
     <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mb-6">
-      <CardContent className="p-6 pt-8">
+      <CardContent className="p-4 sm:p-6 pt-6 sm:pt-8">
         {/* Post Header */}
-        <div className="flex items-start space-x-4 mb-5">
+        <div className="flex items-start space-x-4 mb-4 sm:mb-5">
           <div className="relative">
             <MemoizedAvatar className="h-12 w-12 ring-2 ring-red-100/60 hover:ring-red-200/80 transition-all duration-300">
               <AvatarImage src={post.author.avatar} />
@@ -238,7 +387,7 @@ export default function MainPage() {
                 </MemoizedBadge>
               </div>
               <span className="text-xs text-gray-500 flex items-center space-x-1">
-                <span>📖</span>
+                <BookOpen className="h-4 w-4" />
                 <span>{post.readTime} de lectura</span>
               </span>
             </div>
@@ -246,10 +395,10 @@ export default function MainPage() {
         </div>
         {/* Post Content */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 hover:text-red-700 transition-colors duration-200 cursor-pointer">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3 hover:text-red-700 transition-colors duration-200 cursor-pointer">
             {post.title}
           </h3>
-          <p className="text-gray-700 leading-relaxed mb-4 line-clamp-3">
+          <p className="text-gray-700 leading-relaxed mb-4 line-clamp-3 text-[15px] sm:text-base" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
             {post.content}
           </p>
           {post.image && (
@@ -257,7 +406,7 @@ export default function MainPage() {
               <img 
                 src={post.image} 
                 alt={post.title}
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300"
               />
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
@@ -266,26 +415,26 @@ export default function MainPage() {
         
         {/* Post Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center space-x-6">
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors duration-200 group">
-              <span className="text-lg group-hover:scale-110 transition-transform duration-200">❤️</span>
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <button className={`flex items-center space-x-2 transition-colors duration-200 group ${post.isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-500'}`} aria-label="Me gusta" aria-pressed={post.isLiked} onClick={() => onLike(post.id)}>
+              <Heart className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" fill={post.isLiked ? 'currentColor' : 'none'} />
               <span className="text-sm font-medium">{post.likes}</span>
             </button>
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors duration-200 group">
-              <span className="text-lg group-hover:scale-110 transition-transform duration-200">💬</span>
+            <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors duration-200 group" aria-label="Comentarios">
+              <MessageCircle className="h-4 w-4 group-hover:scale-110 transition-transform duración-200" />
               <span className="text-sm font-medium">{post.comments}</span>
             </button>
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors duration-200 group">
-              <span className="text-lg group-hover:scale-110 transition-transform duration-200">🔄</span>
+            <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors duration-200 group" aria-label="Compartidos" onClick={() => onShare(post.id)}>
+              <Repeat className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
               <span className="text-sm font-medium">{post.shares}</span>
             </button>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="text-gray-500 hover:text-yellow-500 transition-colors duration-200">
-              <span className="text-lg">🔖</span>
+            <button className={`transition-colors duration-200 ${post.isBookmarked ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'}`} aria-label="Guardar" aria-pressed={post.isBookmarked} onClick={() => onBookmark(post.id)}>
+              <Bookmark className="h-4 w-4" fill={post.isBookmarked ? 'currentColor' : 'none'} />
             </button>
-            <button className="text-gray-500 hover:text-gray-700 transition-colors duration-200">
-              <span className="text-lg">📤</span>
+            <button className="text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Compartir">
+              <Share2 className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -365,7 +514,7 @@ export default function MainPage() {
       
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-2 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
@@ -411,9 +560,9 @@ export default function MainPage() {
                 </span>
               </MemoizedButton>
               
-              <MemoizedButton className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm">
+              <MemoizedButton className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm" onClick={() => router.push('/writer')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Escribir
+                Publicar
               </MemoizedButton>
               
               <MemoizedAvatar className="h-8 w-8">
@@ -425,10 +574,10 @@ export default function MainPage() {
         </div>
       </header>
 
-      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+      <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Sidebar - Mobile Navigation */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
+          <div className="lg:col-span-2 xl:col-span-2 order-2 lg:order-1">
             {/* Mobile Navigation - Horizontal scroll */}
             <div className="lg:hidden mb-4">
               <div className="flex overflow-x-auto space-x-2 pb-2 scrollbar-hide">
@@ -481,114 +630,20 @@ export default function MainPage() {
           </div>
 
           {/* Main Content */}
-          <div className="md:col-span-2 lg:col-span-2 order-1 lg:order-2">
+          <div className="md:col-span-2 lg:col-span-3 xl:col-span-3 order-1 lg:order-2">
             <div className="space-y-4 sm:space-y-6">
-              {/* Create Post Card - Consistent with Design Philosophy - Hidden on mobile */}
-              <Card className="hidden sm:block bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden">
-                <CardContent className="p-6">
-                  {/* Header Section */}
-                  <div className="flex items-start space-x-4 mb-6">
-                    <Avatar className="h-10 w-10 mt-4">
-                      <AvatarImage src="/api/placeholder/40/40" />
-                      <AvatarFallback className="text-sm bg-gray-100 text-gray-700">TU</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1 mt-4">¿Qué historia quieres contar hoy?</h3>
-                      <p className="text-sm text-gray-500 [font-family:var(--font-rubik)]">Comparte tu creatividad con la comunidad</p>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Text Area */}
-                  <div className="relative mb-6">
-                    <textarea
-                      placeholder="Escribe tu historia aquí... Deja volar tu imaginación y comparte tu mundo con nosotros."
-                      className="w-full p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300/50 focus:border-red-300 bg-white text-sm transition-all duration-300 hover:border-red-200 min-h-[100px]"
-                      rows={4}
-                    />
-                  </div>
-
-                  {/* Genre Selection - Consistent with Page Style */}
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Selecciona el género</h4>
-                    <div className="flex gap-3 flex-wrap">
-                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                  📝 Cuento
-                </Button>
-                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                  📖 Novela
-                </Button>
-                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                  🎭 Teatro
-                </Button>
-                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                        🎵 Poesía
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Publishing Options - Matching Page Design */}
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Opciones de publicación</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
-                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">📢 Publicar en feed</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
-                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">💬 Permitir comentarios</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
-                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">🔄 Permitir compartir</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons - Mobile Responsive */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 px-4 sm:px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        ✍️ Modo Escritor
-                      </Button>
-                      <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        💾 Guardar
-                      </Button>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        Vista previa
-                      </Button>
-                      <Button className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        🚀 Publicar Historia
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Quick Tips - Matching Design Language */}
-                  <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-start space-x-2">
-                      <span className="text-red-500 text-sm mt-0.5">💡</span>
-                      <div>
-                        <h5 className="text-sm font-medium text-red-800 mb-1">Consejos para una mejor publicación</h5>
-                        <p className="text-xs text-red-700">Usa un título atractivo, incluye etiquetas relevantes y revisa la ortografía antes de publicar.</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Posts Feed */}
-              <div className="mt-12">
-                {memoizedPosts.map((post) => (
-                  <PostCard key={post.id} post={post} />
+              <div className="mt-0">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={post} onLike={handleLike} onBookmark={handleBookmark} onShare={handleShare} />
                 ))}
               </div>
             </div>
           </div>
 
           {/* Right Sidebar - Hidden on mobile, visible on tablet and desktop */}
-          <div className="hidden md:block lg:col-span-1 md:col-span-1 lg:col-span-1 order-3">
+          <div className="hidden md:block lg:col-span-1 xl:col-span-2 order-3">
 
 
             {/* Suggested Authors */}
