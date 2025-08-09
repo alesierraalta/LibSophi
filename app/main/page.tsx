@@ -66,14 +66,16 @@ export default function MainPage() {
     return (
       <MemoizedButton
         variant={isActive ? 'default' : 'ghost'}
-        className={`w-full justify-start text-sm transition-all duration-200 ${
+        className={`group w-full justify-start text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-red-500 ${
           isActive 
-            ? 'bg-red-600 text-white hover:bg-red-700'
-        : 'text-gray-700 hover:text-red-700 hover:bg-red-50'
+            ? 'bg-red-600 text-white hover:bg-red-700 border-l-4 border-red-700'
+        : 'text-gray-700 hover:text-red-700 hover:bg-red-50 border-l-4 border-transparent hover:border-red-200'
         }`}
         onClick={onClick}
+        title={item.label}
+        aria-current={isActive ? 'page' : undefined}
       >
-        <Icon className="h-4 w-4 mr-3" />
+        <Icon className="h-5 w-5 mr-3 opacity-90 group-hover:opacity-100" />
         {item.label}
       </MemoizedButton>
     )

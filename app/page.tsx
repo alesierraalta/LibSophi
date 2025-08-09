@@ -130,7 +130,10 @@ export default function Home() {
           
           {/* Enhanced Social Writing Network Preview */}
           <div className="mb-6 sm:mb-8 md:mb-10 mx-1 sm:mx-2">
-            <WritingSocialPreview />
+            <WritingSocialPreview 
+              laptopScreenImage="/api/placeholder/832/544"
+              mobileScreenImage="/iphone.png"
+            />
           </div>
 
           {/* Optimized CTAs */}
