@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useMemo, memo, lazy, Suspense } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -362,14 +363,23 @@ export default function MainPage() {
       
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-2 lg:px-3">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <div className="bg-gray-800 text-white rounded-lg p-2.5">
-                <Edit3 className="h-5 w-5" />
+              <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 overflow-hidden rounded-md flex items-center justify-center bg-transparent">
+                <div className="relative h-[200%] w-[200%] -m-[50%]">
+                  <Image
+                    src="/1.png"
+                    alt="Palabreo logo"
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
               </div>
-              <h1 className="text-xl font-serif font-bold text-gray-800">
+              <h1 className="text-xl md:text-2xl font-serif font-bold text-red-600">
                 Palabreo
               </h1>
             </div>
@@ -414,7 +424,7 @@ export default function MainPage() {
       </header>
 
       <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Sidebar - Mobile Navigation */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             {/* Mobile Navigation - Horizontal scroll */}
@@ -580,7 +590,7 @@ export default function MainPage() {
 
 
             {/* Suggested Authors */}
-            <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mt-4 md:mt-6">
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mt-0">
               <CardHeader className="bg-red-50 border-b border-red-200 p-3 md:p-4 lg:p-6">
                 <CardTitle className="text-sm md:text-base lg:text-lg font-semibold text-red-800">Autores Sugeridos</CardTitle>
               </CardHeader>

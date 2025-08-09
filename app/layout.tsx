@@ -113,7 +113,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className="scroll-smooth">
+    <html lang="es" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${poppins.variable} ${rubik.variable} font-sans antialiased bg-white text-gray-900`}>
         <StructuredData />
         <a href="#main-content" className="skip-link">
