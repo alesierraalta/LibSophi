@@ -46,7 +46,7 @@ export default function RegisterPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-4">
+    <div className="auth-page min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-4 [font-family:var(--font-poppins)]">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -54,7 +54,7 @@ export default function RegisterPage() {
             <span className="text-white text-2xl font-bold">P</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Únete a Palabreo</h1>
-          <p className="text-gray-600">Crea tu cuenta y comienza a escribir tu historia</p>
+          <p className="text-gray-600 [font-family:var(--font-rubik)]">Crea tu cuenta y comienza a escribir tu historia</p>
         </div>
 
         {/* Register Form */}
@@ -62,7 +62,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Field */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
                 Nombre completo
               </label>
               <div className="relative">
@@ -83,7 +83,7 @@ export default function RegisterPage() {
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
                 Correo electrónico
               </label>
               <div className="relative">
@@ -104,7 +104,7 @@ export default function RegisterPage() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
                 Contraseña
               </label>
               <div className="relative">
@@ -130,7 +130,7 @@ export default function RegisterPage() {
 
             {/* Confirm Password Field */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
                 Confirmar contraseña
               </label>
               <div className="relative">
@@ -163,7 +163,7 @@ export default function RegisterPage() {
                 className="rounded border-gray-300 text-primary shadow-sm focus:ring-primary mt-1"
                 required
               />
-              <span className="ml-2 text-sm text-gray-600">
+              <span className="ml-2 text-sm text-gray-600 [font-family:var(--font-rubik)]">
                 Acepto los{' '}
                 <Link href="/terms" className="text-primary hover:text-primary/80">
                   Términos de Servicio
@@ -197,7 +197,7 @@ export default function RegisterPage() {
           {/* Divider */}
           <div className="my-6 flex items-center">
             <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-4 text-sm text-gray-500 bg-white">o regístrate con</span>
+            <span className="px-4 text-sm text-gray-500 bg-white [font-family:var(--font-rubik)]">o regístrate con</span>
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
@@ -205,18 +205,18 @@ export default function RegisterPage() {
           <div className="space-y-3">
             <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               <span className="mr-3">🔍</span>
-              <span className="font-medium text-gray-700">Continuar con Google</span>
+              <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con Google</span>
             </button>
             
             <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               <span className="mr-3">🐙</span>
-              <span className="font-medium text-gray-700">Continuar con GitHub</span>
+              <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con GitHub</span>
             </button>
           </div>
 
           {/* Login Link */}
           <div className="mt-8 text-center">
-            <p className="text-gray-600">
+            <p className="text-gray-600 [font-family:var(--font-rubik)]">
               ¿Ya tienes cuenta?{' '}
               <Link href="/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
                 Inicia sesión

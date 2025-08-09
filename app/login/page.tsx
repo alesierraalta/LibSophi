@@ -26,7 +26,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-secondary/5 flex items-center justify-center p-4">
+    <div className="auth-page min-h-screen bg-gradient-to-br from-primary/5 via-white to-secondary/5 flex items-center justify-center p-4 [font-family:var(--font-poppins)]">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -34,7 +34,7 @@ export default function LoginPage() {
             <span className="text-white text-2xl font-bold">P</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Bienvenido de vuelta!</h1>
-          <p className="text-gray-600">Inicia sesión en tu cuenta de Palabreo</p>
+          <p className="text-gray-600 [font-family:var(--font-rubik)]">Inicia sesión en tu cuenta de Palabreo</p>
         </div>
 
         {/* Login Form */}
@@ -42,7 +42,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
                 Correo electrónico
               </label>
               <div className="relative">
@@ -63,7 +63,7 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
                 Contraseña
               </label>
               <div className="relative">
@@ -93,7 +93,7 @@ export default function LoginPage() {
                   type="checkbox"
                   className="rounded border-gray-300 text-primary shadow-sm focus:ring-primary"
                 />
-                <span className="ml-2 text-sm text-gray-600">Recordarme</span>
+                <span className="ml-2 text-sm text-gray-600 [font-family:var(--font-rubik)]">Recordarme</span>
               </label>
               <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80 transition-colors">
                 ¿Olvidaste tu contraseña?
@@ -122,7 +122,7 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="my-6 flex items-center">
             <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-4 text-sm text-gray-500 bg-white">o continúa con</span>
+            <span className="px-4 text-sm text-gray-500 bg-white [font-family:var(--font-rubik)]">o continúa con</span>
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
@@ -130,18 +130,18 @@ export default function LoginPage() {
           <div className="space-y-3">
             <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               <span className="mr-3">🔍</span>
-              <span className="font-medium text-gray-700">Continuar con Google</span>
+              <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con Google</span>
             </button>
             
             <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               <span className="mr-3">🐙</span>
-              <span className="font-medium text-gray-700">Continuar con GitHub</span>
+              <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con GitHub</span>
             </button>
           </div>
 
           {/* Register Link */}
           <div className="mt-8 text-center">
-            <p className="text-gray-600">
+            <p className="text-gray-600 [font-family:var(--font-rubik)]">
               ¿No tienes cuenta?{' '}
               <Link href="/register" className="font-semibold text-primary hover:text-primary/80 transition-colors">
                 Regístrate gratis
@@ -152,7 +152,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 [font-family:var(--font-rubik)]">
             Al continuar, aceptas nuestros{' '}
             <Link href="/terms" className="text-primary hover:text-primary/80">
               Términos de Servicio

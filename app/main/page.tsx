@@ -355,7 +355,7 @@ export default function MainPage() {
   ))
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
       {/* Theme Selector for Red Palette */}
       <Suspense fallback={<div className="h-0" />}>
         <ThemeSelector />
@@ -492,7 +492,7 @@ export default function MainPage() {
                     </Avatar>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1 mt-4">¿Qué historia quieres contar hoy?</h3>
-                      <p className="text-sm text-gray-500">Comparte tu creatividad con la comunidad</p>
+                      <p className="text-sm text-gray-500 [font-family:var(--font-rubik)]">Comparte tu creatividad con la comunidad</p>
                     </div>
                   </div>
 
