@@ -521,7 +521,7 @@ export default function WriterPage() {
 
   const handlePublish = () => {
     // TODO: Integrar con backend/API de publicaciones
-    const finalChapters: Chapter[] = isChapterBased
+    const finalChapters: Chapter[] = useChapters
       ? chapters
       : [{ id: currentWorkId ?? `${Date.now()}`, title: title || 'Contenido', content }]
     const work: Work = {
