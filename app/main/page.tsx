@@ -379,7 +379,7 @@ export default function MainPage() {
                   />
                 </div>
               </div>
-              <h1 className="text-xl md:text-2xl font-serif font-bold text-red-600">
+              <h1 className="text-xl md:text-2xl font-bold text-red-600 [font-family:var(--font-poppins)]">
                 Palabreo
               </h1>
             </div>
