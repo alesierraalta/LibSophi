@@ -21,7 +21,7 @@ export default function WriterPage() {
   const [isPreview, setIsPreview] = useState(false)
   const [previewWholeWork, setPreviewWholeWork] = useState(false)
   const [useChapters, setUseChapters] = useState<boolean>(genre === 'novela')
-  const [focusMode, setFocusMode] = useState(false)
+  const [focusMode, setFocusMode] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [undoStack, setUndoStack] = useState<{ title: string; content: string }[]>([])
   const [redoStack, setRedoStack] = useState<{ title: string; content: string }[]>([])
@@ -557,7 +557,7 @@ export default function WriterPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="w-full max-w-none px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-12 sm:h-16">
             <div className="flex items-center space-x-3">
               <div
@@ -606,7 +606,7 @@ export default function WriterPage() {
         </div>
       </header>
 
-      <main className={`max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-16 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
+      <main className={`w-full max-w-none px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-16 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
         <section className={`${focusMode ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
           <Card className="bg-white border-none shadow-none rounded-none sm:border sm:shadow-sm sm:rounded-lg overflow-hidden">
             <CardContent className="p-0 sm:p-6 space-y-4">
@@ -874,7 +874,7 @@ export default function WriterPage() {
 
       {/* Mobile bottom toolbar for a native-like experience */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-        <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+        <div className="w-full max-w-none px-3 py-2 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <div className="flex items-center gap-2">
             <button className="p-2 text-gray-700" aria-label="Negrita" onClick={() => wrapSelection('**')}><Bold className="h-5 w-5"/></button>
             <button className="p-2 text-gray-700" aria-label="Cursiva" onClick={() => wrapSelection('*')}><Italic className="h-5 w-5"/></button>
