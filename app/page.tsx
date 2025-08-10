@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import Button from '../components/Button'
 import Section from '../components/Section'
 import FAQ from '../components/FAQ'
@@ -28,7 +29,19 @@ export default function Home() {
       <header className="bg-white backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-primary/10">
         <div className="container-max">
           <div className="flex items-center justify-between py-4 sm:py-5 md:py-6">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-3">
+              <div className="h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 overflow-hidden rounded-md flex items-center justify-center bg-transparent">
+                <div className="relative h-[200%] w-[200%] -m-[50%]">
+                  <Image
+                    src="/1.png"
+                    alt="Palabreo logo"
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Palabreo
               </h1>
@@ -39,7 +52,7 @@ export default function Home() {
               <nav className="hidden md:flex items-center space-x-6" role="navigation" aria-label="Navegación principal">
                 <Button 
                   variant="ghost" 
-                  size="sm"
+                  size="md"
                   data-analytics="cta_login_click_header"
                   aria-label="Iniciar sesión en Palabreo"
                   className="text-gray-600 hover:text-primary"
@@ -49,10 +62,9 @@ export default function Home() {
                 </Button>
                 <Button 
                   variant="gradient"
-                  size="sm"
+                  size="md"
                   data-analytics="cta_register_click_header"
                   aria-label="Registrarse gratis en Palabreo"
-                  icon={<span>✨</span>}
                   onClick={() => router.push('/register')}
                 >
                   Regístrate
@@ -205,7 +217,7 @@ export default function Home() {
       */}
       <Section id="como-funciona" background="pastel" aria-labelledby="como-funciona-title">
         
-        <div className="text-center mb-10 sm:mb-16">
+          <div className="text-center mb-10 sm:mb-16">
           <h2 id="como-funciona-title" className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
             Cómo funciona
           </h2>

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle } from 'lucide-react'
 
 export default function WriterPage() {
   const router = useRouter()
@@ -25,8 +25,47 @@ export default function WriterPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [undoStack, setUndoStack] = useState<{ title: string; content: string }[]>([])
   const [redoStack, setRedoStack] = useState<{ title: string; content: string }[]>([])
+  // Guided tour state
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [tourStepIndex, setTourStepIndex] = useState(0)
+  const [highlightRect, setHighlightRect] = useState<{
+    top: number; left: number; width: number; height: number
+  } | null>(null)
+  const [autoTour, setAutoTour] = useState(false)
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null)
+  // Toolbar refs (desktop)
+  const boldBtnRef = useRef<HTMLButtonElement | null>(null)
+  const italicBtnRef = useRef<HTMLButtonElement | null>(null)
+  const underlineBtnRef = useRef<HTMLButtonElement | null>(null)
+  const strikeBtnRef = useRef<HTMLButtonElement | null>(null)
+  const h1BtnRef = useRef<HTMLButtonElement | null>(null)
+  const h2BtnRef = useRef<HTMLButtonElement | null>(null)
+  const quoteBtnRef = useRef<HTMLButtonElement | null>(null)
+  const listBtnRef = useRef<HTMLButtonElement | null>(null)
+  const listOrderedBtnRef = useRef<HTMLButtonElement | null>(null)
+  const linkBtnRef = useRef<HTMLButtonElement | null>(null)
+  const imageBtnRef = useRef<HTMLButtonElement | null>(null)
+  const inlineCodeBtnRef = useRef<HTMLButtonElement | null>(null)
+  const codeBlockBtnRef = useRef<HTMLButtonElement | null>(null)
+  const hrBtnRef = useRef<HTMLButtonElement | null>(null)
+  const eraserBtnRef = useRef<HTMLButtonElement | null>(null)
+  const indentIncBtnRef = useRef<HTMLButtonElement | null>(null)
+  const indentDecBtnRef = useRef<HTMLButtonElement | null>(null)
+  const undoBtnRef = useRef<HTMLButtonElement | null>(null)
+  const redoBtnRef = useRef<HTMLButtonElement | null>(null)
+  const previewBtnRef = useRef<HTMLButtonElement | null>(null)
+  const focusBtnRef = useRef<HTMLButtonElement | null>(null)
+  const publishBtnRef = useRef<HTMLButtonElement | null>(null)
+  // Toolbar refs (mobile)
+  const mBoldBtnRef = useRef<HTMLButtonElement | null>(null)
+  const mItalicBtnRef = useRef<HTMLButtonElement | null>(null)
+  const mH1BtnRef = useRef<HTMLButtonElement | null>(null)
+  const mListBtnRef = useRef<HTMLButtonElement | null>(null)
+  const mLinkBtnRef = useRef<HTMLButtonElement | null>(null)
+  const mImageBtnRef = useRef<HTMLButtonElement | null>(null)
+  const mPreviewBtnRef = useRef<HTMLButtonElement | null>(null)
+  const mPublishBtnRef = useRef<HTMLButtonElement | null>(null)
 
   // Capítulos y obras
   type Chapter = { id: string; title: string; content: string }
@@ -136,6 +175,167 @@ export default function WriterPage() {
     }
   }, [useChapters])
 
+  // Guided tour helpers
+  const startTour = () => {
+    setTourStepIndex(0)
+    setShowTutorial(true)
+    setAutoTour(true)
+  }
+  const endTour = () => {
+    setShowTutorial(false)
+    setAutoTour(false)
+    try { localStorage.setItem('palabreo-writer-tour-complete', '1') } catch {}
+  }
+  const nextTour = () => {
+    setAutoTour(false)
+    setTourStepIndex((i) => Math.min(i + 1, getTourSteps().length - 1))
+  }
+  const prevTour = () => {
+    setAutoTour(false)
+    setTourStepIndex((i) => Math.max(i - 1, 0))
+  }
+
+  type TourStep = {
+    id: string
+    title: string
+    description: string
+    getTarget: () => HTMLElement | null
+  }
+  const getTourSteps = (): TourStep[] => {
+    if (isMobile) {
+      return [
+        { id: 'bold', title: 'Negrita', description: 'Aplica negrita al texto seleccionado.', getTarget: () => mBoldBtnRef.current },
+        { id: 'italic', title: 'Cursiva', description: 'Aplica cursiva al texto seleccionado.', getTarget: () => mItalicBtnRef.current },
+        { id: 'h1', title: 'Título (H1)', description: 'Convierte la línea actual en título principal.', getTarget: () => mH1BtnRef.current },
+        { id: 'list', title: 'Lista', description: 'Crea una lista con viñetas.', getTarget: () => mListBtnRef.current },
+        { id: 'link', title: 'Enlace', description: 'Inserta un enlace en el texto.', getTarget: () => mLinkBtnRef.current },
+        { id: 'image', title: 'Imagen', description: 'Inserta una imagen por URL.', getTarget: () => mImageBtnRef.current },
+        { id: 'preview', title: 'Vista previa', description: 'Alterna para ver el resultado final.', getTarget: () => mPreviewBtnRef.current },
+        { id: 'publish', title: 'Publicar', description: 'Publica tu obra cuando esté lista.', getTarget: () => mPublishBtnRef.current },
+      ]
+    }
+    return [
+      { id: 'bold', title: 'Negrita', description: 'Aplica negrita al texto seleccionado.', getTarget: () => boldBtnRef.current },
+      { id: 'italic', title: 'Cursiva', description: 'Aplica cursiva al texto seleccionado.', getTarget: () => italicBtnRef.current },
+      { id: 'underline', title: 'Subrayado', description: 'Subraya el texto seleccionado.', getTarget: () => underlineBtnRef.current },
+      { id: 'strikethrough', title: 'Tachado', description: 'Tacha el texto seleccionado.', getTarget: () => strikeBtnRef.current },
+      { id: 'h1', title: 'Título (H1)', description: 'Convierte la línea actual en título principal.', getTarget: () => h1BtnRef.current },
+      { id: 'h2', title: 'Subtítulo (H2)', description: 'Convierte la línea actual en subtítulo.', getTarget: () => h2BtnRef.current },
+      { id: 'quote', title: 'Cita', description: 'Formatea el párrafo como cita.', getTarget: () => quoteBtnRef.current },
+      { id: 'list', title: 'Lista', description: 'Crea una lista con viñetas.', getTarget: () => listBtnRef.current },
+      { id: 'listOrdered', title: 'Lista numerada', description: 'Crea una lista numerada.', getTarget: () => listOrderedBtnRef.current },
+      { id: 'link', title: 'Enlace', description: 'Inserta un enlace en el texto.', getTarget: () => linkBtnRef.current },
+      { id: 'image', title: 'Imagen', description: 'Inserta una imagen por URL.', getTarget: () => imageBtnRef.current },
+      { id: 'inlineCode', title: 'Código en línea', description: 'Formatea como código en línea.', getTarget: () => inlineCodeBtnRef.current },
+      { id: 'codeBlock', title: 'Bloque de código', description: 'Inserta un bloque de código.', getTarget: () => codeBlockBtnRef.current },
+      { id: 'hr', title: 'Separador', description: 'Inserta una línea horizontal para separar secciones.', getTarget: () => hrBtnRef.current },
+      { id: 'eraser', title: 'Limpiar formato', description: 'Quita negrita, cursiva, etc. del texto seleccionado.', getTarget: () => eraserBtnRef.current },
+      { id: 'indentIncrease', title: 'Aumentar sangría', description: 'Incrementa la sangría de las líneas seleccionadas.', getTarget: () => indentIncBtnRef.current },
+      { id: 'indentDecrease', title: 'Reducir sangría', description: 'Reduce la sangría de las líneas seleccionadas.', getTarget: () => indentDecBtnRef.current },
+      { id: 'undo', title: 'Deshacer', description: 'Deshace el último cambio.', getTarget: () => undoBtnRef.current },
+      { id: 'redo', title: 'Rehacer', description: 'Rehace el cambio deshecho.', getTarget: () => redoBtnRef.current },
+      { id: 'preview', title: 'Vista previa', description: 'Alterna para ver el resultado final.', getTarget: () => previewBtnRef.current },
+      { id: 'focus', title: 'Modo enfoque', description: 'Oculta la barra lateral para escribir sin distracciones.', getTarget: () => focusBtnRef.current },
+      { id: 'publish', title: 'Publicar', description: 'Publica tu obra cuando esté lista.', getTarget: () => publishBtnRef.current },
+    ]
+  }
+
+  const getTourPreviewHtml = (id: string): string => {
+    switch (id) {
+      case 'bold':
+        return '<p>Ejemplo: <strong>negrita</strong></p>'
+      case 'italic':
+        return '<p>Ejemplo: <em>cursiva</em></p>'
+      case 'underline':
+        return '<p>Ejemplo: <u>subrayado</u></p>'
+      case 'strikethrough':
+        return '<p>Ejemplo: <del>tachado</del></p>'
+      case 'h1':
+        return '<h1 class="text-xl font-bold">Título H1</h1>'
+      case 'h2':
+        return '<h2 class="text-lg font-semibold">Subtítulo H2</h2>'
+      case 'quote':
+        return '<blockquote class="border-l-4 border-gray-300 pl-3 italic">Una cita breve</blockquote>'
+      case 'list':
+        return '<ul class="list-disc pl-5"><li>Elemento 1</li><li>Elemento 2</li></ul>'
+      case 'listOrdered':
+        return '<ol class="list-decimal pl-5"><li>Primero</li><li>Segundo</li></ol>'
+      case 'link':
+        return '<p>Visita <a href="#" class="text-blue-600 underline">un enlace</a></p>'
+      case 'image':
+        return '<div class="relative h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-500 text-xs">Imagen (URL)</div>'
+      case 'inlineCode':
+        return '<p>Usa <code>codigo</code> en línea</p>'
+      case 'codeBlock':
+        return '<pre class="bg-gray-50 border border-gray-200 rounded p-2 text-xs"><code>console.log("hola");</code></pre>'
+      case 'hr':
+        return '<hr class="my-2 border-gray-300" />'
+      case 'eraser':
+        return '<p><span class="line-through">Texto con formato</span> ➜ <span>limpiado</span></p>'
+      case 'indentIncrease':
+        return '<pre class="text-xs">línea\n  línea con sangría</pre>'
+      case 'indentDecrease':
+        return '<pre class="text-xs">  línea con sangría\nlínea sin sangría</pre>'
+      case 'undo':
+        return '<p>Revierte el último cambio realizado.</p>'
+      case 'redo':
+        return '<p>Reaplica el cambio deshecho.</p>'
+      case 'preview':
+        return '<p>Muestra el contenido renderizado.</p>'
+      case 'focus':
+        return '<p>Escribe sin distracciones ocultando la barra lateral.</p>'
+      case 'publish':
+        return '<p>Publica tu obra cuando esté lista.</p>'
+      default:
+        return ''
+    }
+  }
+
+  useEffect(() => {
+    if (!showTutorial) return
+    const steps = getTourSteps()
+    const target = steps[tourStepIndex]?.getTarget()
+    const updateRect = () => {
+      const element = steps[tourStepIndex]?.getTarget()
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        setHighlightRect({
+          top: Math.max(8, rect.top - 8),
+          left: Math.max(8, rect.left - 8),
+          width: rect.width + 16,
+          height: rect.height + 16,
+        })
+      } else {
+        setHighlightRect(null)
+      }
+    }
+    // Initial update (after a tick to ensure layout is stable)
+    const id = window.setTimeout(updateRect, 0)
+    window.addEventListener('resize', updateRect)
+    window.addEventListener('scroll', updateRect, true)
+    return () => {
+      window.clearTimeout(id)
+      window.removeEventListener('resize', updateRect)
+      window.removeEventListener('scroll', updateRect, true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTutorial, tourStepIndex, isMobile, isPreview, focusMode])
+
+  // Auto-advance tour and auto-exit at the end
+  useEffect(() => {
+    if (!showTutorial || !autoTour) return
+    const steps = getTourSteps()
+    if (tourStepIndex >= steps.length - 1) {
+      const endId = window.setTimeout(() => endTour(), 1500)
+      return () => window.clearTimeout(endId)
+    }
+    const id = window.setTimeout(() => {
+      setTourStepIndex((i) => Math.min(i + 1, steps.length - 1))
+    }, 1800)
+    return () => window.clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTutorial, autoTour, tourStepIndex, isMobile])
+
   // Historial simple de deshacer/rehacer
   const pushUndoState = (next: { title: string; content: string }) => {
     setUndoStack((prev) => [...prev.slice(-20), next])
@@ -187,9 +387,10 @@ export default function WriterPage() {
     const next = `${before}${prefix}${selected || ''}${finalSuffix}${after}`
     handleContentChange(next)
     requestAnimationFrame(() => {
-      const pos = start + prefix.length + (selected ? selected.length + finalSuffix.length : 0)
+      const selectionStart = start + prefix.length
+      const selectionEnd = selectionStart + (selected ? selected.length : 0)
       textarea.focus()
-      textarea.setSelectionRange(pos, pos)
+      textarea.setSelectionRange(selectionStart, selectionEnd)
     })
   }
 
@@ -214,6 +415,13 @@ export default function WriterPage() {
       .join('\n')
     const next = `${before}${toggled}${after}`
     handleContentChange(next)
+    requestAnimationFrame(() => {
+      const delta = toggled.length - selected.length
+      const newStart = start
+      const newEnd = end + delta
+      textarea.focus()
+      textarea.setSelectionRange(newStart, newEnd)
+    })
   }
 
   const insertLink = () => {
@@ -598,7 +806,7 @@ export default function WriterPage() {
                 )}
               </div>
               <Button variant="outline" onClick={() => router.push('/main')} className="text-sm">Cancelar</Button>
-              <Button disabled={isPublishDisabled} onClick={handlePublish} className="bg-red-600 hover:bg-red-700 text-white text-sm">
+              <Button ref={publishBtnRef} disabled={isPublishDisabled} onClick={handlePublish} className="bg-red-600 hover:bg-red-700 text-white text-sm">
                 🚀 Publicar
               </Button>
             </div>
@@ -606,7 +814,7 @@ export default function WriterPage() {
         </div>
       </header>
 
-      <main className={`w-full max-w-none px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-16 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
+      <main className={`w-full max-w-none px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-24 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
         <section className={`${focusMode ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
           <Card className="bg-white border-none shadow-none rounded-none sm:border sm:shadow-sm sm:rounded-lg overflow-hidden">
             <CardContent className="p-0 sm:p-6 space-y-4">
@@ -638,37 +846,41 @@ export default function WriterPage() {
               ) : null}
               {/* Toolbar */}
               <div className="hidden sm:flex flex-wrap items-center gap-1.5 border border-gray-200 rounded-md p-2 bg-gray-50">
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Negrita (Ctrl+B)" onClick={() => wrapSelection('**')}><Bold className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Cursiva (Ctrl+I)" onClick={() => wrapSelection('*')}><Italic className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Subrayado (Ctrl+Shift+U)" onClick={() => wrapSelection('<u>', '</u>')}><Underline className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Tachado (Ctrl+Shift+S)" onClick={() => wrapSelection('~~')}><Strikethrough className="h-4 w-4"/></Button>
+                <Button ref={boldBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Negrita (Ctrl+B)" title="Aplica negrita al texto seleccionado (Ctrl+B). Puedes combinarla con cursiva, subrayado, etc." onClick={() => wrapSelection('**')}><Bold className="h-4 w-4"/></Button>
+                <Button ref={italicBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Cursiva (Ctrl+I)" title="Aplica cursiva al texto seleccionado (Ctrl+I). Combínala con otras opciones." onClick={() => wrapSelection('*')}><Italic className="h-4 w-4"/></Button>
+                <Button ref={underlineBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Subrayado (Ctrl+Shift+U)" title="Subraya el texto seleccionado (Ctrl+Shift+U)." onClick={() => wrapSelection('<u>', '</u>')}><Underline className="h-4 w-4"/></Button>
+                <Button ref={strikeBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Tachado (Ctrl+Shift+S)" title="Tacha el texto seleccionado (Ctrl+Shift+S)." onClick={() => wrapSelection('~~')}><Strikethrough className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1"/>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Encabezado 1" onClick={() => insertHeading(1)}><Heading1 className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Encabezado 2" onClick={() => insertHeading(2)}><Heading2 className="h-4 w-4"/></Button>
+                <Button ref={h1BtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Encabezado 1" title="Convierte la línea actual en título principal (H1)." onClick={() => insertHeading(1)}><Heading1 className="h-4 w-4"/></Button>
+                <Button ref={h2BtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Encabezado 2" title="Convierte la línea actual en subtítulo (H2)." onClick={() => insertHeading(2)}><Heading2 className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1"/>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Cita" onClick={() => toggleLinePrefix('> ')}><Quote className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Lista" onClick={() => toggleLinePrefix('- ')}><List className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Lista ordenada" onClick={() => toggleLinePrefix('1. ')}><ListOrdered className="h-4 w-4"/></Button>
+                <Button ref={quoteBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Cita" title="Formatea el párrafo como cita." onClick={() => toggleLinePrefix('> ')}><Quote className="h-4 w-4"/></Button>
+                <Button ref={listBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Lista" title="Convierte líneas seleccionadas en lista con viñetas." onClick={() => toggleLinePrefix('- ')}><List className="h-4 w-4"/></Button>
+                <Button ref={listOrderedBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Lista ordenada" title="Convierte líneas seleccionadas en lista numerada." onClick={() => toggleLinePrefix('1. ')}><ListOrdered className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1"/>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Enlace" onClick={insertLink}><LinkIcon className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Imagen" onClick={() => editorRef.current && wrapSelection('![alt](', ')')}><ImageIcon className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Código en línea (Ctrl+Alt+C)" onClick={insertInlineCode}><Code className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Bloque de código (Ctrl+Alt+B)" onClick={insertCodeBlock}><Code2 className="h-4 w-4"/></Button>
+                <Button ref={linkBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Enlace" title="Inserta un enlace con el texto seleccionado." onClick={insertLink}><LinkIcon className="h-4 w-4"/></Button>
+                <Button ref={imageBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Imagen" title="Inserta una imagen en formato Markdown (requiere URL pública)." onClick={() => editorRef.current && wrapSelection('![alt](', ')')}><ImageIcon className="h-4 w-4"/></Button>
+                <Button ref={inlineCodeBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Código en línea (Ctrl+Alt+C)" title="Formatea como código en línea (Ctrl+Alt+C)." onClick={insertInlineCode}><Code className="h-4 w-4"/></Button>
+                <Button ref={codeBlockBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Bloque de código (Ctrl+Alt+B)" title="Inserta un bloque de código (Ctrl+Alt+B)." onClick={insertCodeBlock}><Code2 className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1"/>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Regla horizontal (Ctrl+Alt+H)" onClick={insertHorizontalRule}><SeparatorHorizontal className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Limpiar formato" onClick={clearFormatting}><Eraser className="h-4 w-4"/></Button>
+                <Button ref={hrBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Regla horizontal (Ctrl+Alt+H)" title="Inserta una separación horizontal (Ctrl+Alt+H)." onClick={insertHorizontalRule}><SeparatorHorizontal className="h-4 w-4"/></Button>
+                <Button ref={eraserBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Limpiar formato" title="Elimina formatos del texto seleccionado (negrita, cursiva, etc.)." onClick={clearFormatting}><Eraser className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1"/>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Aumentar sangría (Tab)" onClick={() => indentSelection(false)}><IndentIncrease className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Reducir sangría (Shift+Tab)" onClick={() => indentSelection(true)}><IndentDecrease className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Deshacer" onClick={handleUndo}><Undo className="h-4 w-4"/></Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Rehacer" onClick={handleRedo}><Redo className="h-4 w-4"/></Button>
+                <Button ref={indentIncBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Aumentar sangría (Tab)" title="Aumenta la sangría de las líneas seleccionadas (Tab)." onClick={() => indentSelection(false)}><IndentIncrease className="h-4 w-4"/></Button>
+                <Button ref={indentDecBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Reducir sangría (Shift+Tab)" title="Reduce la sangría de las líneas seleccionadas (Shift+Tab)." onClick={() => indentSelection(true)}><IndentDecrease className="h-4 w-4"/></Button>
+                <Button ref={undoBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Deshacer" title="Deshace el último cambio." onClick={handleUndo}><Undo className="h-4 w-4"/></Button>
+                <Button ref={redoBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Rehacer" title="Rehace el último cambio deshecho." onClick={handleRedo}><Redo className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1 ml-auto"/>
-                <Button variant="outline" size="sm" className="h-8 px-2" aria-label="Vista previa" onClick={() => setIsPreview((v) => !v)}>
+                <Button ref={previewBtnRef} variant="outline" size="sm" className="h-8 px-2" aria-label="Vista previa" title="Alterna entre edición y vista previa del contenido." onClick={() => setIsPreview((v) => !v)}>
                   <Eye className="h-4 w-4 mr-1"/>
                   {isPreview ? 'Editar' : 'Vista previa'}
                 </Button>
-                <Button variant="outline" size="sm" className="h-8 px-2" aria-label="Modo enfoque" onClick={() => setFocusMode((v) => !v)}>
+                <Button ref={focusBtnRef} variant="outline" size="sm" className="h-8 px-2" aria-label="Modo enfoque" title="Oculta la barra lateral para escribir sin distracciones." onClick={() => setFocusMode((v) => !v)}>
                   {focusMode ? (<><Minimize className="h-4 w-4 mr-1"/>Salir enfoque</>) : (<><Maximize className="h-4 w-4 mr-1"/>Enfoque</>)}
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 px-2" aria-label="Abrir tutorial" title="Inicia un recorrido guiado por las herramientas del editor." onClick={startTour}>
+                  <HelpCircle className="h-4 w-4 mr-1"/>
+                  Tutorial
                 </Button>
               </div>
 
@@ -684,7 +896,6 @@ export default function WriterPage() {
                     className="w-full min-h-[240px] sm:min-h-[300px] bg-white text-gray-800 leading-relaxed outline-none resize-none text-[17px] sm:text-base px-4 sm:px-0"
                     style={{ fontFamily: '"Times New Roman", Times, serif' }}
                     autoFocus={isMobile}
-                    style-index={undefined}
                   />
                 </div>
               ) : (
@@ -873,21 +1084,24 @@ export default function WriterPage() {
       </main>
 
       {/* Mobile bottom toolbar for a native-like experience */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 touch-manipulation">
         <div className="w-full max-w-none px-3 py-2 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <div className="flex items-center gap-2">
-            <button className="p-2 text-gray-700" aria-label="Negrita" onClick={() => wrapSelection('**')}><Bold className="h-5 w-5"/></button>
-            <button className="p-2 text-gray-700" aria-label="Cursiva" onClick={() => wrapSelection('*')}><Italic className="h-5 w-5"/></button>
-            <button className="p-2 text-gray-700" aria-label="H1" onClick={() => insertHeading(1)}><Heading1 className="h-5 w-5"/></button>
-            <button className="p-2 text-gray-700" aria-label="Lista" onClick={() => toggleLinePrefix('- ')}><List className="h-5 w-5"/></button>
-            <button className="p-2 text-gray-700" aria-label="Enlace" onClick={insertLink}><LinkIcon className="h-5 w-5"/></button>
-            <button className="p-2 text-gray-700" aria-label="Imagen" onClick={() => editorRef.current && wrapSelection('![alt](', ')')}><ImageIcon className="h-5 w-5"/></button>
+            <button ref={mBoldBtnRef} className="p-2 text-gray-700" aria-label="Negrita" title="Negrita (Ctrl+B)" onClick={() => wrapSelection('**')}><Bold className="h-5 w-5"/></button>
+            <button ref={mItalicBtnRef} className="p-2 text-gray-700" aria-label="Cursiva" title="Cursiva (Ctrl+I)" onClick={() => wrapSelection('*')}><Italic className="h-5 w-5"/></button>
+            <button ref={mH1BtnRef} className="p-2 text-gray-700" aria-label="H1" title="Título (H1)" onClick={() => insertHeading(1)}><Heading1 className="h-5 w-5"/></button>
+            <button ref={mListBtnRef} className="p-2 text-gray-700" aria-label="Lista" title="Lista con viñetas" onClick={() => toggleLinePrefix('- ')}><List className="h-5 w-5"/></button>
+            <button ref={mLinkBtnRef} className="p-2 text-gray-700" aria-label="Enlace" title="Insertar enlace" onClick={insertLink}><LinkIcon className="h-5 w-5"/></button>
+            <button ref={mImageBtnRef} className="p-2 text-gray-700" aria-label="Imagen" title="Insertar imagen (URL)" onClick={() => editorRef.current && wrapSelection('![alt](', ')')}><ImageIcon className="h-5 w-5"/></button>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" onClick={() => setIsPreview(v => !v)} aria-label="Vista previa">
+            <button ref={mPreviewBtnRef} className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" title="Alternar vista previa" onClick={() => setIsPreview(v => !v)} aria-label="Vista previa">
               {isPreview ? 'Editar' : 'Vista previa'}
             </button>
-            <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-4 text-sm" onClick={handlePublish} disabled={isPublishDisabled} aria-label="Publicar">
+            <button className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" title="Abrir tutorial" onClick={startTour} aria-label="Abrir tutorial">
+              <HelpCircle className="h-5 w-5"/>
+            </button>
+            <Button ref={mPublishBtnRef} className="bg-red-600 hover:bg-red-700 text-white h-9 px-4 text-sm" onClick={handlePublish} disabled={isPublishDisabled} aria-label="Publicar">
               Publicar
             </Button>
           </div>
@@ -954,6 +1168,58 @@ export default function WriterPage() {
               </Card>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Guided tour overlay */}
+      {showTutorial && (
+        <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Recorrido guiado del editor">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
+          {/* Highlight box */}
+          {highlightRect && (
+            <>
+              <div
+                className="fixed border-2 border-red-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
+                style={{
+                  top: highlightRect.top,
+                  left: highlightRect.left,
+                  width: highlightRect.width,
+                  height: highlightRect.height,
+                  boxShadow: '0 0 0 9999px rgba(0,0,0,0)',
+                  background: 'transparent',
+                }}
+              />
+              {/* Tooltip with inline preview */}
+              <div
+                className="fixed bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm"
+                style={{
+                  top: Math.min((typeof window !== 'undefined' ? window.innerHeight : 0) - 180, highlightRect.top + highlightRect.height + 12),
+                  left: Math.min((typeof window !== 'undefined' ? window.innerWidth : 0) - 340, Math.max(12, highlightRect.left)),
+                  width: 320,
+                }}
+              >
+                <div className="text-sm font-semibold text-gray-900 mb-1">{getTourSteps()[tourStepIndex]?.title}</div>
+                <div className="text-sm text-gray-700 mb-3">{getTourSteps()[tourStepIndex]?.description}</div>
+                {/* Preview area */}
+                <div className="mb-3 border border-gray-200 rounded p-2 bg-gray-50">
+                  <div className="text-xs text-gray-500 mb-1">Vista previa</div>
+                  <div className="prose prose-sm max-w-none text-gray-900" dangerouslySetInnerHTML={{ __html: getTourPreviewHtml(getTourSteps()[tourStepIndex]?.id || '') }} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-500">Paso {tourStepIndex + 1} de {getTourSteps().length}</div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={endTour}>Saltar</Button>
+                    <Button variant="outline" size="sm" onClick={prevTour} disabled={tourStepIndex === 0}>Anterior</Button>
+                    {tourStepIndex < getTourSteps().length - 1 ? (
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={nextTour}>Siguiente</Button>
+                    ) : (
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={endTour}>Terminar</Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
