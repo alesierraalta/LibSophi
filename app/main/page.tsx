@@ -2,11 +2,12 @@
 
 import React, { useState, useCallback, useMemo, memo, lazy, Suspense } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3 } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, UserPlus, AtSign, BookOpen, Eye, Mail, Copy, Repeat2 } from 'lucide-react'
 
 // Lazy load ThemeSelector for better performance
 const ThemeSelector = lazy(() => import('@/components/ThemeSelector'))
@@ -41,12 +42,46 @@ export default function MainPage() {
   const [posts, setPosts] = useState(initialPosts)
   const [activeTab, setActiveTab] = useState('feed')
   const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
+  const [showNotifications, setShowNotifications] = useState(false)
+  const router = useRouter()
 
   // Memoized callback to prevent unnecessary re-renders
   const handleLike = useCallback((postId: number) => {
     setPosts(prevPosts => prevPosts.map(post => 
       post.id === postId 
         ? { ...post, likes: post.isLiked ? post.likes - 1 : post.likes + 1, isLiked: !post.isLiked }
+        : post
+    ))
+  }, [])
+
+  const handleAddComment = useCallback((postId: number) => {
+    setPosts(prevPosts => prevPosts.map(post => 
+      post.id === postId 
+        ? { ...post, comments: (post.comments ?? 0) + 1 }
+        : post
+    ))
+  }, [])
+
+  const handleShare = useCallback(async (postId: number) => {
+    setPosts(prevPosts => prevPosts.map(post => 
+      post.id === postId 
+        ? { ...post, shares: (post.shares ?? 0) + 1 }
+        : post
+    ))
+    try {
+      const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/post/${postId}` : `https://palabreo.com/post/${postId}`
+      if (navigator.share) {
+        await navigator.share({ url: shareUrl, title: 'Palabreo', text: 'Mira este post' })
+      } else {
+        await navigator.clipboard.writeText(shareUrl)
+      }
+    } catch {}
+  }, [])
+
+  const handleRepost = useCallback((postId: number) => {
+    setPosts(prevPosts => prevPosts.map(post => 
+      post.id === postId 
+        ? { ...post, reposts: (post as any).reposts ? (post as any).reposts + 1 : 1 }
         : post
     ))
   }, [])
@@ -205,9 +240,61 @@ export default function MainPage() {
   ], [])
 
   // Memoized post card component
-  const PostCard = memo(({ post }: { post: any }) => (
+  const PostCard = memo(({ post }: { post: any }) => {
+    const [showCommentBox, setShowCommentBox] = useState(false)
+    const [commentText, setCommentText] = useState('')
+    const [localLikes, setLocalLikes] = useState<number>(post.likes ?? 0)
+    const [localIsLiked, setLocalIsLiked] = useState<boolean>(!!post.isLiked)
+    const [localComments, setLocalComments] = useState<number>(post.comments ?? 0)
+    const [localReposts, setLocalReposts] = useState<number>((post as any).reposts ?? 0)
+    const [localReposted, setLocalReposted] = useState<boolean>(false)
+    const [bookmarked, setBookmarked] = useState<boolean>(() => {
+      try {
+        const raw = localStorage.getItem('palabreo-bookmarks')
+        const ids: number[] = raw ? JSON.parse(raw) : []
+        return ids.includes(post.id)
+      } catch {
+        return false
+      }
+    })
+    const onLike = () => {
+      setLocalLikes(prev => (localIsLiked ? Math.max(0, prev - 1) : prev + 1))
+      setLocalIsLiked(v => !v)
+    }
+    const onAddComment = () => setLocalComments(prev => prev + 1)
+    const onRepost = () => {
+      setLocalReposts(prev => (localReposted ? Math.max(0, prev - 1) : prev + 1))
+      setLocalReposted(v => !v)
+    }
+    const onShare = async () => {
+      try {
+        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/post/${post.id}` : `https://palabreo.com/post/${post.id}`
+        if (navigator.share) {
+          await navigator.share({ url: shareUrl, title: post.title, text: 'Mira este post en Palabreo' })
+        } else {
+          await navigator.clipboard.writeText(shareUrl)
+        }
+      } catch {}
+    }
+    const toggleBookmark = () => {
+      setBookmarked(prev => {
+        const next = !prev
+        try {
+          const raw = localStorage.getItem('palabreo-bookmarks')
+          let ids: number[] = raw ? JSON.parse(raw) : []
+          if (next) {
+            if (!ids.includes(post.id)) ids.push(post.id)
+          } else {
+            ids = ids.filter(id => id !== post.id)
+          }
+          localStorage.setItem('palabreo-bookmarks', JSON.stringify(ids))
+        } catch {}
+        return next
+      })
+    }
+    return (
     <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mb-6">
-      <CardContent className="p-6 pt-8">
+      <CardContent className="p-6 pt-8" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
         {/* Post Header */}
         <div className="flex items-start space-x-4 mb-5">
           <div className="relative">
@@ -215,7 +302,6 @@ export default function MainPage() {
               <AvatarImage src={post.author.avatar} />
               <AvatarFallback className="text-sm bg-red-50 text-red-700 font-semibold">{post.author.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
             </MemoizedAvatar>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
@@ -235,8 +321,8 @@ export default function MainPage() {
                   {post.genre}
                 </MemoizedBadge>
               </div>
-              <span className="text-xs text-gray-500 flex items-center space-x-1">
-                <span>📖</span>
+              <span className="text-xs text-gray-500 flex items-center gap-1">
+                <BookOpen className="h-3.5 w-3.5" />
                 <span>{post.readTime} de lectura</span>
               </span>
             </div>
@@ -265,31 +351,45 @@ export default function MainPage() {
         {/* Post Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center space-x-6">
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors duration-200 group">
-              <span className="text-lg group-hover:scale-110 transition-transform duration-200">❤️</span>
-              <span className="text-sm font-medium">{post.likes}</span>
+            <button onClick={onLike} className={`flex items-center space-x-2 text-gray-500 transition-colors duration-200 group ${localIsLiked ? 'text-red-600' : 'hover:text-red-600'}`} title={localIsLiked ? 'Quitar me gusta' : 'Me gusta'}>
+              <Heart className={`h-5 w-5 group-hover:scale-110 transition-transform duration-200 ${localIsLiked ? 'text-red-600 fill-red-600' : ''}`} />
+              <span className="text-sm font-medium">{localLikes}</span>
             </button>
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors duration-200 group">
-              <span className="text-lg group-hover:scale-110 transition-transform duration-200">💬</span>
-              <span className="text-sm font-medium">{post.comments}</span>
+            <button onClick={() => setShowCommentBox(v => !v)} className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors duration-200 group">
+              <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium">{localComments}</span>
             </button>
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors duration-200 group">
-              <span className="text-lg group-hover:scale-110 transition-transform duration-200">🔄</span>
-              <span className="text-sm font-medium">{post.shares}</span>
+            <button onClick={onRepost} className={`flex items-center space-x-2 text-gray-500 transition-colors duration-200 group ${localReposted ? 'text-purple-600' : 'hover:text-purple-600'}`} title={localReposted ? 'Quitar repost' : 'Repostear'}>
+              <Repeat2 className={`h-5 w-5 group-hover:scale-110 transition-transform duration-200 ${localReposted ? 'text-purple-600' : ''}`} />
+              <span className="text-sm font-medium">{localReposts}</span>
             </button>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="text-gray-500 hover:text-yellow-500 transition-colors duration-200">
-              <span className="text-lg">🔖</span>
+            <button onClick={toggleBookmark} className={`text-gray-500 hover:text-yellow-600 transition-colors duration-200 ${bookmarked ? 'text-yellow-600' : ''}`} aria-label="Guardar">
+              <Bookmark className={`h-5 w-5 ${bookmarked ? 'fill-yellow-500' : ''}`} />
             </button>
-            <button className="text-gray-500 hover:text-gray-700 transition-colors duration-200">
-              <span className="text-lg">📤</span>
+            <button onClick={onShare} className="text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Compartir" title="Compartir">
+              <Share2 className="h-5 w-5" />
             </button>
           </div>
         </div>
+
+        {showCommentBox && (
+          <div className="mt-3 border-t border-gray-100 pt-3">
+            <div className="flex items-center gap-2">
+              <input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Escribe un comentario..." className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <button
+                onClick={() => { if (commentText.trim()) { onAddComment(); setCommentText('') } }}
+                className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Comentar
+              </button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
-  ))
+  )})
 
   // Memoized sidebar trends data
   const sidebarTrends = useMemo(() => [
@@ -319,40 +419,65 @@ export default function MainPage() {
   ))
 
   // Memoized suggested author component
-  const SuggestedAuthor = memo(({ author }: { author: any }) => (
-    <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <div className="relative flex-shrink-0">
-            <MemoizedAvatar className="h-10 w-10 ring-2 ring-red-100/50 group-hover:ring-red-200/70 transition-all duration-300">
-              <img src={`/api/placeholder/40/40`} alt={author.name} className="rounded-full" />
-            </MemoizedAvatar>
-            {author.verified && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">✓</span>
+  const SuggestedAuthor = memo(({ author }: { author: any }) => {
+    const [isFollowing, setIsFollowing] = useState<boolean>(() => {
+      try {
+        const raw = localStorage.getItem('palabreo-following')
+        const ids: string[] = raw ? JSON.parse(raw) : []
+        return ids.includes(author.username)
+      } catch { return false }
+    })
+    const toggleFollow = () => {
+      setIsFollowing(prev => {
+        const next = !prev
+        try {
+          const raw = localStorage.getItem('palabreo-following')
+          let ids: string[] = raw ? JSON.parse(raw) : []
+          if (next) {
+            if (!ids.includes(author.username)) ids.push(author.username)
+          } else {
+            ids = ids.filter(id => id !== author.username)
+          }
+          localStorage.setItem('palabreo-following', JSON.stringify(ids))
+        } catch {}
+        return next
+      })
+    }
+    return (
+      <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="relative flex-shrink-0">
+              <MemoizedAvatar className="h-10 w-10 ring-2 ring-red-100/50 group-hover:ring-red-200/70 transition-all duration-300">
+                <img src={`/api/placeholder/40/40`} alt={author.name} className="rounded-full" />
+              </MemoizedAvatar>
+              {author.verified && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">✓</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-semibold text-gray-900 text-sm group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{author.name}</p>
+                <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{author.followers}</span>
               </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-semibold text-gray-900 text-sm group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{author.name}</p>
-              <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{author.followers}</span>
-            </div>
-            <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap mb-1">{author.username}</p>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-          <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px]">
-                {author.genre}
-              </MemoizedBadge>
+              <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap mb-1">{author.username}</p>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px]">
+                  {author.genre}
+                </MemoizedBadge>
+              </div>
             </div>
           </div>
+          <MemoizedButton onClick={toggleFollow} size="sm" variant={isFollowing ? 'default' : 'outline'} className={`text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 ml-3 ${isFollowing ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400'}`}>
+            {isFollowing ? 'Siguiendo' : 'Seguir'}
+          </MemoizedButton>
         </div>
-        <MemoizedButton size="sm" variant="outline" className="text-xs px-3 py-1.5 border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400 transition-all duration-300 rounded-full font-medium flex-shrink-0 ml-3">
-          Seguir
-        </MemoizedButton>
       </div>
-    </div>
-  ))
+    )
+  })
 
   return (
     <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
@@ -397,19 +522,26 @@ export default function MainPage() {
             </div>
 
             {/* Header Actions */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 relative">
               <MemoizedButton variant="ghost" size="sm" className="md:hidden">
                 <Search className="h-4 w-4" />
               </MemoizedButton>
               
-              <MemoizedButton variant="ghost" size="sm" className="relative text-gray-600 hover:text-red-600 hover:bg-red-50">
+              <MemoizedButton
+                variant="ghost"
+                size="sm"
+                className="relative text-gray-600 hover:text-red-600 hover:bg-red-50"
+                onClick={() => setShowNotifications((v) => !v)}
+                aria-expanded={showNotifications}
+                aria-haspopup="menu"
+              >
                 <Bell className="h-4 w-4" />
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                   3
                 </span>
               </MemoizedButton>
               
-              <MemoizedButton className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm">
+              <MemoizedButton className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm" onClick={() => router.push('/writer')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Escribir
               </MemoizedButton>
@@ -418,6 +550,54 @@ export default function MainPage() {
                 <AvatarImage src="/api/placeholder/32/32" />
                 <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
               </MemoizedAvatar>
+
+              {showNotifications && (
+                <div
+                  role="menu"
+                  aria-label="Notificaciones recientes"
+                  className="absolute right-0 top-10 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-2 bg-red-50 border-b border-red-100 text-sm font-semibold text-red-800">Recientes</div>
+                  <ul className="max-h-80 overflow-auto divide-y divide-gray-100">
+                    <li className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <MessageCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                        <div>
+                          <div className="font-medium text-gray-900">Nuevo comentario</div>
+                          <div className="text-xs text-gray-600">Ana comentó tu capítulo “El último tren”.</div>
+                        </div>
+                      </div>
+                    </li>
+                    <li className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <UserPlus className="h-4 w-4 text-green-600 mt-0.5" />
+                        <div>
+                          <div className="font-medium text-gray-900">Nuevo seguidor</div>
+                          <div className="text-xs text-gray-600">Carlos empezó a seguirte.</div>
+                        </div>
+                      </div>
+                    </li>
+                    <li className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <AtSign className="h-4 w-4 text-red-600 mt-0.5" />
+                        <div>
+                          <div className="font-medium text-gray-900">Mención</div>
+                          <div className="text-xs text-gray-600">Te mencionaron en “Versos al amanecer”.</div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                  <div className="px-4 py-2 border-t border-gray-100">
+                    <button
+                      onClick={() => { setShowNotifications(false); router.push('/notifications') }}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                      aria-label="Ver más notificaciones"
+                    >
+                      Ver más
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -481,103 +661,8 @@ export default function MainPage() {
           {/* Main Content */}
           <div className="md:col-span-2 lg:col-span-2 order-1 lg:order-2">
             <div className="space-y-4 sm:space-y-6">
-              {/* Create Post Card - Consistent with Design Philosophy - Hidden on mobile */}
-              <Card className="hidden sm:block bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden">
-                <CardContent className="p-6">
-                  {/* Header Section */}
-                  <div className="flex items-start space-x-4 mb-6">
-                    <Avatar className="h-10 w-10 mt-4">
-                      <AvatarImage src="/api/placeholder/40/40" />
-                      <AvatarFallback className="text-sm bg-gray-100 text-gray-700">TU</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1 mt-4">¿Qué historia quieres contar hoy?</h3>
-                      <p className="text-sm text-gray-500 [font-family:var(--font-rubik)]">Comparte tu creatividad con la comunidad</p>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Text Area */}
-                  <div className="relative mb-6">
-                    <textarea
-                      placeholder="Escribe tu historia aquí... Deja volar tu imaginación y comparte tu mundo con nosotros."
-                      className="w-full p-4 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300/50 focus:border-red-300 bg-white text-sm transition-all duration-300 hover:border-red-200 min-h-[100px]"
-                      rows={4}
-                    />
-                  </div>
-
-                  {/* Genre Selection - Consistent with Page Style */}
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Selecciona el género</h4>
-                    <div className="flex gap-3 flex-wrap">
-                      <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                  📝 Cuento
-                </Button>
-                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                  📖 Novela
-                </Button>
-                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                  🎭 Teatro
-                </Button>
-                <Button size="sm" variant="outline" className="text-sm px-4 py-2 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 transition-all duration-300 rounded-lg">
-                        🎵 Poesía
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Publishing Options - Matching Page Design */}
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Opciones de publicación</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
-                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">📢 Publicar en feed</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
-                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">💬 Permitir comentarios</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input type="checkbox" className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" defaultChecked />
-                        <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">🔄 Permitir compartir</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons - Mobile Responsive */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 px-4 sm:px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        ✍️ Modo Escritor
-                      </Button>
-                      <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        💾 Guardar
-                      </Button>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        Vista previa
-                      </Button>
-                      <Button className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 py-2 text-sm font-medium rounded-lg transition-all duration-300">
-                        🚀 Publicar Historia
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Quick Tips - Matching Design Language */}
-                  <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-start space-x-2">
-                      <span className="text-red-500 text-sm mt-0.5">💡</span>
-                      <div>
-                        <h5 className="text-sm font-medium text-red-800 mb-1">Consejos para una mejor publicación</h5>
-                        <p className="text-xs text-red-700">Usa un título atractivo, incluye etiquetas relevantes y revisa la ortografía antes de publicar.</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Posts Feed */}
-              <div className="mt-12">
+              <div className="mt-0">
                 {memoizedPosts.map((post) => (
                   <PostCard key={post.id} post={post} />
                 ))}
@@ -607,7 +692,7 @@ export default function MainPage() {
             <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mt-4 md:mt-6">
               <CardHeader className="bg-red-50 border-b border-red-200 p-3 md:p-4 lg:p-6">
                 <CardTitle className="text-sm md:text-base lg:text-lg font-semibold flex items-center text-red-800">
-                  <span className="mr-2 text-lg md:text-xl">📧</span>
+                  <Mail className="h-4 w-4 mr-2" />
                   Newsletters Destacados
                 </CardTitle>
               </CardHeader>
@@ -680,9 +765,9 @@ export default function MainPage() {
                             {story.genre}
                           </Badge>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <span className="text-gray-500 text-xs font-medium">{story.reads}</span>
-                          <span className="text-gray-400 text-xs">👁️</span>
+                        <div className="flex items-center space-x-1 text-gray-500 text-xs">
+                          <Eye className="h-4 w-4 text-gray-400" />
+                          <span className="font-medium">{story.reads}</span>
                         </div>
                       </div>
                     </div>

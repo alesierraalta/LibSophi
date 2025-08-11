@@ -21,6 +21,7 @@ export default function WriterPage() {
   const [isPreview, setIsPreview] = useState(false)
   const [previewWholeWork, setPreviewWholeWork] = useState(false)
   const [useChapters, setUseChapters] = useState<boolean>(genre === 'novela')
+  const [editorFont, setEditorFont] = useState<'times' | 'serif' | 'poppins' | 'rubik' | 'merri' | 'lora' | 'robotoslab' | 'playfair' | 'mono'>('times')
   const [focusMode, setFocusMode] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [undoStack, setUndoStack] = useState<{ title: string; content: string }[]>([])
@@ -92,6 +93,31 @@ export default function WriterPage() {
   const totalWordCount = useMemo(() => {
     return chapters.reduce((sum, ch) => sum + ch.content.trim().split(/\s+/).filter(Boolean).length, 0)
   }, [chapters])
+
+  const editorFontFamily = useMemo(() => {
+    switch (editorFont) {
+      case 'times':
+        return '"Times New Roman", Times, serif'
+      case 'serif':
+        return 'Georgia, Cambria, "Times New Roman", Times, serif'
+      case 'poppins':
+        return 'var(--font-poppins)'
+      case 'rubik':
+        return 'var(--font-rubik)'
+      case 'merri':
+        return 'var(--font-merriweather)'
+      case 'lora':
+        return 'var(--font-lora)'
+      case 'robotoslab':
+        return 'var(--font-robotoslab)'
+      case 'playfair':
+        return 'var(--font-playfair)'
+      case 'mono':
+        return 'var(--font-jetbrains-mono)'
+      default:
+        return 'serif'
+    }
+  }, [editorFont])
 
   useEffect(() => {
     if (title.length === 0 && content.length === 0) return
@@ -871,6 +897,25 @@ export default function WriterPage() {
                 <Button ref={undoBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Deshacer" title="Deshace el último cambio." onClick={handleUndo}><Undo className="h-4 w-4"/></Button>
                 <Button ref={redoBtnRef} variant="ghost" size="sm" className="h-8 px-2 text-gray-700" aria-label="Rehacer" title="Rehace el último cambio deshecho." onClick={handleRedo}><Redo className="h-4 w-4"/></Button>
                 <div className="w-px h-6 bg-gray-200 mx-1 ml-auto"/>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-600">Fuente</label>
+                  <select
+                    aria-label="Elegir fuente del editor"
+                    value={editorFont}
+                    onChange={(e) => setEditorFont(e.target.value as any)}
+                    className="h-8 px-2 border border-gray-200 rounded-md text-xs bg-white text-gray-700"
+                  >
+                    <option value="times">Times New Roman</option>
+                    <option value="serif">Serif clásica</option>
+                    <option value="poppins">Poppins</option>
+                    <option value="rubik">Rubik</option>
+                    <option value="merri">Merriweather</option>
+                    <option value="lora">Lora</option>
+                    <option value="robotoslab">Roboto Slab</option>
+                    <option value="playfair">Playfair Display</option>
+                    <option value="mono">JetBrains Mono</option>
+                  </select>
+                </div>
                 <Button ref={previewBtnRef} variant="outline" size="sm" className="h-8 px-2" aria-label="Vista previa" title="Alterna entre edición y vista previa del contenido." onClick={() => setIsPreview((v) => !v)}>
                   <Eye className="h-4 w-4 mr-1"/>
                   {isPreview ? 'Editar' : 'Vista previa'}
@@ -894,7 +939,7 @@ export default function WriterPage() {
                     onKeyDown={handleKeyDown}
                     placeholder="Escribe aquí... Usa párrafos cortos, ritmo y voz propia."
                     className="w-full min-h-[240px] sm:min-h-[300px] bg-white text-gray-800 leading-relaxed outline-none resize-none text-[17px] sm:text-base px-4 sm:px-0"
-                    style={{ fontFamily: '"Times New Roman", Times, serif' }}
+                    style={{ fontFamily: editorFontFamily }}
                     autoFocus={isMobile}
                   />
                 </div>
@@ -1101,6 +1146,22 @@ export default function WriterPage() {
             <button className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" title="Abrir tutorial" onClick={startTour} aria-label="Abrir tutorial">
               <HelpCircle className="h-5 w-5"/>
             </button>
+            <select
+              aria-label="Elegir fuente del editor (móvil)"
+              value={editorFont}
+              onChange={(e) => setEditorFont(e.target.value as any)}
+              className="px-2 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700 bg-white"
+            >
+              <option value="times">Times</option>
+              <option value="serif">Serif</option>
+              <option value="poppins">Poppins</option>
+              <option value="rubik">Rubik</option>
+              <option value="merri">Merriweather</option>
+              <option value="lora">Lora</option>
+              <option value="robotoslab">Roboto Slab</option>
+              <option value="playfair">Playfair</option>
+              <option value="mono">Mono</option>
+            </select>
             <Button ref={mPublishBtnRef} className="bg-red-600 hover:bg-red-700 text-white h-9 px-4 text-sm" onClick={handlePublish} disabled={isPublishDisabled} aria-label="Publicar">
               Publicar
             </Button>

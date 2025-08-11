@@ -14,22 +14,22 @@ export default function WritingSocialPreview({
   laptopDeviceImage,
 }: WritingSocialPreviewProps = {}) {
   return (
-    <div className="relative max-w-7xl mx-auto px-4 py-0">
+    <div className="relative max-w-7xl mx-auto px-4 py-0 overflow-hidden">
       {/* Devices Container */}
-      <div className="relative flex items-center justify-center min-h-[300px] sm:min-h-[360px] md:min-h-[420px] pb-6 sm:pb-8 md:pb-10">
+      <div className="relative flex flex-col md:flex-row items-center justify-center min-h-[300px] sm:min-h-[360px] md:min-h-[420px] pt-6 pb-4 sm:pt-8 sm:pb-6 md:pt-10 md:pb-10 pr-12 sm:pr-16 md:pr-0">
         
         {/* MacBook - Use provided device image if available, else render native mock */}
-        <div className="relative z-10 -ml-6 sm:-ml-10 md:-ml-12 transform scale-95 sm:scale-110 md:scale-125">
+        <div className="relative z-10 ml-0 md:-ml-12 transform scale-90 sm:scale-100 md:scale-120">
           {laptopDeviceImage ? (
             <img
               src={laptopDeviceImage}
               alt="Palabreo MacBook Mock"
-              className="w-[46rem] sm:w-[56rem] md:w-[64rem] h-auto object-contain"
+              className="w-full max-w-[22rem] sm:max-w-[40rem] md:max-w-[64rem] h-auto object-contain"
             />
           ) : (
             <div className="bg-gradient-to-b from-gray-200 via-gray-300 to-gray-400 rounded-3xl p-6 shadow-2xl border border-gray-300/50">
               <div className="bg-gradient-to-b from-gray-900 via-black to-gray-900 rounded-2xl p-2 shadow-inner">
-                <div className="bg-black rounded-xl overflow-hidden h-[26rem] sm:h-[30rem] md:h-[34rem] w-[40rem] sm:w-[46rem] md:w-[52rem] relative border border-gray-800">
+                <div className="bg-black rounded-xl overflow-hidden h-[16rem] sm:h-[24rem] md:h-[34rem] w-full max-w-[22rem] sm:max-w-[40rem] md:max-w-[52rem] relative border border-gray-800">
                   {laptopScreenImage ? (
                     <img src={laptopScreenImage} alt="Palabreo MacBook Screen" className="w-full h-full object-cover rounded-xl" />
                   ) : (
@@ -46,18 +46,18 @@ export default function WritingSocialPreview({
         </div>
 
         {/* iPhone 15 Pro Max - If image provided, render image only (no native frame) */}
-        <div className="absolute right-0 sm:right-0 md:right-2 top-1/2 -translate-y-1/2 transform scale-110 sm:scale-125 md:scale-150 z-20">
+        <div className="absolute right-8 sm:right-12 md:right-14 lg:right-20 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-3 md:translate-x-0 transform scale-105 sm:scale-110 md:scale-[1.15] lg:scale-[1.25] z-20">
           {mobileScreenImage ? (
             <img
               src={mobileScreenImage}
               alt="Palabreo iPhone Mock"
-              className="h-[42rem] sm:h-[50rem] md:h-[56rem] w-[22rem] sm:w-[26rem] md:w-[30rem] object-contain"
+              className="h-80 w-40 sm:h-[28rem] sm:w-[14rem] md:h-[42rem] md:w-[21rem] lg:h-[48rem] lg:w-[26rem] object-contain"
             />
           ) : (
             <div className="bg-gradient-to-b from-gray-700 via-gray-800 to-gray-900 rounded-3xl p-1 shadow-2xl border border-gray-600/30">
               <div className="bg-black rounded-3xl p-1">
                 {/* iPhone Screen - Much Wider for iPhone 15 Pro Max */}
-                <div className="bg-black rounded-3xl overflow-hidden h-[32rem] sm:h-[36rem] md:h-[40rem] w-72 sm:w-80 md:w-88 relative">
+                <div className="bg-black rounded-3xl overflow-hidden h-[26rem] sm:h-[32rem] md:h-[48rem] w-56 sm:w-72 md:w-96 relative">
                   <div className="bg-white h-full rounded-3xl overflow-hidden relative">
                     {/* Dynamic Island - Smaller */}
                     <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
