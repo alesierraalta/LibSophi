@@ -2,12 +2,13 @@
 
 import React, { useState, useCallback, useMemo, memo, lazy, Suspense } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, UserPlus, AtSign, BookOpen, Eye, Mail, Copy, Repeat2 } from 'lucide-react'
+import ProfileHoverCard from '@/components/ProfileHoverCard'
 
 // Lazy load ThemeSelector for better performance
 const ThemeSelector = lazy(() => import('@/components/ThemeSelector'))
@@ -44,6 +45,7 @@ export default function MainPage() {
   const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
   const [showNotifications, setShowNotifications] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // Memoized callback to prevent unnecessary re-renders
   const handleLike = useCallback((postId: number) => {
@@ -95,6 +97,13 @@ export default function MainPage() {
     { icon: Bookmark, label: 'Favoritos', id: 'saved' }
   ], [])
 
+  // Mobile top carousel items only: Inicio, Explorar, Guardados
+  const mobileNavItems = useMemo(() => [
+    { icon: Home, label: 'Inicio', id: 'feed' },
+    { icon: Compass, label: 'Explorar', id: 'explore' },
+    { icon: Bookmark, label: 'Guardados', id: 'saved' },
+  ], [])
+
   // Memoized navigation button component
   const NavigationButton = memo(({ item, isActive, onClick }: { item: any, isActive: boolean, onClick: () => void }) => {
     const Icon = item.icon
@@ -116,8 +125,42 @@ export default function MainPage() {
 
   // Memoized callback for tab changes
   const handleTabChange = useCallback((tabId: string) => {
+    if (tabId === 'explore') {
+      router.push('/explore')
+      return
+    }
+    if (tabId === 'feed') {
+      router.push('/main')
+      setActiveTab('feed')
+      return
+    }
+    if (tabId === 'my-stories') {
+      router.push('/main?tab=my-stories')
+      setActiveTab('my-stories')
+      return
+    }
+    if (tabId === 'library') {
+      router.push('/main?tab=library')
+      setActiveTab('library')
+      return
+    }
+    if (tabId === 'saved') {
+      router.push('/main?tab=saved')
+      setActiveTab('saved')
+      return
+    }
     setActiveTab(tabId)
-  }, [])
+  }, [router])
+
+  // Sync active tab with URL query param
+  React.useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'my-stories' || tab === 'library' || tab === 'saved') {
+      if (activeTab !== tab) setActiveTab(tab)
+    } else if (!tab && activeTab !== 'feed') {
+      setActiveTab('feed')
+    }
+  }, [searchParams, activeTab])
 
   // Memoized trending topics data
   const trendingTopics = useMemo(() => [
@@ -257,14 +300,64 @@ export default function MainPage() {
         return false
       }
     })
+    const [comments, setComments] = useState<{ id: string; author: any; text: string; time: number }[]>(() => {
+      try {
+        const raw = localStorage.getItem(`palabreo-comments-${post.id}`)
+        return raw ? JSON.parse(raw) : []
+      } catch { return [] }
+    })
+    React.useEffect(() => { setLocalComments(comments.length) }, [comments])
+    React.useEffect(() => {
+      // Seed example comments if none
+      try {
+        const key = `palabreo-comments-${post.id}`
+        const seededKey = `palabreo-comments-seeded-${post.id}`
+        if (localStorage.getItem(seededKey)) return
+        const raw = localStorage.getItem(key)
+        const existing = raw ? JSON.parse(raw) : []
+        if (Array.isArray(existing) && existing.length > 0) return
+        const now = Date.now()
+        const samples = [
+          { id: `${now}-1`, author: { name: 'Elena Martínez', username: '@elena_writes' }, text: `Impresionante atmósfera, @${post.author.username.replace('@','')} 👏`, time: now - 1000*60*20 },
+          { id: `${now}-2`, author: { name: 'Carlos Ruiz', username: '@carlos_stories' }, text: 'Coincido, gran ritmo narrativo.', time: now - 1000*60*12 },
+        ]
+        localStorage.setItem(key, JSON.stringify(samples))
+        localStorage.setItem(seededKey, '1')
+        setComments(samples)
+      } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
     const onLike = () => {
       setLocalLikes(prev => (localIsLiked ? Math.max(0, prev - 1) : prev + 1))
       setLocalIsLiked(v => !v)
     }
-    const onAddComment = () => setLocalComments(prev => prev + 1)
+    const onAddComment = (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed) return
+      const newItem = { id: `${Date.now()}-${Math.random().toString(36).slice(2,6)}`, author: { name: 'Tú', username: '@tu' }, text: trimmed, time: Date.now() }
+      setComments(prev => {
+        const next = [...prev, newItem]
+        try { localStorage.setItem(`palabreo-comments-${post.id}`, JSON.stringify(next)) } catch {}
+        return next
+      })
+    }
     const onRepost = () => {
       setLocalReposts(prev => (localReposted ? Math.max(0, prev - 1) : prev + 1))
       setLocalReposted(v => !v)
+      try {
+        const key = 'palabreo-reposts'
+        const raw = localStorage.getItem(key)
+        const list: any[] = raw ? JSON.parse(raw) : []
+        if (!localReposted) {
+          const item = { id: post.id, title: post.title, author: post.author, excerpt: (post.content || '').slice(0, 160), image: post.image || null, time: Date.now() }
+          const exists = list.some(x => x && x.id === post.id)
+          const next = exists ? list : [...list, item]
+          localStorage.setItem(key, JSON.stringify(next))
+        } else {
+          const next = list.filter(x => x && x.id !== post.id)
+          localStorage.setItem(key, JSON.stringify(next))
+        }
+      } catch {}
     }
     const onShare = async () => {
       try {
@@ -294,14 +387,15 @@ export default function MainPage() {
     }
     return (
     <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mb-6">
-      <CardContent className="p-6 pt-8" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+      <CardContent className="p-6 pt-8">
         {/* Post Header */}
         <div className="flex items-start space-x-4 mb-5">
-          <div className="relative">
+          <div className="relative group" tabIndex={0}>
             <MemoizedAvatar className="h-12 w-12 ring-2 ring-red-100/60 hover:ring-red-200/80 transition-all duration-300">
               <AvatarImage src={post.author.avatar} />
               <AvatarFallback className="text-sm bg-red-50 text-red-700 font-semibold">{post.author.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
             </MemoizedAvatar>
+            <ProfileHoverCard author={{ name: post.author.name, username: post.author.username, avatar: post.author.avatar }} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
@@ -333,7 +427,7 @@ export default function MainPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-3 hover:text-red-700 transition-colors duration-200 cursor-pointer">
             {post.title}
           </h3>
-          <p className="text-gray-700 leading-relaxed mb-4 line-clamp-3">
+          <p className="text-gray-700 leading-relaxed mb-4 line-clamp-3" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
             {post.content}
           </p>
           {post.image && (
@@ -375,11 +469,35 @@ export default function MainPage() {
         </div>
 
         {showCommentBox && (
-          <div className="mt-3 border-t border-gray-100 pt-3">
+          <div className="mt-3 border-t border-gray-100 pt-3 space-y-3">
+            {comments.length > 0 && (
+              <div className="space-y-2">
+                {comments.slice(-5).map((c) => {
+                  const displayName = typeof c.author === 'object' && c.author?.name ? c.author.name : (typeof c.author === 'string' ? c.author : 'Usuario')
+                  const username = typeof c.author === 'object' && c.author?.username ? c.author.username : null
+                  const initials = (displayName || 'U').split(' ').map((n: string) => n[0]).join('').slice(0,2).toUpperCase()
+                  const usernameDisplay = username || ('@' + (displayName || 'usuario').toLowerCase().replace(/[^a-z0-9_]+/gi, ''))
+                  return (
+                  <div key={c.id} className="flex items-start gap-2">
+                    <div className="h-8 w-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-xs font-bold">
+                      {initials}
+                    </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 max-w-full">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-gray-900">{usernameDisplay}</span>
+                        <span className="text-xs text-gray-500">{displayName}</span>
+                        <span className="text-[11px] text-gray-400 ml-auto">{new Date(c.time).toLocaleString()}</span>
+                      </div>
+                      <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">{c.text}</div>
+                    </div>
+                  </div>)
+                })}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Escribe un comentario..." className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm" />
               <button
-                onClick={() => { if (commentText.trim()) { onAddComment(); setCommentText('') } }}
+                onClick={() => { onAddComment(commentText); setCommentText('') }}
                 className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
               >
                 Comentar
@@ -541,15 +659,17 @@ export default function MainPage() {
                 </span>
               </MemoizedButton>
               
-              <MemoizedButton className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm" onClick={() => router.push('/writer')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Escribir
+              <MemoizedButton className="hidden md:inline-flex bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm" onClick={() => router.push('/writer')}>
+                <PenTool className="h-4 w-4 mr-2" />
+                Publicar
               </MemoizedButton>
               
-              <MemoizedAvatar className="h-8 w-8">
-                <AvatarImage src="/api/placeholder/32/32" />
-                <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
-              </MemoizedAvatar>
+              <button onClick={() => router.push('/profile')} aria-label="Ir a mi perfil" className="rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
+                <MemoizedAvatar className="h-8 w-8">
+                  <AvatarImage src="/api/placeholder/32/32" />
+                  <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
+                </MemoizedAvatar>
+              </button>
 
               {showNotifications && (
                 <div
@@ -603,29 +723,31 @@ export default function MainPage() {
         </div>
       </header>
 
+      {/* Mobile Navigation Carousel - moved to top */}
+      <div className="lg:hidden max-w-full mx-auto px-0 sm:px-4 lg:px-6">
+        <div className="flex items-stretch border-b border-gray-200 bg-white">
+          {mobileNavItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleTabChange(item.id)}
+              className={`flex-1 inline-flex items-center justify-center gap-2 h-12 text-sm font-medium transition-colors ${
+                activeTab === item.id
+                  ? 'text-red-600 border-b-2 border-red-600'
+                  : 'text-gray-600 hover:text-red-600'
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Sidebar - Mobile Navigation */}
           <div className="lg:col-span-1 order-2 lg:order-1">
-            {/* Mobile Navigation - Horizontal scroll */}
-            <div className="lg:hidden mb-4">
-              <div className="flex overflow-x-auto space-x-2 pb-2 scrollbar-hide">
-                {navigationItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleTabChange(item.id)}
-                    className={`flex-shrink-0 flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      activeTab === item.id
-                        ? 'bg-red-600 text-white'
-                        : 'bg-white/80 text-gray-600 hover:bg-red-50 hover:text-red-600 border border-gray-200'
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span className="whitespace-nowrap">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Mobile Navigation moved to top */}
 
             {/* Desktop Navigation */}
             <Card className="hidden lg:block bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden">
@@ -778,6 +900,15 @@ export default function MainPage() {
           </div>
         </div>
       </div>
+
+      {/* Floating Publish Button - Mobile only */}
+      <button
+        onClick={() => router.push('/writer')}
+        aria-label="Publicar"
+        className="md:hidden fixed bottom-20 right-4 z-50 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg w-14 h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-600"
+      >
+        <PenTool className="h-6 w-6" />
+      </button>
     </div>
   )
 }

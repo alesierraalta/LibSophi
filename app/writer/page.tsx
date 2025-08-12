@@ -75,6 +75,7 @@ export default function WriterPage() {
   const [chapters, setChapters] = useState<Chapter[]>([{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: '' }])
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0)
   const [hasSelectedWork, setHasSelectedWork] = useState(false)
+  const [draftAvailable, setDraftAvailable] = useState(false)
   const [selectingContinuation, setSelectingContinuation] = useState(false)
   const [currentWorkId, setCurrentWorkId] = useState<string | null>(null)
   const [existingWorks, setExistingWorks] = useState<Work[]>([])
@@ -162,6 +163,14 @@ export default function WriterPage() {
         if (typeof saved.currentWorkId !== 'undefined') setCurrentWorkId(saved.currentWorkId ?? null)
         if (typeof saved.currentChapterIndex === 'number') setCurrentChapterIndex(saved.currentChapterIndex)
         if (typeof saved.useChapters === 'boolean') setUseChapters(saved.useChapters)
+        const hadSelection = (
+          (saved.currentWorkId && saved.currentWorkId.length > 0) ||
+          (saved.title && saved.title.trim().length > 0) ||
+          (Array.isArray(saved.chapters) && saved.chapters.some((ch: any) => ch && typeof ch.content === 'string' && ch.content.trim().length > 0))
+        )
+        setDraftAvailable(!!hadSelection)
+        // Siempre pedir selección al abrir
+        setHasSelectedWork(false)
       }
       const worksRaw = localStorage.getItem('palabreo-works')
       if (worksRaw) {
@@ -186,9 +195,8 @@ export default function WriterPage() {
   }, [content])
 
   useEffect(() => {
-    // Para formatos sin capítulos, no pedir selección de obra ni mostrar UI de capítulos
+    // Ajuste de capítulos según modo (no forzar selección de obra)
     if (!useChapters) {
-      setHasSelectedWork(true)
       setPreviewWholeWork(false)
     } else {
       setChapters((prev) => {
@@ -753,6 +761,12 @@ export default function WriterPage() {
     setSelectingContinuation(false)
     const id = `${Date.now()}`
     setCurrentWorkId(id)
+    setTitle('')
+    setContent('')
+    setCoverUrl('')
+    setTags([])
+    setChapters([{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: '' }])
+    setCurrentChapterIndex(0)
   }
 
   const handleSelectExistingWork = (work: Work) => {
@@ -790,7 +804,7 @@ export default function WriterPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className={`bg-white border-b border-gray-200 sticky top-0 z-50 ${isMobile && focusMode ? 'hidden' : ''}`}>
         <div className="w-full max-w-none px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-12 sm:h-16">
             <div className="flex items-center space-x-3">
@@ -839,6 +853,91 @@ export default function WriterPage() {
           </div>
         </div>
       </header>
+
+      {/* Mobile mini toolbar under header */}
+      <div className={`sm:hidden sticky top-12 z-40 border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 ${isMobile && focusMode ? 'hidden' : ''}` }>
+        <div className="px-2 py-2 flex flex-wrap items-center gap-1">
+          {/* Row 1: inline styles and headings */}
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => wrapSelection('**')} aria-label="Negrita"><Bold className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => wrapSelection('*')} aria-label="Cursiva"><Italic className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => wrapSelection('<u>', '</u>')} aria-label="Subrayado"><Underline className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => wrapSelection('~~')} aria-label="Tachado"><Strikethrough className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => insertHeading(1)} aria-label="Título H1"><Heading1 className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => insertHeading(2)} aria-label="Título H2"><Heading2 className="h-5 w-5"/></button>
+
+          {/* Row 2: lists, quote, links, images */}
+          <div className="w-full h-0" aria-hidden="true" />
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => toggleLinePrefix('- ')} aria-label="Lista con viñetas"><List className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => toggleLinePrefix('1. ')} aria-label="Lista numerada"><ListOrdered className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => toggleLinePrefix('> ')} aria-label="Cita"><Quote className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={insertLink} aria-label="Enlace"><LinkIcon className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => editorRef.current && wrapSelection('![alt](', ')')} aria-label="Imagen"><ImageIcon className="h-5 w-5"/></button>
+
+          {/* Row 3: code, hr, clear, indent */}
+          <div className="w-full h-0" aria-hidden="true" />
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={insertInlineCode} aria-label="Código en línea"><Code className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={insertCodeBlock} aria-label="Bloque de código"><Code2 className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={insertHorizontalRule} aria-label="Separador"><SeparatorHorizontal className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={clearFormatting} aria-label="Limpiar formato"><Eraser className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => indentSelection(false)} aria-label="Aumentar sangría"><IndentIncrease className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={() => indentSelection(true)} aria-label="Reducir sangría"><IndentDecrease className="h-5 w-5"/></button>
+          
+          {/* Row 4: undo/redo and actions */}
+          <div className="w-full h-0" aria-hidden="true" />
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={handleUndo} aria-label="Deshacer"><Undo className="h-5 w-5"/></button>
+          <button className="h-10 w-10 rounded-md border border-gray-300 bg-white text-gray-700 flex items-center justify-center active:scale-95" onClick={handleRedo} aria-label="Rehacer"><Redo className="h-5 w-5"/></button>
+          <div className="w-full h-0" aria-hidden="true" />
+          <button className={`h-10 px-3 rounded-md border ${isPreview ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-300 text-gray-700'} active:scale-95`} onClick={() => setIsPreview(v => !v)} aria-label="Vista previa">
+            <div className="flex items-center gap-2">
+              <Eye className="h-5 w-5"/>
+              <span className="text-sm">{isPreview ? 'Editar' : 'Previsualizar'}</span>
+            </div>
+          </button>
+          <button className={`h-10 px-3 rounded-md border bg-white border-gray-300 text-gray-700 active:scale-95`} onClick={() => setFocusMode(v => !v)} aria-label="Modo enfoque">
+            <div className="flex items-center gap-2">
+              {focusMode ? <Minimize className="h-5 w-5"/> : <Maximize className="h-5 w-5"/>}
+              <span className="text-sm">{focusMode ? 'Salir enfoque' : 'Enfoque'}</span>
+            </div>
+          </button>
+          <button className={`h-10 px-3 rounded-md border ${isPublishDisabled ? 'bg-gray-200 border-gray-300 text-gray-500' : 'bg-red-600 border-red-600 text-white active:scale-95'}`} onClick={handlePublish} aria-label="Publicar" disabled={isPublishDisabled}>
+            <span className="text-sm">Publicar</span>
+          </button>
+
+          {/* Row 5: font select (full width) */}
+          <div className="w-full h-0" aria-hidden="true" />
+          <div className="w-full flex items-center gap-2">
+            <label className="text-xs text-gray-600">Fuente</label>
+            <select
+              aria-label="Elegir fuente del editor (móvil)"
+              value={editorFont}
+              onChange={(e) => setEditorFont(e.target.value as any)}
+              className="flex-1 h-10 px-2 rounded-md border border-gray-300 text-sm text-gray-700 bg-white"
+            >
+              <option value="times">Times New Roman</option>
+              <option value="serif">Serif clásica</option>
+              <option value="poppins">Poppins</option>
+              <option value="rubik">Rubik</option>
+              <option value="merri">Merriweather</option>
+              <option value="lora">Lora</option>
+              <option value="robotoslab">Roboto Slab</option>
+              <option value="playfair">Playfair Display</option>
+              <option value="mono">JetBrains Mono</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating exit focus button on mobile */}
+      {isMobile && focusMode && (
+        <button
+          onClick={() => setFocusMode(false)}
+          aria-label="Salir del modo enfoque"
+          className="sm:hidden fixed top-2 right-2 z-[60] h-10 px-3 rounded-full bg-black/60 text-white backdrop-blur flex items-center gap-2 active:scale-95"
+        >
+          <Minimize className="h-5 w-5" />
+          <span className="text-sm">Salir</span>
+        </button>
+      )}
 
       <main className={`w-full max-w-none px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-24 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
         <section className={`${focusMode ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
@@ -938,7 +1037,7 @@ export default function WriterPage() {
                     onChange={(e) => handleContentChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Escribe aquí... Usa párrafos cortos, ritmo y voz propia."
-                    className="w-full min-h-[240px] sm:min-h-[300px] bg-white text-gray-800 leading-relaxed outline-none resize-none text-[17px] sm:text-base px-4 sm:px-0"
+                    className="w-full min-h-[240px] sm:min-h-[300px] bg-white text-gray-800 leading-[1.7] outline-none resize-none text-[18px] sm:text-base px-4 sm:px-0"
                     style={{ fontFamily: editorFontFamily }}
                     autoFocus={isMobile}
                   />
@@ -1128,57 +1227,19 @@ export default function WriterPage() {
         </aside>
       </main>
 
-      {/* Mobile bottom toolbar for a native-like experience */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 touch-manipulation">
-        <div className="w-full max-w-none px-3 py-2 flex items-center justify-between" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
-          <div className="flex items-center gap-2">
-            <button ref={mBoldBtnRef} className="p-2 text-gray-700" aria-label="Negrita" title="Negrita (Ctrl+B)" onClick={() => wrapSelection('**')}><Bold className="h-5 w-5"/></button>
-            <button ref={mItalicBtnRef} className="p-2 text-gray-700" aria-label="Cursiva" title="Cursiva (Ctrl+I)" onClick={() => wrapSelection('*')}><Italic className="h-5 w-5"/></button>
-            <button ref={mH1BtnRef} className="p-2 text-gray-700" aria-label="H1" title="Título (H1)" onClick={() => insertHeading(1)}><Heading1 className="h-5 w-5"/></button>
-            <button ref={mListBtnRef} className="p-2 text-gray-700" aria-label="Lista" title="Lista con viñetas" onClick={() => toggleLinePrefix('- ')}><List className="h-5 w-5"/></button>
-            <button ref={mLinkBtnRef} className="p-2 text-gray-700" aria-label="Enlace" title="Insertar enlace" onClick={insertLink}><LinkIcon className="h-5 w-5"/></button>
-            <button ref={mImageBtnRef} className="p-2 text-gray-700" aria-label="Imagen" title="Insertar imagen (URL)" onClick={() => editorRef.current && wrapSelection('![alt](', ')')}><ImageIcon className="h-5 w-5"/></button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button ref={mPreviewBtnRef} className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" title="Alternar vista previa" onClick={() => setIsPreview(v => !v)} aria-label="Vista previa">
-              {isPreview ? 'Editar' : 'Vista previa'}
-            </button>
-            <button className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700" title="Abrir tutorial" onClick={startTour} aria-label="Abrir tutorial">
-              <HelpCircle className="h-5 w-5"/>
-            </button>
-            <select
-              aria-label="Elegir fuente del editor (móvil)"
-              value={editorFont}
-              onChange={(e) => setEditorFont(e.target.value as any)}
-              className="px-2 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700 bg-white"
-            >
-              <option value="times">Times</option>
-              <option value="serif">Serif</option>
-              <option value="poppins">Poppins</option>
-              <option value="rubik">Rubik</option>
-              <option value="merri">Merriweather</option>
-              <option value="lora">Lora</option>
-              <option value="robotoslab">Roboto Slab</option>
-              <option value="playfair">Playfair</option>
-              <option value="mono">Mono</option>
-            </select>
-            <Button ref={mPublishBtnRef} className="bg-red-600 hover:bg-red-700 text-white h-9 px-4 text-sm" onClick={handlePublish} disabled={isPublishDisabled} aria-label="Publicar">
-              Publicar
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Mobile bottom toolbar removed to avoid duplication; unified in top mini toolbar */}
 
       {/* Overlay de selección de obra */}
       {!hasSelectedWork && (
-        <div className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full grid grid-cols-1 gap-4">
+        <div className={`fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm p-0 sm:p-4 flex ${isMobile ? 'items-end' : 'items-center justify-center'}`}>
+          <div className={`w-full ${isMobile ? '' : 'max-w-2xl'} grid grid-cols-1 gap-4`}>
             {!selectingContinuation ? (
-              <Card className="bg-white border border-gray-200 shadow-xl rounded-xl overflow-hidden">
-                <CardHeader className="p-6 border-b border-gray-100">
+              <Card className={`bg-white border border-gray-200 shadow-2xl ${isMobile ? 'rounded-t-2xl' : 'rounded-xl'} overflow-hidden`}>
+                {isMobile && <div className="w-full flex items-center justify-center pt-2"><div className="h-1.5 w-12 rounded-full bg-gray-300"/></div>}
+                <CardHeader className="p-4 sm:p-6 border-b border-gray-100">
                   <CardTitle className="text-lg">¿Qué vas a escribir hoy?</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   <button onClick={handleStartNewWork} className="p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition text-left">
                     <div className="flex items-center gap-3">
                       <BookPlus className="h-5 w-5 text-red-600"/>
@@ -1197,18 +1258,30 @@ export default function WriterPage() {
                       </div>
                     </div>
                   </button>
+                  {draftAvailable && (
+                    <button onClick={() => setHasSelectedWork(true)} className="p-4 border border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition text-left md:col-span-2">
+                      <div className="flex items-center gap-3">
+                        <span className="h-5 w-5 rounded-full bg-blue-600 inline-block"/>
+                        <div>
+                          <div className="font-semibold text-gray-900">Continuar borrador</div>
+                          <div className="text-sm text-gray-600">Abrir el borrador guardado recientemente</div>
+                        </div>
+                      </div>
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             ) : (
-              <Card className="bg-white border border-gray-200 shadow-xl rounded-xl overflow-hidden">
-                <CardHeader className="p-6 border-b border-gray-100">
+              <Card className={`bg-white border border-gray-200 shadow-2xl ${isMobile ? 'rounded-t-2xl' : 'rounded-xl'} overflow-hidden`}>
+                {isMobile && <div className="w-full flex items-center justify-center pt-2"><div className="h-1.5 w-12 rounded-full bg-gray-300"/></div>}
+                <CardHeader className="p-4 sm:p-6 border-b border-gray-100">
                   <CardTitle className="text-lg">Elige una obra para continuar</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-3">
+                <CardContent className="p-4 sm:p-6 space-y-3">
                   {existingWorks.length === 0 && (
                     <div className="text-sm text-gray-600">No tienes obras guardadas aún. Crea una nueva.</div>
                   )}
-                  <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-auto pr-1">
+                  <div className="grid grid-cols-1 gap-3 max-h-[60vh] overflow-auto pr-1">
                     {existingWorks.map((w) => (
                       <button key={w.id} onClick={() => handleSelectExistingWork(w)} className="p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition text-left">
                         <div className="flex items-center justify-between">

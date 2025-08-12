@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, PenTool, Bell } from 'lucide-react'
+import { BookOpen, Bell, Library, Bookmark } from 'lucide-react'
 
 type NavItem = {
   href: string
@@ -11,14 +11,15 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Inicio', Icon: Home },
   { href: '/main', label: 'Feed', Icon: BookOpen },
-  { href: '/writer', label: 'Escribir', Icon: PenTool },
+  { href: '/main?tab=my-stories', label: 'Mis Libros', Icon: Library },
+  { href: '/favorites', label: 'Favoritos', Icon: Bookmark },
   { href: '/notifications', label: 'Alertas', Icon: Bell },
 ]
 
 export default function MobileFooter() {
   const pathname = usePathname()
+  if (pathname === '/writer' || pathname.startsWith('/writer/')) return null
 
   return (
     <footer
@@ -29,7 +30,8 @@ export default function MobileFooter() {
       <nav className="max-w-5xl mx-auto">
         <ul className="flex items-center justify-around px-2 py-2">
           {navItems.map(({ href, label, Icon }) => {
-            const isActive = pathname === href
+            const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://palabreo.com')
+            const isActive = pathname === url.pathname && (url.search ? (typeof window !== 'undefined' ? window.location.search === url.search : false) : true)
             return (
               <li key={href} className="flex-1">
                 <Link

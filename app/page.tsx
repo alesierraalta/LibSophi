@@ -10,10 +10,14 @@ import InteractiveDemo from '../components/InteractiveDemo'
 import AnimatedElement from '../components/AnimatedElement'
 import { FeatureCard } from '../components/Card'
 import ThemeSelector from '../components/ThemeSelector'
+import { useEffect } from 'react'
 import WritingSocialPreview from '../components/WritingSocialPreview'
 
 export default function Home() {
   const router = useRouter()
+  useEffect(() => {
+    router.replace('/main')
+  }, [router])
   return (
     <main id="main-content" className="w-full min-h-screen">
       {/* Theme Selector for Red Evaluation */}
