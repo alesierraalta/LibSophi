@@ -39,7 +39,7 @@ const initialPosts = [
   }
 ]
 
-export default function MainPage() {
+function MainPageInner() {
   const [posts, setPosts] = useState(initialPosts)
   const [activeTab, setActiveTab] = useState('feed')
   const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
@@ -910,5 +910,13 @@ export default function MainPage() {
         <PenTool className="h-6 w-6" />
       </button>
     </div>
+  )
+}
+
+export default function MainPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <MainPageInner />
+    </Suspense>
   )
 }
