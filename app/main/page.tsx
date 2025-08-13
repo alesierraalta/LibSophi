@@ -135,8 +135,7 @@ function MainPageInner() {
       return
     }
     if (tabId === 'my-stories') {
-      router.push('/main?tab=my-stories')
-      setActiveTab('my-stories')
+      router.push('/mis-obras')
       return
     }
     if (tabId === 'library') {
@@ -173,20 +172,24 @@ function MainPageInner() {
 
   // Memoized trending topic component
   const TrendingTopic = memo(({ topic }: { topic: any }) => (
-    <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-          <MemoizedBadge 
-            variant="outline" 
-            className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5"
-          >
-            {topic.tag}
-          </MemoizedBadge>
+    <button
+      type="button"
+      aria-label={`Ver tendencia ${topic.tag}`}
+      className="w-full text-left group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+    >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0"></span>
+            <MemoizedBadge
+              variant="outline"
+              className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 whitespace-normal break-words max-w-full group-hover:text-red-800"
+            >
+              {topic.tag}
+            </MemoizedBadge>
+          </div>
+          <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{topic.count}</span>
         </div>
-        <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{topic.count}</span>
-      </div>
-    </div>
+    </button>
   ))
 
   // Memoized posts data with expanded content
@@ -369,6 +372,44 @@ function MainPageInner() {
         }
       } catch {}
     }
+    // Mobile long-press (Pinterest-like) overlay state
+    const [isLongPressActive, setIsLongPressActive] = useState<boolean>(false)
+    const longPressTimerRef = React.useRef<number | null>(null)
+    const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null)
+    const LONG_PRESS_MS = 350
+    const MOVE_THRESHOLD_PX = 10
+
+    const clearLongPressTimer = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+    }
+    const onTouchStartCard = (e: React.TouchEvent) => {
+      // Ignore if pressing on interactive elements
+      const target = e.target as HTMLElement
+      if (target.closest('button, a, input, textarea, [role="button"]')) return
+      const t = e.touches[0]
+      touchStartPosRef.current = { x: t.clientX, y: t.clientY }
+      clearLongPressTimer()
+      longPressTimerRef.current = window.setTimeout(() => {
+        setIsLongPressActive(true)
+        try { (navigator as any).vibrate && (navigator as any).vibrate(10) } catch {}
+      }, LONG_PRESS_MS)
+    }
+    const onTouchMoveCard = (e: React.TouchEvent) => {
+      if (!touchStartPosRef.current) return
+      const t = e.touches[0]
+      const dx = Math.abs(t.clientX - touchStartPosRef.current.x)
+      const dy = Math.abs(t.clientY - touchStartPosRef.current.y)
+      if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
+        clearLongPressTimer()
+      }
+    }
+    const onTouchEndCard = () => {
+      clearLongPressTimer()
+      touchStartPosRef.current = null
+    }
     const toggleBookmark = () => {
       setBookmarked(prev => {
         const next = !prev
@@ -386,7 +427,13 @@ function MainPageInner() {
       })
     }
     return (
-    <Card className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden mb-6">
+    <Card
+      className={`relative bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-200 overflow-hidden mb-6 ${isLongPressActive ? 'scale-[0.98] brightness-95' : ''}`}
+      onTouchStart={onTouchStartCard}
+      onTouchMove={onTouchMoveCard}
+      onTouchEnd={onTouchEndCard}
+      onContextMenu={(e) => { e.preventDefault() }}
+    >
       <CardContent className="p-6 pt-8">
         {/* Post Header */}
         <div className="flex items-start space-x-4 mb-5">
@@ -506,6 +553,41 @@ function MainPageInner() {
           </div>
         )}
       </CardContent>
+
+      {/* Mobile Long-Press Overlay */}
+      {isLongPressActive && (
+        <div className="absolute inset-0 z-50 md:hidden" onClick={() => setIsLongPressActive(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white/95 shadow-xl border border-gray-200 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-around">
+              <button
+                onClick={() => { toggleBookmark(); setIsLongPressActive(false) }}
+                className={`flex flex-col items-center text-xs ${bookmarked ? 'text-yellow-600' : 'text-gray-700'}`}
+                aria-label="Guardar"
+              >
+                <Bookmark className={`h-6 w-6 ${bookmarked ? 'fill-yellow-500' : ''}`} />
+                <span className="mt-1">Guardar</span>
+              </button>
+              <button
+                onClick={() => { onRepost(); setIsLongPressActive(false) }}
+                className="flex flex-col items-center text-xs text-gray-700"
+                aria-label="Repostear"
+              >
+                <Repeat2 className="h-6 w-6" />
+                <span className="mt-1">Repostear</span>
+              </button>
+              <button
+                onClick={async () => { await onShare(); setIsLongPressActive(false) }}
+                className="flex flex-col items-center text-xs text-gray-700"
+                aria-label="Compartir"
+              >
+                <Share2 className="h-6 w-6" />
+                <span className="mt-1">Compartir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )})
 
@@ -563,7 +645,7 @@ function MainPageInner() {
     }
     return (
       <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
               <MemoizedAvatar className="h-10 w-10 ring-2 ring-red-100/50 group-hover:ring-red-200/70 transition-all duration-300">
@@ -580,16 +662,16 @@ function MainPageInner() {
                 <p className="font-semibold text-gray-900 text-sm group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{author.name}</p>
                 <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{author.followers}</span>
               </div>
-              <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap mb-1">{author.username}</p>
+              <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200 truncate mb-1">{author.username}</p>
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-                <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px]">
+                <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-full sm:max-w-[160px]">
                   {author.genre}
                 </MemoizedBadge>
               </div>
             </div>
           </div>
-          <MemoizedButton onClick={toggleFollow} size="sm" variant={isFollowing ? 'default' : 'outline'} className={`text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 ml-3 ${isFollowing ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400'}`}>
+          <MemoizedButton onClick={toggleFollow} size="sm" variant={isFollowing ? 'default' : 'outline'} className={`text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-3 ${isFollowing ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400'}`}>
             {isFollowing ? 'Siguiendo' : 'Seguir'}
           </MemoizedButton>
         </div>
@@ -826,25 +908,25 @@ function MainPageInner() {
                     { title: "Cuentos de Medianoche", author: "Carmen López", subscribers: "3.1k", frequency: "Mensual", genre: "Cuentos Originales" },
                   ].map((newsletter, index) => (
                     <div key={index} className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm mb-1 text-gray-900 group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{newsletter.title}</h4>
-                          <p className="text-gray-500 text-xs mb-2 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">por {newsletter.author}</p>
+                          <h4 className="font-semibold text-sm mb-1 text-gray-900 group-hover:text-red-700 transition-colors duration-200 line-clamp-2 whitespace-normal break-words">{newsletter.title}</h4>
+                          <p className="text-gray-500 text-xs mb-2 group-hover:text-gray-600 transition-colors duration-200 truncate">por {newsletter.author}</p>
                         </div>
-                        <Button variant="outline" size="sm" className="text-xs px-3 py-1.5 border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400 transition-all duration-300 rounded-full font-medium flex-shrink-0 ml-2">
+                        <Button variant="outline" size="sm" className="text-xs px-3 py-1.5 border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400 transition-all duration-300 rounded-full font-medium flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-2">
                           Suscribirse
                         </Button>
                       </div>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                         <div className="flex items-center space-x-1">
                           <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
+                          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-full sm:max-w-[140px]">
                             {newsletter.genre}
                           </Badge>
                         </div>
                         <span className="text-gray-600 text-xs font-medium flex-shrink-0">{newsletter.frequency}</span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-gray-500 text-xs font-medium">{newsletter.subscribers} suscriptores</span>
                         <div className="flex items-center space-x-1">
                           <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
@@ -870,20 +952,20 @@ function MainPageInner() {
                     { title: "Memorias de una generación perdida", author: "Elena García", reads: "15.2k", genre: "Ensayo Autobiográfico" },
                   ].map((story, index) => (
                     <div key={index} className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm mb-1 text-gray-900 group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{story.title}</h4>
-                          <p className="text-gray-500 text-xs mb-2 group-hover:text-gray-600 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">por {story.author}</p>
+                          <h4 className="font-semibold text-sm mb-1 text-gray-900 group-hover:text-red-700 transition-colors duration-200 line-clamp-2 whitespace-normal break-words">{story.title}</h4>
+                          <p className="text-gray-500 text-xs mb-2 group-hover:text-gray-600 transition-colors duration-200 truncate">por {story.author}</p>
                         </div>
-                        <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                        <div className="flex items-center space-x-1 flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-2 justify-end">
                           <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                           <span className="text-xs text-orange-600 font-medium">Popular</span>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center space-x-1">
                           <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
+                          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-full sm:max-w-[140px]">
                             {story.genre}
                           </Badge>
                         </div>
