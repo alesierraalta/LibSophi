@@ -380,6 +380,9 @@ function ExploreItemCard({ card, saved, onToggleSaved }: { card: any; saved: boo
   const [isLongPressActive, setIsLongPressActive] = useState<boolean>(false)
   const longPressTimerRef = React.useRef<number | null>(null)
   const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null)
+  const cardRef = React.useRef<HTMLDivElement | null>(null)
+  const [ripple, setRipple] = useState<{ x: number; y: number; size: number; key: number } | null>(null)
+  const [sheenKey, setSheenKey] = useState<number>(0)
   const LONG_PRESS_MS = 350
   const MOVE_THRESHOLD_PX = 10
 
@@ -398,6 +401,17 @@ function ExploreItemCard({ card, saved, onToggleSaved }: { card: any; saved: boo
     longPressTimerRef.current = window.setTimeout(() => {
       setIsLongPressActive(true)
       try { (navigator as any).vibrate && (navigator as any).vibrate(10) } catch {}
+      const rect = cardRef.current?.getBoundingClientRect()
+      const baseX = touchStartPosRef.current?.x ?? (rect ? rect.left + rect.width / 2 : 0)
+      const baseY = touchStartPosRef.current?.y ?? (rect ? rect.top + rect.height / 2 : 0)
+      const relX = rect ? baseX - rect.left : 0
+      const relY = rect ? baseY - rect.top : 0
+      const diag = rect ? Math.sqrt(rect.width * rect.width + rect.height * rect.height) : 0
+      const size = Math.max(32, Math.floor(diag * 1.2))
+      const key = Date.now()
+      setRipple({ x: relX, y: relY, size, key })
+      setSheenKey(key)
+      window.setTimeout(() => { setRipple(null) }, 750)
     }, LONG_PRESS_MS)
   }
   const onTouchMoveCard = (e: React.TouchEvent) => {
@@ -438,11 +452,26 @@ function ExploreItemCard({ card, saved, onToggleSaved }: { card: any; saved: boo
   return (
     <Card
       className={`relative group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all focus-within:ring-2 focus-within:ring-red-500 ${isLongPressActive ? 'scale-[0.98] brightness-95' : ''}`}
+      ref={cardRef}
       onTouchStart={onTouchStartCard}
       onTouchMove={onTouchMoveCard}
       onTouchEnd={onTouchEndCard}
       onContextMenu={(e) => { e.preventDefault() }}
     >
+      {ripple && (
+        <div className="pointer-events-none absolute inset-0 z-40 md:hidden">
+          <div
+            key={ripple.key}
+            className="ripple-anim absolute rounded-full"
+            style={{ top: ripple.y - ripple.size / 2, left: ripple.x - ripple.size / 2, width: ripple.size, height: ripple.size }}
+          />
+        </div>
+      )}
+      {isLongPressActive && (
+        <div className="pointer-events-none absolute inset-0 z-40 md:hidden">
+          <div key={sheenKey} className="sheen-anim absolute inset-y-0 -left-1/3 w-1/3" />
+        </div>
+      )}
       <div className="flex flex-col md:flex-row">
         <div className="relative w-full md:w-2/5 h-44 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden">
           <Image
