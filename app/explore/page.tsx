@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bell, MessageCircle, UserPlus, AtSign, Eye, TrendingUp, ChevronRight, Users, BadgeCheck } from 'lucide-react'
+import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bell, MessageCircle, UserPlus, AtSign, Eye, TrendingUp, ChevronRight, Users, BadgeCheck, Repeat2, Share2 } from 'lucide-react'
 import OptimizedImage from '@/components/OptimizedImage'
 
 export default function ExplorePage() {
