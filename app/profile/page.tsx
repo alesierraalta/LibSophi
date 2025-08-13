@@ -220,17 +220,17 @@ export default function ProfilePage() {
       </div>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24">
         {activeTab === 'works' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {works.map(w => (
               <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="relative h-36 w-full">
+                <div className="relative h-48 sm:h-56 lg:h-64 w-full">
                   <img src={w.cover} alt={w.title} className="absolute inset-0 w-full h-full object-cover"/>
                 </div>
                 <CardContent className="p-3">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">{w.title}</h3>
-                  <div className="text-xs text-gray-600 flex items-center justify-between mt-1">
+                  <h3 className="text-base font-semibold text-gray-900 truncate">{w.title}</h3>
+                  <div className="text-sm text-gray-600 flex items-center justify-between mt-1">
                     <span>{w.type}</span>
                     <span>{w.reads} lecturas</span>
                   </div>

@@ -606,7 +606,7 @@ function MainPageInner() {
       
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-10 sm:px-16 lg:px-24 xl:px-32">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
@@ -724,7 +724,7 @@ function MainPageInner() {
       </header>
 
       {/* Mobile Navigation Carousel - moved to top */}
-      <div className="lg:hidden max-w-full mx-auto px-0 sm:px-4 lg:px-6">
+      <div className="lg:hidden max-w-full mx-auto px-0 sm:px-14 lg:px-24 xl:px-32">
         <div className="flex items-stretch border-b border-gray-200 bg-white">
           {mobileNavItems.map((item) => (
             <button
@@ -743,7 +743,7 @@ function MainPageInner() {
         </div>
       </div>
 
-      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+      <div className="max-w-full mx-auto px-8 sm:px-16 lg:px-24 xl:px-32 py-4 sm:py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Sidebar - Mobile Navigation */}
           <div className="lg:col-span-1 order-2 lg:order-1">

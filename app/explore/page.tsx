@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bell, MessageCircle, UserPlus, AtSign, Eye } from 'lucide-react'
+import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bell, MessageCircle, UserPlus, AtSign, Eye, TrendingUp, ChevronRight, Users, BadgeCheck } from 'lucide-react'
 import OptimizedImage from '@/components/OptimizedImage'
 
 export default function ExplorePage() {
@@ -23,14 +23,20 @@ export default function ExplorePage() {
     setSaved(prev => ({ ...prev, [id]: !prev[id] }))
 
   const trendingTags = useMemo(() => [
-    '#Descubrimientos', '#HistoriasCortas', '#FicciónLatam', '#Ensayos', '#Poemas', '#Teatro', '#Newsletters'
+    { tag: '#Descubrimientos', posts: '1.2k publicaciones', delta: '+15%' },
+    { tag: '#HistoriasCortas', posts: '980 publicaciones', delta: '+8%' },
+    { tag: '#FicciónLatam', posts: '820 publicaciones', delta: '+12%' },
+    { tag: '#Ensayos', posts: '640 publicaciones', delta: '+5%' },
+    { tag: '#Poemas', posts: '1.6k publicaciones', delta: '+22%' },
+    { tag: '#Teatro', posts: '430 publicaciones', delta: '+3%' },
+    { tag: '#Newsletters', posts: '700 publicaciones', delta: '+9%' }
   ], [])
 
   const suggestedAuthors = useMemo(() => [
-    { name: 'Elena Martínez', username: '@elena_writes' },
-    { name: 'Carlos Ruiz', username: '@carlos_stories' },
-    { name: 'Ana García', username: '@ana_teatro' },
-    { name: 'Lucía P.', username: '@lucia_letters' },
+    { name: 'Elena Martínez', username: '@elena_writes', followers: '12.5k', genre: 'Poesía', verified: true },
+    { name: 'Carlos Ruiz', username: '@carlos_stories', followers: '8.9k', genre: 'Narrativa', verified: false },
+    { name: 'Ana García', username: '@ana_teatro', followers: '6.2k', genre: 'Teatro', verified: true },
+    { name: 'Lucía P.', username: '@lucia_letters', followers: '4.1k', genre: 'Narrativa', verified: false },
   ], [])
 
   const items = useMemo(() => (
@@ -118,7 +124,7 @@ export default function ExplorePage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header (identical to /main) */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-10 sm:px-16 lg:px-24 xl:px-32">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
@@ -222,7 +228,7 @@ export default function ExplorePage() {
       </header>
 
       {/* Mobile Navigation Carousel (same patrón que /main) */}
-      <div className="lg:hidden max-w-full mx-auto px-0 sm:px-6 lg:px-8">
+      <div className="lg:hidden max-w-full mx-auto px-0 sm:px-14 lg:px-24 xl:px-32">
         <div className="flex items-stretch border-b border-gray-200 bg-white">
           {[
             { icon: Home, label: 'Inicio', id: 'feed' },
@@ -241,7 +247,7 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-full mx-auto px-8 sm:px-16 lg:px-24 xl:px-32 py-6">
         {/* Hero + Filters */}
         <section className="mb-6">
           <div className="flex items-center gap-2 text-gray-700 mb-3">
@@ -270,9 +276,9 @@ export default function ExplorePage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
           {/* Left: Trending / Authors */}
-          <aside className="lg:col-span-1 space-y-7 order-2 lg:order-1">
+          <aside className="xl:col-span-3 space-y-7 order-2 lg:order-1">
             {/* Desktop Navigation Panel */}
             <Card className="hidden lg:block bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden">
               <CardContent className="p-6 pt-6">
@@ -290,9 +296,21 @@ export default function ExplorePage() {
               <CardContent className="p-4">
                 <div className="space-y-2.5">
                   {trendingTags.map(t => (
-                    <button key={t} onClick={() => setTag(t.replace('#',''))} className="w-full text-left px-3.5 py-2.5 rounded-lg hover:bg-red-50 text-sm text-gray-800 border border-transparent hover:border-red-200">
-                      <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 mr-2">{t}</Badge>
-                      Explorar
+                    <button
+                      key={t.tag}
+                      onClick={() => setTag(t.tag.replace('#',''))}
+                      className="w-full px-3.5 py-2.5 rounded-lg hover:bg-red-50 text-sm text-gray-800 border border-transparent hover:border-red-200 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">{t.tag}</Badge>
+                        <span className="hidden sm:inline text-xs text-gray-500">• {t.posts}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-[10px] text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" /> {t.delta}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -306,18 +324,29 @@ export default function ExplorePage() {
               <CardContent className="p-4">
                 <div className="space-y-3.5">
                   {suggestedAuthors.map(a => (
-                    <div key={a.username} className="flex items-center justify-between gap-2 w-full">
+                    <div key={a.username} className="flex items-center justify-between gap-2 w-full p-2 rounded-lg hover:bg-gray-50">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <Avatar className="h-8 w-8 ring-2 ring-red-100/60 flex-shrink-0">
                           <AvatarImage src="/api/placeholder/40/40" />
                           <AvatarFallback className="text-xs bg-red-50 text-red-700">{a.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 truncate">{a.name}</div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="text-sm font-semibold text-gray-900 truncate">{a.name}</div>
+                            {a.verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />}
+                          </div>
                           <div className="text-xs text-gray-500 truncate">{a.username}</div>
+                          <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-600">
+                            <Badge variant="outline" className="px-2 py-0.5 bg-gray-50 text-gray-700 border-gray-200">{a.genre}</Badge>
+                            <span className="inline-flex items-center gap-1 text-gray-500">
+                              <Users className="h-3 w-3" /> {a.followers}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-600 hover:bg-red-100 flex-shrink-0">Seguir</Button>
+                      <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-600 hover:bg-red-100 flex-shrink-0 inline-flex items-center">
+                        <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Seguir
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -326,63 +355,62 @@ export default function ExplorePage() {
           </aside>
 
           {/* Right: Grid of discoveries */}
-          <section className="lg:col-span-4 order-1 lg:order-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-7">
+          <section className="xl:col-span-9 order-1 lg:order-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-7">
               {filtered.map(card => (
                 <Card
                   key={card.id}
                   className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow focus-within:ring-2 focus-within:ring-red-500"
                 >
-                  <div className="relative h-44 sm:h-48 lg:h-52 overflow-hidden">
-                    <Image
-                      src={card.cover}
-                      alt={card.title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <button
-                      type="button"
-                      aria-label={saved[card.id] ? 'Quitar de guardados' : 'Guardar'}
-                      aria-pressed={!!saved[card.id]}
-                      onClick={() => toggleSaved(card.id)}
-                      className={`absolute top-3 right-3 z-10 rounded-full bg-white/90 backdrop-blur px-2.5 py-2 shadow-sm transition-colors ${saved[card.id] ? 'text-red-600' : 'text-gray-700 hover:text-red-600'}`}
-                    >
-                      <Bookmark className="h-4 w-4" />
-                    </button>
-                    <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] bg-red-50/90 text-red-700 border-red-200">{card.genre}</Badge>
-                      <span className="text-xs text-white/90 bg-black/30 px-2 py-0.5 rounded-full">{card.readTime}</span>
-                    </div>
-                  </div>
-                  <CardContent className="px-5 pt-6 pb-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
-                      {card.title}
-                    </h3>
-                    <p className="text-xs text-gray-600 line-clamp-2 mb-3.5">{card.excerpt}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Avatar className="h-7 w-7 ring-2 ring-red-100/60 flex-shrink-0">
-                          <AvatarImage src={card.author.avatar} />
-                          <AvatarFallback className="text-[10px] bg-red-50 text-red-700">{card.author.name.split(' ').map((n:string)=>n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-xs text-gray-700 truncate">{card.author.name}</div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-red-300 text-red-600 hover:bg-red-100 inline-flex items-center gap-1.5"
+                  <div className="flex flex-col md:flex-row">
+                    <div className="relative w-full md:w-2/5 h-44 sm:h-48 md:h-56 lg:h-64 xl:h-72 overflow-hidden">
+                      <Image
+                        src={card.cover}
+                        alt={card.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 40vw"
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <button
+                        type="button"
+                        aria-label={saved[card.id] ? 'Quitar de guardados' : 'Guardar'}
+                        aria-pressed={!!saved[card.id]}
+                        onClick={() => toggleSaved(card.id)}
+                        className={`absolute top-3 right-3 z-10 rounded-full bg-white/90 backdrop-blur px-2.5 py-2 shadow-sm transition-colors ${saved[card.id] ? 'text-red-600' : 'text-gray-700 hover:text-red-600'}`}
                       >
-                        <Eye className="h-3.5 w-3.5" /> Abrir
-                      </Button>
+                        <Bookmark className="h-4 w-4" />
+                      </button>
+                      <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] bg-red-50/90 text-red-700 border-red-200">{card.genre}</Badge>
+                        <span className="text-xs text-white/90 bg-black/30 px-2 py-0.5 rounded-full">{card.readTime}</span>
+                      </div>
                     </div>
-                  </CardContent>
+                    <CardContent className="flex-1 p-4 md:p-5 lg:p-6">
+                      <h3 className="text-base font-semibold text-gray-900 mb-1.5 md:mb-2 line-clamp-2 md:line-clamp-2">
+                        {card.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 line-clamp-3 md:line-clamp-3 mb-3 md:mb-4">{card.excerpt}</p>
+                      <div className="mt-auto flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Avatar className="h-8 w-8 ring-2 ring-red-100/60 flex-shrink-0">
+                            <AvatarImage src={card.author.avatar} />
+                            <AvatarFallback className="text-[10px] bg-red-50 text-red-700">{card.author.name.split(' ').map((n:string)=>n[0]).join('')}</AvatarFallback>
+                          </Avatar>
+                          <div className="text-sm text-gray-700 truncate">{card.author.name}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs border-red-300 text-red-600 hover:bg-red-100 inline-flex items-center gap-1.5"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Abrir
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </div>
                 </Card>
               ))}
-            </div>
-            <div className="flex justify-center mt-7">
-              <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-100">Cargar más</Button>
             </div>
           </section>
         </div>
