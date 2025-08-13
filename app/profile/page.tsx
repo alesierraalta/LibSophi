@@ -151,6 +151,9 @@ export default function ProfilePage() {
             </div>
             {/* Actions */}
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push('/landing')}>
+                Landing
+              </Button>
               <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs" onClick={() => router.push('/writer')}>
                 Escribir
               </Button>

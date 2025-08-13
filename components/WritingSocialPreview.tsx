@@ -16,7 +16,7 @@ export default function WritingSocialPreview({
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-0 overflow-hidden">
       {/* Devices Container */}
-      <div className="relative flex flex-col md:flex-row items-center justify-center min-h-[300px] sm:min-h-[360px] md:min-h-[420px] pt-6 pb-4 sm:pt-8 sm:pb-6 md:pt-10 md:pb-10 pr-12 sm:pr-16 md:pr-0">
+      <div className="relative flex flex-col md:flex-row items-center justify-center min-h-[300px] sm:min-h-[360px] md:min-h-[420px] pt-2 pb-2 sm:pt-4 sm:pb-4 md:pt-6 md:pb-6 pr-12 sm:pr-16 md:pr-0">
         
         {/* MacBook - Use provided device image if available, else render native mock */}
         <div className="relative z-10 ml-0 md:-ml-12 transform scale-90 sm:scale-100 md:scale-120">
