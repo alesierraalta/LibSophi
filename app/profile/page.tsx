@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2 } from 'lucide-react'
+import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon } from 'lucide-react'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -132,6 +132,85 @@ export default function ProfilePage() {
     { id: 3, title: 'Crónicas del andén', type: 'Relato', reads: '5.7k', cover: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=640&h=360&fit=crop' },
   ], [])
 
+  // Quick actions for works (mobile long-press and desktop menu)
+  const [activeWorkOverlayId, setActiveWorkOverlayId] = useState<number | null>(null)
+  const [activeOverlayPos, setActiveOverlayPos] = useState<{ x: number; y: number } | null>(null)
+  const overlayTimerRef = React.useRef<number | null>(null)
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+  const activationTriggeredRef = React.useRef<boolean>(false)
+  const lastHoverIndexRef = React.useRef<number | null>(null)
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null)
+  const LONG_PRESS_MS = 350
+  const MOVE_THRESHOLD_PX = 10
+
+  const clearOverlayTimer = () => {
+    if (overlayTimerRef.current) {
+      clearTimeout(overlayTimerRef.current)
+      overlayTimerRef.current = null
+    }
+  }
+
+  React.useEffect(() => {
+    return () => {
+      clearOverlayTimer()
+    }
+  }, [])
+
+  const onTouchStartWork = (workId: number) => (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+    clearOverlayTimer()
+    // Save viewport coordinates for a fixed overlay (can extend beyond card)
+    setActiveOverlayPos({ x: t.clientX, y: t.clientY })
+    activationTriggeredRef.current = false
+    overlayTimerRef.current = window.setTimeout(() => {
+      setActiveWorkOverlayId(workId)
+      try { (navigator as any).vibrate && (navigator as any).vibrate(10) } catch {}
+    }, LONG_PRESS_MS)
+  }
+
+  const onTouchMoveWork = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+    const t = e.touches[0]
+    const dx = Math.abs(t.clientX - touchStartRef.current.x)
+    const dy = Math.abs(t.clientY - touchStartRef.current.y)
+    if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
+      clearOverlayTimer()
+    }
+  }
+
+  const onTouchEndWork = () => {
+    clearOverlayTimer()
+    touchStartRef.current = null
+    setHoverIndex(null)
+  }
+
+  const shareWork = async (w: any) => {
+    try {
+      const url = typeof window !== 'undefined' ? `${window.location.origin}/work/${w.id}` : `https://palabreo.com/work/${w.id}`
+      if (navigator.share) {
+        await navigator.share({ url, title: w.title, text: 'Mira mi obra en Palabreo' })
+      } else {
+        await navigator.clipboard.writeText(url)
+      }
+    } catch {}
+  }
+
+  const duplicateWork = (w: any) => {
+    // Placeholder: only UI feedback for now
+    alert(`Duplicado: ${w.title}`)
+  }
+
+  const changeCover = (w: any) => {
+    alert(`Cambiar portada de: ${w.title}`)
+  }
+
+  const deleteWork = (w: any) => {
+    if (confirm(`¿Eliminar "${w.title}"? Esta acción no se puede deshacer.`)) {
+      alert('Eliminado (demo)')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
       {/* Header (brand) */}
@@ -227,17 +306,141 @@ export default function ProfilePage() {
         {activeTab === 'works' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {works.map(w => (
-              <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="relative h-48 sm:h-56 lg:h-64 w-full">
+              <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden relative">
+                <div
+                  className="relative h-48 sm:h-56 lg:h-64 w-full touch-manipulation"
+                  onTouchStart={onTouchStartWork(w.id)}
+                  onTouchMove={onTouchMoveWork}
+                  onTouchEnd={onTouchEndWork}
+                >
                   <img src={w.cover} alt={w.title} className="absolute inset-0 w-full h-full object-cover"/>
                 </div>
                 <CardContent className="p-3">
-                  <h3 className="text-base font-semibold text-gray-900 truncate">{w.title}</h3>
-                  <div className="text-sm text-gray-600 flex items-center justify-between mt-1">
-                    <span>{w.type}</span>
-                    <span>{w.reads} lecturas</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 truncate">{w.title}</h3>
+                      <div className="text-sm text-gray-600 mt-1">{w.type} · {w.reads} lecturas</div>
+                    </div>
+                    {/* Desktop inline menu */}
+                    <div className="hidden sm:flex items-center gap-2">
+                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => router.push(`/writer?edit=${w.id}`)}>
+                        <Edit3 className="h-4 w-4" />
+                      </button>
+                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => duplicateWork(w)}>
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => changeCover(w)}>
+                        <ImageIcon className="h-4 w-4" />
+                      </button>
+                      <button className="text-xs px-2 py-1 rounded-full border border-red-300 text-red-600 hover:bg-red-50" onClick={() => deleteWork(w)}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => shareWork(w)}>
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
+
+                {/* Mobile long-press overlay: radial menu at touch point */}
+                {activeWorkOverlayId === w.id && activeOverlayPos && (
+                  <div
+                    className="sm:hidden fixed inset-0 z-30 touch-none"
+                    onClick={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                    onTouchEnd={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                    onTouchCancel={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                  >
+                    <div className="fixed inset-0 bg-black/30 radial-overlay-fade" />
+                    {(() => {
+                        const centerX = activeOverlayPos.x
+                        const centerY = activeOverlayPos.y
+                        const vw = typeof window !== 'undefined' ? window.innerWidth : 360
+                        const vh = typeof window !== 'undefined' ? window.innerHeight : 640
+                        const baseRadius = 104
+                        const padding = 24
+                        const maxRLeft = Math.max(0, centerX - padding)
+                        const maxRRight = Math.max(0, vw - centerX - padding)
+                        const maxRTop = Math.max(0, centerY - padding)
+                        const maxRBottom = Math.max(0, vh - centerY - padding)
+                        const safeRadius = Math.max(64, Math.min(baseRadius, maxRLeft, maxRRight, maxRTop, maxRBottom))
+                        const startDeg = -90
+                        const stepDeg = 360 / 5
+                        const actions = [
+                          { label: 'Editar', icon: Edit3, onClick: () => router.push(`/writer?edit=${w.id}`), tone: 'default' as const },
+                          { label: 'Duplicar', icon: Copy, onClick: () => duplicateWork(w), tone: 'default' as const },
+                          { label: 'Portada', icon: ImageIcon, onClick: () => changeCover(w), tone: 'default' as const },
+                          { label: 'Eliminar', icon: Trash2, onClick: () => deleteWork(w), tone: 'danger' as const },
+                          { label: 'Compartir', icon: Share2, onClick: () => shareWork(w), tone: 'default' as const },
+                        ]
+                        const handleTouchMove: React.TouchEventHandler<HTMLDivElement> = (ev) => {
+                          if (!activeOverlayPos) return
+                          const t = ev.touches[0]
+                          const dx = t.clientX - centerX
+                          const dy = t.clientY - centerY
+                          const r = Math.hypot(dx, dy)
+                          if (r < safeRadius * 0.6) {
+                            setHoverIndex(null)
+                            return
+                          }
+                          let deg = Math.atan2(dy, dx) * (180 / Math.PI)
+                          // Normalize angle to [0, 360)
+                          if (deg < -180) deg += 360
+                          if (deg < 0) deg += 360
+                          let idx = Math.round((deg - (startDeg < 0 ? startDeg + 360 : startDeg)) / stepDeg) % actions.length
+                          if (idx < 0) idx += actions.length
+                          if (idx !== lastHoverIndexRef.current) {
+                            try { (navigator as any).vibrate && (navigator as any).vibrate(8) } catch {}
+                            lastHoverIndexRef.current = idx
+                          }
+                          setHoverIndex(idx)
+                          // Ejecutar acción al alcanzar el anillo exterior
+                          if (r >= safeRadius * 0.85 && !activationTriggeredRef.current) {
+                            activationTriggeredRef.current = true
+                            const a = actions[idx]
+                            a.onClick()
+                            setActiveWorkOverlayId(null)
+                            setActiveOverlayPos(null)
+                            setHoverIndex(null)
+                          }
+                          ev.preventDefault()
+                        }
+                        const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (ev) => {
+                          ev.preventDefault()
+                          ev.stopPropagation()
+                          setActiveWorkOverlayId(null)
+                          setActiveOverlayPos(null)
+                          setHoverIndex(null)
+                          activationTriggeredRef.current = false
+                        }
+                        return (
+                          <div className="fixed inset-0" onClick={(e) => e.stopPropagation()} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                            {actions.map((a, i) => {
+                              const theta = ((startDeg + i * stepDeg) * Math.PI) / 180
+                              const top = centerY + safeRadius * Math.sin(theta)
+                              const left = centerX + safeRadius * Math.cos(theta)
+                              const isActive = hoverIndex === i
+                              const common = 'absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md border text-gray-700 bg-white transition-transform duration-200 ease-out radial-pop'
+                              const tone = a.tone === 'danger' ? 'border-red-300 text-red-700 bg-red-50' : 'border-gray-200'
+                              const ring = isActive ? 'scale-110 ring-2 ring-red-400' : 'scale-100'
+                              return (
+                                <button
+                                  key={a.label}
+                                  className={`${common} ${tone} ${ring} w-10 h-10 flex items-center justify-center`}
+                                  style={{ top, left, animationDelay: `${i * 40}ms` }}
+                                  onClick={(e) => { e.stopPropagation(); a.onClick(); setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                                  aria-label={a.label}
+                                >
+                                  <a.icon className="h-5 w-5" />
+                                </button>
+                              )
+                            })}
+                            {/* Center hint dot */}
+                            <div className="absolute w-3.5 h-3.5 rounded-full bg-white border border-gray-300 shadow" style={{ top: centerY, left: centerX, transform: 'translate(-50%, -50%)' }} />
+                          </div>
+                        )
+                      })()}
+                  </div>
+                )}
               </Card>
             ))}
           </div>

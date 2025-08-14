@@ -373,58 +373,7 @@ function MainPageInner() {
       } catch {}
     }
     // Mobile long-press (Pinterest-like) overlay state
-    const [isLongPressActive, setIsLongPressActive] = useState<boolean>(false)
-    const longPressTimerRef = React.useRef<number | null>(null)
-    const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null)
-    const cardRef = React.useRef<HTMLDivElement | null>(null)
-    const [ripple, setRipple] = useState<{ x: number; y: number; size: number; key: number } | null>(null)
-    const [sheenKey, setSheenKey] = useState<number>(0)
-    const LONG_PRESS_MS = 350
-    const MOVE_THRESHOLD_PX = 10
-
-    const clearLongPressTimer = () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current)
-        longPressTimerRef.current = null
-      }
-    }
-    const onTouchStartCard = (e: React.TouchEvent) => {
-      // Ignore if pressing on interactive elements
-      const target = e.target as HTMLElement
-      if (target.closest('button, a, input, textarea, [role="button"]')) return
-      const t = e.touches[0]
-      touchStartPosRef.current = { x: t.clientX, y: t.clientY }
-      clearLongPressTimer()
-      longPressTimerRef.current = window.setTimeout(() => {
-        setIsLongPressActive(true)
-        try { (navigator as any).vibrate && (navigator as any).vibrate(10) } catch {}
-        // Prepare ripple and sheen animations
-        const rect = cardRef.current?.getBoundingClientRect()
-        const baseX = touchStartPosRef.current?.x ?? (rect ? rect.left + rect.width / 2 : 0)
-        const baseY = touchStartPosRef.current?.y ?? (rect ? rect.top + rect.height / 2 : 0)
-        const relX = rect ? baseX - rect.left : 0
-        const relY = rect ? baseY - rect.top : 0
-        const diag = rect ? Math.sqrt(rect.width * rect.width + rect.height * rect.height) : 0
-        const size = Math.max(32, Math.floor(diag * 1.2))
-        const key = Date.now()
-        setRipple({ x: relX, y: relY, size, key })
-        setSheenKey(key)
-        window.setTimeout(() => { setRipple(null) }, 750)
-      }, LONG_PRESS_MS)
-    }
-    const onTouchMoveCard = (e: React.TouchEvent) => {
-      if (!touchStartPosRef.current) return
-      const t = e.touches[0]
-      const dx = Math.abs(t.clientX - touchStartPosRef.current.x)
-      const dy = Math.abs(t.clientY - touchStartPosRef.current.y)
-      if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
-        clearLongPressTimer()
-      }
-    }
-    const onTouchEndCard = () => {
-      clearLongPressTimer()
-      touchStartPosRef.current = null
-    }
+    
     const toggleBookmark = () => {
       setBookmarked(prev => {
         const next = !prev
@@ -443,28 +392,8 @@ function MainPageInner() {
     }
     return (
     <Card
-      className={`relative bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-200 overflow-hidden mb-6 ${isLongPressActive ? 'scale-[0.98] brightness-95' : ''}`}
-      ref={cardRef}
-      onTouchStart={onTouchStartCard}
-      onTouchMove={onTouchMoveCard}
-      onTouchEnd={onTouchEndCard}
-      onContextMenu={(e) => { e.preventDefault() }}
+      className={`relative bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md transition-all duration-200 overflow-hidden mb-6`}
     >
-      {/* Ripple and Sheen animations (mobile only) */}
-      {ripple && (
-        <div className="pointer-events-none absolute inset-0 z-40 md:hidden">
-          <div
-            key={ripple.key}
-            className="ripple-anim absolute rounded-full"
-            style={{ top: ripple.y - ripple.size / 2, left: ripple.x - ripple.size / 2, width: ripple.size, height: ripple.size }}
-          />
-        </div>
-      )}
-      {isLongPressActive && (
-        <div className="pointer-events-none absolute inset-0 z-40 md:hidden">
-          <div key={sheenKey} className="sheen-anim absolute inset-y-0 -left-1/3 w-1/3" />
-        </div>
-      )}
       <CardContent className="p-6 pt-8">
         {/* Post Header */}
         <div className="flex items-start space-x-4 mb-5">
@@ -585,40 +514,7 @@ function MainPageInner() {
         )}
       </CardContent>
 
-      {/* Mobile Long-Press Overlay */}
-      {isLongPressActive && (
-        <div className="absolute inset-0 z-50 md:hidden" onClick={() => setIsLongPressActive(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white/95 shadow-xl border border-gray-200 px-4 py-3" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-around">
-              <button
-                onClick={() => { toggleBookmark(); setIsLongPressActive(false) }}
-                className={`flex flex-col items-center text-xs ${bookmarked ? 'text-yellow-600' : 'text-gray-700'}`}
-                aria-label="Guardar"
-              >
-                <Bookmark className={`h-6 w-6 ${bookmarked ? 'fill-yellow-500' : ''}`} />
-                <span className="mt-1">Guardar</span>
-              </button>
-              <button
-                onClick={() => { onRepost(); setIsLongPressActive(false) }}
-                className="flex flex-col items-center text-xs text-gray-700"
-                aria-label="Repostear"
-              >
-                <Repeat2 className="h-6 w-6" />
-                <span className="mt-1">Repostear</span>
-              </button>
-              <button
-                onClick={async () => { await onShare(); setIsLongPressActive(false) }}
-                className="flex flex-col items-center text-xs text-gray-700"
-                aria-label="Compartir"
-              >
-                <Share2 className="h-6 w-6" />
-                <span className="mt-1">Compartir</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </Card>
   )})
 
@@ -676,7 +572,7 @@ function MainPageInner() {
     }
     return (
       <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
               <MemoizedAvatar className="h-10 w-10 ring-2 ring-red-100/50 group-hover:ring-red-200/70 transition-all duration-300">
@@ -689,14 +585,16 @@ function MainPageInner() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <p className="font-semibold text-gray-900 text-sm group-hover:text-red-700 transition-colors duration-200 overflow-hidden text-ellipsis whitespace-nowrap">{author.name}</p>
+              <div className="flex items-center justify-between mb-1 gap-2 min-w-0">
+                <p className="font-semibold text-gray-900 text-sm group-hover:text-red-700 transition-colors duration-200 leading-tight truncate max-w-full">
+                  {author.name}
+                </p>
                 <span className="text-xs text-gray-500 font-medium flex-shrink-0 ml-2">{author.followers}</span>
               </div>
               <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200 truncate mb-1">{author.username}</p>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 min-w-0">
                 <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-                <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-full sm:max-w-[160px]">
+                <MemoizedBadge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 px-2 py-0.5 truncate max-w-full sm:max-w-[160px]">
                   {author.genre}
                 </MemoizedBadge>
               </div>
