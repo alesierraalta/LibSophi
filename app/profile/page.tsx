@@ -142,6 +142,44 @@ export default function ProfilePage() {
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null)
   const LONG_PRESS_MS = 350
   const MOVE_THRESHOLD_PX = 10
+  const scrollLockedRef = React.useRef<boolean>(false)
+  const scrollLockPosRef = React.useRef<number>(0)
+
+  const preventScrollEvent = React.useCallback((e: Event) => { e.preventDefault() }, [])
+  const lockBodyScroll = React.useCallback(() => {
+    if (scrollLockedRef.current) return
+    const y = window.scrollY || window.pageYOffset || 0
+    scrollLockPosRef.current = y
+    const body = document.body
+    body.style.position = 'fixed'
+    body.style.top = `-${y}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+    window.addEventListener('touchmove', preventScrollEvent, { passive: false })
+    window.addEventListener('wheel', preventScrollEvent, { passive: false })
+    document.addEventListener('touchmove', preventScrollEvent, { passive: false })
+    document.addEventListener('wheel', preventScrollEvent, { passive: false })
+    scrollLockedRef.current = true
+  }, [preventScrollEvent])
+  const unlockBodyScroll = React.useCallback(() => {
+    if (!scrollLockedRef.current) return
+    const y = scrollLockPosRef.current || 0
+    const body = document.body
+    window.removeEventListener('touchmove', preventScrollEvent as any, { passive: false } as any)
+    window.removeEventListener('wheel', preventScrollEvent as any, { passive: false } as any)
+    document.removeEventListener('touchmove', preventScrollEvent as any, { passive: false } as any)
+    document.removeEventListener('wheel', preventScrollEvent as any, { passive: false } as any)
+    body.style.position = ''
+    body.style.top = ''
+    body.style.left = ''
+    body.style.right = ''
+    body.style.width = ''
+    body.style.overflow = ''
+    window.scrollTo(0, y)
+    scrollLockedRef.current = false
+  }, [preventScrollEvent])
   const [scrollLockPos, setScrollLockPos] = useState<number | null>(null)
 
   const clearOverlayTimer = () => {
@@ -154,8 +192,9 @@ export default function ProfilePage() {
   React.useEffect(() => {
     return () => {
       clearOverlayTimer()
+      unlockBodyScroll()
     }
-  }, [])
+  }, [unlockBodyScroll])
 
   // Lock background scroll while radial overlay is open (robust for iOS/Android)
   React.useEffect(() => {
@@ -207,6 +246,8 @@ export default function ProfilePage() {
     // Save viewport coordinates for a fixed overlay (can extend beyond card)
     setActiveOverlayPos({ x: t.clientX, y: t.clientY })
     activationTriggeredRef.current = false
+    lockBodyScroll()
+    try { e.preventDefault(); e.stopPropagation() } catch {}
     overlayTimerRef.current = window.setTimeout(() => {
       setActiveWorkOverlayId(workId)
       try { (navigator as any).vibrate && (navigator as any).vibrate(10) } catch {}
@@ -220,13 +261,21 @@ export default function ProfilePage() {
     const dy = Math.abs(t.clientY - touchStartRef.current.y)
     if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
       clearOverlayTimer()
+      // If overlay hasn't opened yet, release lock so normal scroll can resume
+      if (!activeWorkOverlayId) {
+        unlockBodyScroll()
+      }
     }
+    try { e.preventDefault(); e.stopPropagation() } catch {}
   }
 
   const onTouchEndWork = () => {
     clearOverlayTimer()
     touchStartRef.current = null
     setHoverIndex(null)
+    if (!activeWorkOverlayId) {
+      unlockBodyScroll()
+    }
   }
 
   const shareWork = async (w: any) => {
@@ -356,6 +405,7 @@ export default function ProfilePage() {
                   onTouchStart={onTouchStartWork(w.id)}
                   onTouchMove={onTouchMoveWork}
                   onTouchEnd={onTouchEndWork}
+                  style={{ touchAction: 'none' }}
                 >
                   <img src={w.cover} alt={w.title} className="absolute inset-0 w-full h-full object-cover"/>
                 </div>
@@ -390,12 +440,13 @@ export default function ProfilePage() {
                 {activeWorkOverlayId === w.id && activeOverlayPos && (
                   <div
                     className="sm:hidden fixed inset-0 z-30 overscroll-none select-none"
-                    onClick={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
-                    onTouchMove={(e) => { e.preventDefault() }}
-                    onTouchStart={(e) => { e.preventDefault() }}
+                    onClick={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); unlockBodyScroll() }}
+                    onTouchMove={(e) => { e.preventDefault(); e.stopPropagation() }}
+                    onTouchStart={(e) => { e.preventDefault(); e.stopPropagation() }}
                     onWheel={(e) => { e.preventDefault() }}
-                    onTouchEnd={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
-                    onTouchCancel={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                    onTouchEnd={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); activationTriggeredRef.current = false; unlockBodyScroll() }}
+                    onTouchCancel={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); activationTriggeredRef.current = false; unlockBodyScroll() }}
+                    onPointerMove={(e) => { e.preventDefault() }}
                     style={{ touchAction: 'none' }}
                   >
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm radial-overlay-fade" />
@@ -450,9 +501,57 @@ export default function ProfilePage() {
                             setActiveWorkOverlayId(null)
                             setActiveOverlayPos(null)
                             setHoverIndex(null)
+                            unlockBodyScroll()
                           }
                           ev.preventDefault()
                           ev.stopPropagation()
+                        }
+                        const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (ev) => {
+                          ev.preventDefault()
+                          ev.stopPropagation()
+                          try { (ev.currentTarget as any).setPointerCapture(ev.pointerId) } catch {}
+                        }
+                        const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (ev) => {
+                          if (!activeOverlayPos) return
+                          const px = ev.clientX
+                          const py = ev.clientY
+                          const dx = px - centerX
+                          const dy = py - centerY
+                          const r = Math.hypot(dx, dy)
+                          if (r < safeRadius * 0.6) {
+                            setHoverIndex(null)
+                            return
+                          }
+                          let deg = Math.atan2(dy, dx) * (180 / Math.PI)
+                          if (deg < 0) deg += 360
+                          const start = startDeg < 0 ? startDeg + 360 : startDeg
+                          const angleNorm = (deg - start + 360) % 360
+                          const idx = Math.floor((angleNorm + (stepDeg / 2)) / stepDeg) % actions.length
+                          if (idx !== lastHoverIndexRef.current) {
+                            try { (navigator as any).vibrate && (navigator as any).vibrate(8) } catch {}
+                            lastHoverIndexRef.current = idx
+                          }
+                          setHoverIndex(idx)
+                          if (r >= safeRadius * 0.7 && !activationTriggeredRef.current) {
+                            activationTriggeredRef.current = true
+                            const a = actions[idx]
+                            a.onClick()
+                            setActiveWorkOverlayId(null)
+                            setActiveOverlayPos(null)
+                            setHoverIndex(null)
+                            unlockBodyScroll()
+                          }
+                          ev.preventDefault()
+                          ev.stopPropagation()
+                        }
+                        const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (ev) => {
+                          ev.preventDefault()
+                          ev.stopPropagation()
+                          setActiveWorkOverlayId(null)
+                          setActiveOverlayPos(null)
+                          setHoverIndex(null)
+                          activationTriggeredRef.current = false
+                          unlockBodyScroll()
                         }
                         const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (ev) => {
                           ev.preventDefault()
@@ -461,9 +560,10 @@ export default function ProfilePage() {
                           setActiveOverlayPos(null)
                           setHoverIndex(null)
                           activationTriggeredRef.current = false
+                          unlockBodyScroll()
                         }
                         return (
-                          <div className="fixed inset-0" onClick={(e) => e.stopPropagation()} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                          <div className="fixed inset-0" onClick={(e) => e.stopPropagation()} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
                             {actions.map((a, i) => {
                               const theta = ((startDeg + i * stepDeg) * Math.PI) / 180
                               const top = centerY + safeRadius * Math.sin(theta)
