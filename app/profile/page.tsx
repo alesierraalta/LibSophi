@@ -142,6 +142,7 @@ export default function ProfilePage() {
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null)
   const LONG_PRESS_MS = 350
   const MOVE_THRESHOLD_PX = 10
+  const [scrollLockPos, setScrollLockPos] = useState<number | null>(null)
 
   const clearOverlayTimer = () => {
     if (overlayTimerRef.current) {
@@ -155,6 +156,49 @@ export default function ProfilePage() {
       clearOverlayTimer()
     }
   }, [])
+
+  // Lock background scroll while radial overlay is open (robust for iOS/Android)
+  React.useEffect(() => {
+    const isOpen = activeWorkOverlayId != null && !!activeOverlayPos
+    const body = typeof document !== 'undefined' ? document.body : null
+    const prevent = (e: Event) => { e.preventDefault() }
+    if (isOpen && body) {
+      const y = window.scrollY || window.pageYOffset || 0
+      setScrollLockPos(y)
+      // Fix body to prevent scroll and layout shift
+      body.style.position = 'fixed'
+      body.style.top = `-${y}px`
+      body.style.left = '0'
+      body.style.right = '0'
+      body.style.width = '100%'
+      body.style.overflow = 'hidden'
+      // Add non-passive listeners to block touch/scroll at root
+      window.addEventListener('touchmove', prevent, { passive: false })
+      window.addEventListener('wheel', prevent, { passive: false })
+      document.addEventListener('touchmove', prevent, { passive: false })
+      document.addEventListener('wheel', prevent, { passive: false })
+    }
+    return () => {
+      if (!body) return
+      // Remove listeners
+      window.removeEventListener('touchmove', prevent as any, { passive: false } as any)
+      window.removeEventListener('wheel', prevent as any, { passive: false } as any)
+      document.removeEventListener('touchmove', prevent as any, { passive: false } as any)
+      document.removeEventListener('wheel', prevent as any, { passive: false } as any)
+      // Restore body scroll position and styles
+      const y = scrollLockPos ?? 0
+      body.style.position = ''
+      body.style.top = ''
+      body.style.left = ''
+      body.style.right = ''
+      body.style.width = ''
+      body.style.overflow = ''
+      if (scrollLockPos != null) {
+        window.scrollTo(0, y)
+        setScrollLockPos(null)
+      }
+    }
+  }, [activeWorkOverlayId, activeOverlayPos, scrollLockPos])
 
   const onTouchStartWork = (workId: number) => (e: React.TouchEvent) => {
     const t = e.touches[0]
@@ -345,12 +389,16 @@ export default function ProfilePage() {
                 {/* Mobile long-press overlay: radial menu at touch point */}
                 {activeWorkOverlayId === w.id && activeOverlayPos && (
                   <div
-                    className="sm:hidden fixed inset-0 z-30 touch-none"
+                    className="sm:hidden fixed inset-0 z-30 overscroll-none select-none"
                     onClick={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                    onTouchMove={(e) => { e.preventDefault() }}
+                    onTouchStart={(e) => { e.preventDefault() }}
+                    onWheel={(e) => { e.preventDefault() }}
                     onTouchEnd={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
                     onTouchCancel={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
+                    style={{ touchAction: 'none' }}
                   >
-                    <div className="fixed inset-0 bg-black/30 radial-overlay-fade" />
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm radial-overlay-fade" />
                     {(() => {
                         const centerX = activeOverlayPos.x
                         const centerY = activeOverlayPos.y
@@ -382,19 +430,20 @@ export default function ProfilePage() {
                             setHoverIndex(null)
                             return
                           }
+                          // Angle in degrees [0,360)
                           let deg = Math.atan2(dy, dx) * (180 / Math.PI)
-                          // Normalize angle to [0, 360)
-                          if (deg < -180) deg += 360
                           if (deg < 0) deg += 360
-                          let idx = Math.round((deg - (startDeg < 0 ? startDeg + 360 : startDeg)) / stepDeg) % actions.length
-                          if (idx < 0) idx += actions.length
+                          // Normalize relative to startDeg
+                          const start = startDeg < 0 ? startDeg + 360 : startDeg
+                          const angleNorm = (deg - start + 360) % 360
+                          const idx = Math.floor((angleNorm + (stepDeg / 2)) / stepDeg) % actions.length
                           if (idx !== lastHoverIndexRef.current) {
                             try { (navigator as any).vibrate && (navigator as any).vibrate(8) } catch {}
                             lastHoverIndexRef.current = idx
                           }
                           setHoverIndex(idx)
                           // Ejecutar acción al alcanzar el anillo exterior
-                          if (r >= safeRadius * 0.85 && !activationTriggeredRef.current) {
+                          if (r >= safeRadius * 0.7 && !activationTriggeredRef.current) {
                             activationTriggeredRef.current = true
                             const a = actions[idx]
                             a.onClick()
@@ -403,6 +452,7 @@ export default function ProfilePage() {
                             setHoverIndex(null)
                           }
                           ev.preventDefault()
+                          ev.stopPropagation()
                         }
                         const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (ev) => {
                           ev.preventDefault()
