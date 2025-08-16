@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { UserPlus } from 'lucide-react'
 import Image from 'next/image'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { createFollowNotification } from '@/lib/notifications'
 
 export type ProfileHoverAuthor = {
   name: string
@@ -29,7 +31,7 @@ export default function ProfileHoverCard({ author, position = 'right', className
     } catch {}
   }, [author.username])
 
-  const toggleFollow = () => {
+  const toggleFollow = async () => {
     setIsFollowing(prev => {
       const next = !prev
       try {
@@ -44,6 +46,49 @@ export default function ProfileHoverCard({ author, position = 'right', className
       } catch {}
       return next
     })
+
+    // Handle Supabase follow/unfollow and notifications
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      
+      if (userData?.user && !isFollowing) {
+        // Get the followed user's ID by username
+        const { data: followedUser } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .eq('username', author.username.replace('@', ''))
+          .single()
+        
+        if (followedUser) {
+          // Insert follow record
+          await supabase
+            .from('follows')
+            .insert({ follower_id: userData.user.id, followed_id: followedUser.id })
+          
+          // Create notification
+          const currentUserName = userData.user.user_metadata?.name || userData.user.email || 'Alguien'
+          createFollowNotification(followedUser.id, userData.user.id, currentUserName)
+        }
+      } else if (userData?.user && isFollowing) {
+        // Get the followed user's ID and unfollow
+        const { data: followedUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', author.username.replace('@', ''))
+          .single()
+        
+        if (followedUser) {
+          await supabase
+            .from('follows')
+            .delete()
+            .eq('follower_id', userData.user.id)
+            .eq('followed_id', followedUser.id)
+        }
+      }
+    } catch (error) {
+      console.error('Error handling follow:', error)
+    }
   }
 
   const positionClasses = position === 'left'

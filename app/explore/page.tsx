@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bell, MessageCircle, UserPlus, AtSign, Eye, TrendingUp, ChevronRight, Users, BadgeCheck, Repeat2, Share2 } from 'lucide-react'
 import OptimizedImage from '@/components/OptimizedImage'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function ExplorePage() {
   const router = useRouter()
@@ -39,51 +40,43 @@ export default function ExplorePage() {
     { name: 'Lucía P.', username: '@lucia_letters', followers: '4.1k', genre: 'Narrativa', verified: false },
   ], [])
 
-  const items = useMemo(() => (
-    [
-      {
-        id: 'p1',
-        title: 'Caminos de sal y viento',
-        excerpt: 'En el altiplano, la sal brillaba como un cielo invertido...'
-          + ' y no había más sonido que el viento contándonos historias antiguas.',
-        author: { name: 'María González', username: '@mariagonzalez', avatar: '/api/placeholder/40/40' },
-        cover: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=630&fit=crop',
-        genre: 'Fantasía',
-        readTime: '8 min',
-        type: 'fiction',
-      },
-      {
-        id: 'p2',
-        title: 'Lo que aprendí publicando 20 newsletters',
-        excerpt: 'De métricas a comunidad: las claves que realmente importan cuando escribes cada semana.',
-        author: { name: 'Javier Torres', username: '@javi_news', avatar: '/api/placeholder/40/40' },
-        cover: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&h=630&fit=crop',
-        genre: 'Newsletter',
-        readTime: '6 min',
-        type: 'newsletter',
-      },
-      {
-        id: 'p3',
-        title: 'Por qué el teatro breve está de regreso',
-        excerpt: 'Ritmo, espacios pequeños y audiencia digital: una combinación inesperadamente poderosa.',
-        author: { name: 'Ana García', username: '@ana_teatro', avatar: '/api/placeholder/40/40' },
-        cover: 'https://images.unsplash.com/photo-1523246191919-5f75f0f7c5bb?w=1200&h=630&fit=crop',
-        genre: 'Teatro',
-        readTime: '5 min',
-        type: 'article',
-      },
-      {
-        id: 'p4',
-        title: 'La carta que nunca envié',
-        excerpt: 'Te escribí tantas veces que perdí la cuenta. Esta es la versión que mereces leer.',
-        author: { name: 'Lucía P.', username: '@lucia_letters', avatar: '/api/placeholder/40/40' },
-        cover: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?w=1200&h=630&fit=crop',
-        genre: 'Narrativa',
-        readTime: '7 min',
-        type: 'fiction',
-      },
-    ]
-  ), [])
+  const [items, setItems] = useState<any[]>([])
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: works } = await supabase
+          .from('works')
+          .select('id,title,genre,cover_url,chapters,content,author_id,created_at')
+          .order('created_at', { ascending: false })
+          .limit(24)
+        const authorIds = Array.from(new Set((works || []).map((w: any) => w.author_id)))
+        let profilesMap: Record<string, any> = {}
+        if (authorIds.length > 0) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('id,username,name,avatar_url')
+            .in('id', authorIds)
+          profilesMap = (profs || []).reduce((acc: any, p: any) => { acc[p.id] = p; return acc }, {})
+        }
+        const mapped = (works || []).map((w: any) => {
+          const author = profilesMap[w.author_id] || {}
+          const excerpt = w.chapters && Array.isArray(w.chapters) && w.chapters.length > 0 ? (w.chapters[0]?.content || '') : (w.content || '')
+          return {
+            id: w.id,
+            title: w.title,
+            excerpt: (excerpt || '').slice(0, 200),
+            author: { name: author.name || 'Autor', username: author.username ? `@${author.username}` : '@autor', avatar: author.avatar_url || '/api/placeholder/40/40' },
+            cover: w.cover_url || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=630&fit=crop',
+            genre: w.genre || 'Obra',
+            readTime: '—',
+            type: 'fiction',
+          }
+        })
+        setItems(mapped)
+      } catch {}
+    })()
+  }, [])
 
   const filtered = items.filter(i => (type === 'all' || i.type === type) && (!tag || i.genre.toLowerCase().includes(tag.toLowerCase()) || i.title.toLowerCase().includes(tag.toLowerCase())))
 

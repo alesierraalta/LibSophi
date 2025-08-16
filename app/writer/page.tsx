@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle } from 'lucide-react'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function WriterPage() {
   const router = useRouter()
@@ -740,11 +741,39 @@ export default function WriterPage() {
   }
 
   // Obras (continuación/nueva)
-  const refreshWorks = () => {
+  const refreshWorks = async () => {
     try {
-      const worksRaw = localStorage.getItem('palabreo-works')
-      if (worksRaw) setExistingWorks(JSON.parse(worksRaw) as Work[])
-    } catch {}
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData?.user) {
+        // fallback local si no hay sesión
+        const worksRaw = localStorage.getItem('palabreo-works')
+        if (worksRaw) setExistingWorks(JSON.parse(worksRaw) as Work[])
+        return
+      }
+      const { data: dbWorks } = await supabase
+        .from('works')
+        .select('id,title,genre,cover_url,chapters,updated_at')
+        .eq('author_id', userData.user.id)
+        .order('updated_at', { ascending: false })
+      if (dbWorks) {
+        setExistingWorks(dbWorks.map((w: any) => ({
+          id: w.id,
+          title: w.title,
+          genre: w.genre || 'obra',
+          coverUrl: w.cover_url || '',
+          tags: [],
+          chapters: Array.isArray(w.chapters) && w.chapters.length > 0 ? w.chapters : [{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: '' }],
+          createdAt: Date.now(),
+          updatedAt: w.updated_at ? new Date(w.updated_at).getTime() : Date.now(),
+        })))
+      }
+    } catch {
+      try {
+        const worksRaw = localStorage.getItem('palabreo-works')
+        if (worksRaw) setExistingWorks(JSON.parse(worksRaw) as Work[])
+      } catch {}
+    }
   }
 
   const saveWorkToStorage = (work: Work) => {
@@ -782,23 +811,81 @@ export default function WriterPage() {
     setContent(work.chapters[0]?.content ?? '')
   }
 
-  const handlePublish = () => {
-    // TODO: Integrar con backend/API de publicaciones
-    const finalChapters: Chapter[] = useChapters
-      ? chapters
-      : [{ id: currentWorkId ?? `${Date.now()}`, title: title || 'Contenido', content }]
-    const work: Work = {
-      id: currentWorkId ?? `${Date.now()}`,
-      title,
-      genre,
-      coverUrl,
-      tags,
-      chapters: finalChapters,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+  const handlePublish = async () => {
+    const supabase = getSupabaseBrowserClient()
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData?.user) {
+      alert('Inicia sesión para publicar tu obra')
+      router.push('/login')
+      return
     }
-    saveWorkToStorage(work)
-    console.log('Publicando...', work)
+
+    const finalChapters: { title: string; content: string }[] = (useChapters ? chapters : [{ id: currentWorkId ?? `${Date.now()}`, title: title || 'Contenido', content }])
+      .map((ch) => ({ title: ch.title, content: ch.content }))
+
+    // Insertar o actualizar obra
+    let workId = currentWorkId || null
+    if (!workId) {
+      const { data, error } = await supabase
+        .from('works')
+        .insert({
+          author_id: userData.user.id,
+          title,
+          content: useChapters ? null : content,
+          genre,
+          cover_url: coverUrl || null,
+          tags: tags || [],
+          chapters: finalChapters,
+        })
+        .select('id')
+        .single()
+      if (error) {
+        alert(error.message)
+        return
+      }
+      workId = data?.id
+      setCurrentWorkId(workId)
+    } else {
+      const { error } = await supabase
+        .from('works')
+        .update({
+          title,
+          content: useChapters ? null : content,
+          genre,
+          cover_url: coverUrl || null,
+          tags: tags || [],
+          chapters: finalChapters,
+        })
+        .eq('id', workId)
+        .eq('author_id', userData.user.id)
+      if (error) {
+        alert(error.message)
+        return
+      }
+      
+      // Sincronizar capítulos normalizados (borrado e inserción simple)
+      await supabase.from('chapters').delete().eq('work_id', workId)
+      const rows = finalChapters.map((ch, i) => ({ work_id: workId, index_in_work: i, title: ch.title, content: ch.content }))
+      if (rows.length > 0) {
+        await supabase.from('chapters').insert(rows)
+      }
+    }
+
+    // Fallback: guardar copia local para overlay de continuación
+    try {
+      const work: Work = {
+        id: workId || `${Date.now()}`,
+        title,
+        genre,
+        coverUrl,
+        tags,
+        chapters: (useChapters ? chapters : [{ id: workId || `${Date.now()}`, title: title || 'Contenido', content }]),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+      saveWorkToStorage(work)
+    } catch {}
+
     router.push('/main')
   }
 

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark, BookOpen, ArrowLeft } from 'lucide-react'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 type Author = {
   name: string
@@ -23,85 +24,75 @@ type Post = {
   image?: string
 }
 
-// Dataset de ejemplo consistente con los IDs usados en /main
-const allPosts: Post[] = [
-  {
-    id: 1,
-    author: { name: 'María González', username: '@mariagonzalez', avatar: '/api/placeholder/40/40' },
-    title: 'El susurro del viento - Capítulo 3',
-    content:
-      'En las montañas de los Andes, donde el viento susurra secretos ancestrales, una joven escritora descubre que las palabras tienen el poder de cambiar el destino...',
-    genre: 'Fantasía',
-    readTime: '12 min',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop',
-  },
-  {
-    id: 2,
-    author: { name: 'Carlos Mendoza', username: '@carlosmendoza', avatar: '/api/placeholder/40/40' },
-    title: 'Versos al amanecer',
-    content:
-      'Cuando la luz toca las montañas y el silencio se vuelve canción, mi alma despierta entre las ramas de un sueño que no tiene razón...',
-    genre: 'Poesía',
-    readTime: '3 min',
-    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop',
-  },
-  {
-    id: 3,
-    author: { name: 'Ana Rodríguez', username: '@anarodriguez', avatar: '/api/placeholder/40/40' },
-    title: 'Capítulo 1: El último tren',
-    content:
-      'La estación estaba desierta a esa hora de la madrugada. Solo el eco de mis pasos resonaba entre los andenes vacíos, creando una sinfonía melancólica...',
-    genre: 'Novela',
-    readTime: '8 min',
-    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=400&fit=crop',
-  },
-  {
-    id: 4,
-    author: { name: 'Diego Herrera', username: '@diegoherrera', avatar: '/api/placeholder/40/40' },
-    title: 'Monólogo del tiempo perdido',
-    content:
-      '¿Cuántas veces hemos dejado que el tiempo se escurra entre nuestros dedos como arena? Yo he sido coleccionista de momentos perdidos...',
-    genre: 'Teatro',
-    readTime: '5 min',
-  },
-  {
-    id: 5,
-    author: { name: 'Sofía Martín', username: '@sofiamartin', avatar: '/api/placeholder/40/40' },
-    title: 'Reflexiones semanales: El arte de la paciencia',
-    content:
-      'Queridos lectores, esta semana he estado reflexionando sobre algo que nuestra sociedad acelerada parece haber olvidado: el arte de la paciencia...',
-    genre: 'Newsletter',
-    readTime: '6 min',
-    image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop',
-  },
-]
+// Se cargará desde Supabase en runtime
 
 export default function FavoritesPage() {
   const router = useRouter()
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([])
+  const [favorites, setFavorites] = useState<Post[]>([])
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('palabreo-bookmarks')
-      const ids: number[] = raw ? JSON.parse(raw) : []
-      setFavoriteIds(ids)
-    } catch {
-      setFavoriteIds([])
-    }
+    ;(async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData?.user) {
+          const { data: bm } = await supabase
+            .from('bookmarks')
+            .select('work_id')
+            .eq('user_id', userData.user.id)
+          const workIds = (bm || []).map((r: any) => r.work_id)
+          if (workIds.length === 0) { setFavorites([]); return }
+          const { data: works } = await supabase
+            .from('works')
+            .select('id,title,genre,cover_url,chapters,content,author_id')
+            .in('id', workIds)
+          const authorIds = Array.from(new Set((works || []).map((w: any) => w.author_id)))
+          let profilesMap: Record<string, any> = {}
+          if (authorIds.length > 0) {
+            const { data: profs } = await supabase
+              .from('profiles')
+              .select('id,username,name,avatar_url')
+              .in('id', authorIds)
+            profilesMap = (profs || []).reduce((acc: any, p: any) => { acc[p.id] = p; return acc }, {})
+          }
+          const mapped: Post[] = (works || []).map((w: any) => {
+            const author = profilesMap[w.author_id] || {}
+            const body = w.chapters && Array.isArray(w.chapters) && w.chapters.length > 0 ? (w.chapters[0]?.content || '') : (w.content || '')
+            return {
+              id: w.id,
+              author: { name: author.name || 'Autor', username: author.username ? `@${author.username}` : '@autor', avatar: author.avatar_url || '/api/placeholder/40/40' },
+              title: w.title,
+              content: body,
+              genre: w.genre || 'Obra',
+              readTime: '—',
+              image: w.cover_url || undefined,
+            }
+          })
+          setFavorites(mapped)
+        } else {
+          // Fallback local
+          const raw = localStorage.getItem('palabreo-bookmarks')
+          const ids: any[] = raw ? JSON.parse(raw) : []
+          setFavorites([]) // no dataset local; dejamos vacío
+        }
+      } catch { setFavorites([]) }
+    })()
   }, [])
 
-  const favorites = useMemo(() => {
-    return allPosts.filter((p) => favoriteIds.includes(p.id))
-  }, [favoriteIds])
-
-  const removeFromFavorites = (postId: number) => {
-    setFavoriteIds((prev) => {
-      const next = prev.filter((id) => id !== postId)
-      try {
-        localStorage.setItem('palabreo-bookmarks', JSON.stringify(next))
-      } catch {}
-      return next
-    })
+  const removeFromFavorites = async (postId: number) => {
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      if (userData?.user) {
+        await supabase.from('bookmarks').delete().eq('user_id', userData.user.id).eq('work_id', postId)
+      } else {
+        const raw = localStorage.getItem('palabreo-bookmarks')
+        let ids: any[] = raw ? JSON.parse(raw) : []
+        ids = ids.filter((id: any) => id !== postId)
+        localStorage.setItem('palabreo-bookmarks', JSON.stringify(ids))
+      }
+      setFavorites(prev => prev.filter(p => p.id !== postId))
+    } catch {}
   }
 
   return (

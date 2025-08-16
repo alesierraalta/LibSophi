@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Button from '../../components/Button'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,14 +16,17 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    
-    // Simulación de login
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    console.log('Login attempt:', { email, password })
-    
-    // Redirect to main page
-    router.push('/main')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        alert(error.message)
+        return
+      }
+      router.push('/main')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -128,12 +132,32 @@ export default function LoginPage() {
 
           {/* Social Login */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = getSupabaseBrowserClient()
+                await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: { redirectTo: `${window.location.origin}/auth/callback?next=/main` },
+                })
+              }}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <span className="mr-3">🔍</span>
               <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con Google</span>
             </button>
             
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = getSupabaseBrowserClient()
+                await supabase.auth.signInWithOAuth({
+                  provider: 'github',
+                  options: { redirectTo: `${window.location.origin}/auth/callback?next=/main` },
+                })
+              }}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <span className="mr-3">🐙</span>
               <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con GitHub</span>
             </button>

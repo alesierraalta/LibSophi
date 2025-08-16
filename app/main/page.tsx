@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, UserPlus, AtSign, BookOpen, Eye, Mail, Copy, Repeat2 } from 'lucide-react'
 import ProfileHoverCard from '@/components/ProfileHoverCard'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { createLikeNotification, createCommentNotification, createFollowNotification } from '@/lib/notifications'
 
 // Lazy load ThemeSelector for better performance
 const ThemeSelector = lazy(() => import('@/components/ThemeSelector'))
@@ -40,12 +42,250 @@ const initialPosts = [
 ]
 
 function MainPageInner() {
-  const [posts, setPosts] = useState(initialPosts)
+  const [posts, setPosts] = useState<any[]>([])
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [onlyFollowing, setOnlyFollowing] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState('feed')
   const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
   const [showNotifications, setShowNotifications] = useState(false)
+  const [trendingTopics, setTrendingTopics] = useState<any[]>([])
+  const [suggestedAuthors, setSuggestedAuthors] = useState<any[]>([])
+  const [spotlightNewsletters, setSpotlightNewsletters] = useState<any[]>([])
+  const [popularStories, setPopularStories] = useState<any[]>([])
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  React.useEffect(() => {
+    ;(async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData?.user) setCurrentUserId(userData.user.id)
+        // Determine author filter if onlyFollowing
+        let authorFilterIds: string[] | null = null
+        if (onlyFollowing && userData?.user) {
+          const { data: flw } = await supabase
+            .from('follows')
+            .select('followee_id')
+            .eq('follower_id', userData.user.id)
+          authorFilterIds = Array.from(new Set((flw || []).map((r: any) => r.followee_id)))
+          if (authorFilterIds.length === 0) {
+            setPosts([])
+            return
+          }
+        }
+        // Fetch latest works
+        let query = supabase
+          .from('works')
+          .select('id,title,genre,cover_url,created_at,author_id,chapters,content')
+          .order('created_at', { ascending: false })
+          .limit(25)
+        if (authorFilterIds && authorFilterIds.length > 0) {
+          query = query.in('author_id', authorFilterIds)
+        }
+        const { data: works } = await query
+        if (Array.isArray(works)) {
+          // Bulk fetch authors
+          const authorIds = Array.from(new Set(works.map((w: any) => w.author_id).filter(Boolean)))
+          let profilesMap: Record<string, any> = {}
+          if (authorIds.length > 0) {
+            const { data: profs } = await supabase
+              .from('profiles')
+              .select('id,username,name,avatar_url')
+              .in('id', authorIds)
+            if (Array.isArray(profs)) {
+              profilesMap = profs.reduce((acc: any, p: any) => { acc[p.id] = p; return acc }, {})
+            }
+          }
+          let mapped = works.map((w: any) => {
+            const author = profilesMap[w.author_id] || {}
+            const body = w.chapters && Array.isArray(w.chapters) && w.chapters.length > 0 ? (w.chapters[0]?.content || '') : (w.content || '')
+            return {
+              id: w.id,
+              author: {
+                name: author.name || 'Autor',
+                username: author.username ? `@${author.username}` : '@autor',
+                avatar: author.avatar_url || '/api/placeholder/40/40',
+              },
+              title: w.title,
+              content: body,
+              genre: w.genre || 'Obra',
+              readTime: '—',
+              likes: 0,
+              comments: 0,
+              shares: 0,
+              isLiked: false,
+              bookmarked: false,
+              timestamp: new Date(w.created_at || Date.now()).toLocaleString(),
+              image: w.cover_url || null,
+            }
+          })
+          // aggregate counts
+          const workIds = mapped.map((m: any) => m.id)
+          if (workIds.length > 0) {
+            const [{ data: likesRows }, { data: commentsRows }, { data: bmRows }] = await Promise.all([
+              supabase.from('likes').select('work_id').in('work_id', workIds),
+              supabase.from('comments').select('work_id').in('work_id', workIds),
+              supabase.from('bookmarks').select('work_id').in('work_id', workIds),
+            ])
+            const likesCount: Record<string, number> = {}
+            const commentsCount: Record<string, number> = {}
+            const bookmarksCount: Record<string, number> = {}
+            ;(likesRows || []).forEach((r: any) => { likesCount[r.work_id] = (likesCount[r.work_id] || 0) + 1 })
+            ;(commentsRows || []).forEach((r: any) => { commentsCount[r.work_id] = (commentsCount[r.work_id] || 0) + 1 })
+            ;(bmRows || []).forEach((r: any) => { bookmarksCount[r.work_id] = (bookmarksCount[r.work_id] || 0) + 1 })
+            mapped = mapped.map((m: any) => ({
+              ...m,
+              likes: likesCount[m.id] || 0,
+              comments: commentsCount[m.id] || 0,
+              shares: 0,
+            }))
+          }
+          // Mark liked/bookmarked for current user
+          if (userData?.user && mapped.length > 0) {
+            const workIds = mapped.map((m: any) => m.id)
+            const [{ data: userLikes }, { data: userBookmarks }] = await Promise.all([
+              supabase.from('likes').select('work_id').eq('user_id', userData.user.id).in('work_id', workIds),
+              supabase.from('bookmarks').select('work_id').eq('user_id', userData.user.id).in('work_id', workIds),
+            ])
+            const likedSet = new Set((userLikes || []).map((r: any) => r.work_id))
+            const bookmarkedSet = new Set((userBookmarks || []).map((r: any) => r.work_id))
+            mapped = mapped.map((m: any) => ({
+              ...m,
+              isLiked: likedSet.has(m.id),
+              bookmarked: bookmarkedSet.has(m.id),
+            }))
+          }
+          setPosts(mapped)
+        }
+      } catch {}
+    })()
+  }, [onlyFollowing])
+
+  // Sidebar data: tendencias, autores sugeridos, newsletters y obras destacadas
+  React.useEffect(() => {
+    ;(async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        // Fetch recent works to derive multiple aggregates
+        const { data: works } = await supabase
+          .from('works')
+          .select('id,title,genre,cover_url,author_id,created_at')
+          .order('created_at', { ascending: false })
+          .limit(200)
+
+        const worksSafe = Array.isArray(works) ? works : []
+
+        // 1) Tendencias por género
+        const genreToCount: Record<string, number> = {}
+        worksSafe.forEach((w: any) => {
+          const g = (w.genre || 'General').toString()
+          genreToCount[g] = (genreToCount[g] || 0) + 1
+        })
+        const topGenres = Object.entries(genreToCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([g, c]) => ({ tag: `#${g}`, count: String(c) }))
+        setTrendingTopics(topGenres)
+
+        // 2) Autores sugeridos (por seguidores)
+        const { data: follows } = await supabase
+          .from('follows')
+          .select('followee_id')
+          .limit(1000)
+        const followCounts: Record<string, number> = {}
+        ;(follows || []).forEach((r: any) => {
+          if (r?.followee_id) followCounts[r.followee_id] = (followCounts[r.followee_id] || 0) + 1
+        })
+        const topAuthorIds = Object.entries(followCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([id]) => id as string)
+        let authors: any[] = []
+        if (topAuthorIds.length > 0) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('id,username,name,avatar_url')
+            .in('id', topAuthorIds)
+          const worksByTop = worksSafe.filter((w: any) => topAuthorIds.includes(w.author_id))
+          const authorToGenre: Record<string, string> = {}
+          topAuthorIds.forEach((id) => {
+            const ws = worksByTop.filter((w: any) => w.author_id === id)
+            const counts: Record<string, number> = {}
+            ws.forEach((w: any) => {
+              const g = (w.genre || 'Obra').toString()
+              counts[g] = (counts[g] || 0) + 1
+            })
+            const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Obra'
+            authorToGenre[id] = top
+          })
+          authors = (profs || []).map((p: any) => ({
+            name: p?.name || 'Autor',
+            username: p?.username ? `@${p.username}` : '@autor',
+            followers: String(followCounts[p.id] || 0),
+            genre: authorToGenre[p.id] || 'Obra',
+            verified: false,
+          }))
+        }
+        setSuggestedAuthors(authors)
+
+        // 3) Newsletters destacados (por género que contenga "newsletter")
+        const newsletters = worksSafe
+          .filter((w: any) => (w.genre || '').toString().toLowerCase().includes('newsletter'))
+          .slice(0, 3)
+        const nlIds = newsletters.map((n: any) => n.id)
+        let bmRows: any[] = []
+        if (nlIds.length > 0) {
+          const { data: bm } = await supabase.from('bookmarks').select('work_id').in('work_id', nlIds)
+          bmRows = bm || []
+        }
+        const subsCount: Record<string, number> = {}
+        bmRows.forEach((r: any) => { subsCount[r.work_id] = (subsCount[r.work_id] || 0) + 1 })
+        const nlAuthorIds = Array.from(new Set(newsletters.map((n: any) => n.author_id).filter(Boolean)))
+        let nlProfiles: any[] = []
+        if (nlAuthorIds.length > 0) {
+          const { data: p2 } = await supabase.from('profiles').select('id,name').in('id', nlAuthorIds)
+          nlProfiles = p2 || []
+        }
+        const idToName: Record<string, string> = {}
+        nlProfiles.forEach((p: any) => { idToName[p.id] = p.name || 'Autor' })
+        setSpotlightNewsletters(newsletters.map((n: any) => ({
+          title: n.title,
+          author: idToName[n.author_id] || 'Autor',
+          subscribers: String(subsCount[n.id] || 0),
+          frequency: '—',
+          genre: n.genre || 'Newsletter',
+        })))
+
+        // 4) Obras destacadas (más me gusta)
+        const workIdsAll = worksSafe.map((w: any) => w.id)
+        let likeRows: any[] = []
+        if (workIdsAll.length > 0) {
+          const { data: lr } = await supabase.from('likes').select('work_id').in('work_id', workIdsAll)
+          likeRows = lr || []
+        }
+        const likeCounts: Record<string, number> = {}
+        likeRows.forEach((r: any) => { likeCounts[r.work_id] = (likeCounts[r.work_id] || 0) + 1 })
+        const topWorks = [...worksSafe]
+          .sort((a: any, b: any) => (likeCounts[b.id] || 0) - (likeCounts[a.id] || 0))
+          .slice(0, 3)
+        const topAuthorIds2 = Array.from(new Set(topWorks.map((w: any) => w.author_id)))
+        let pTop: any[] = []
+        if (topAuthorIds2.length > 0) {
+          const { data: p } = await supabase.from('profiles').select('id,name').in('id', topAuthorIds2)
+          pTop = p || []
+        }
+        const idToNameTop: Record<string, string> = {}
+        pTop.forEach((p: any) => { idToNameTop[p.id] = p.name || 'Autor' })
+        setPopularStories(topWorks.map((w: any) => ({
+          title: w.title,
+          author: idToNameTop[w.author_id] || 'Autor',
+          reads: String(likeCounts[w.id] || 0),
+          genre: w.genre || 'Obra',
+        })))
+      } catch {}
+    })()
+  }, [])
 
   // Memoized callback to prevent unnecessary re-renders
   const handleLike = useCallback((postId: number) => {
@@ -161,14 +401,7 @@ function MainPageInner() {
     }
   }, [searchParams, activeTab])
 
-  // Memoized trending topics data
-  const trendingTopics = useMemo(() => [
-    { tag: '#NovelasLargas', count: '2.1k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' },
-    { tag: '#EnsayosLiterarios', count: '1.8k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' },
-    { tag: '#CuentosCortos', count: '3.2k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' },
-    { tag: '#NewslettersSemanales', count: '850', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[180px]' },
-    { tag: '#PoesíaNarrativa', count: '1.5k', bgClass: 'bg-red-50', textClass: 'text-red-700', hoverClass: 'group-hover:text-red-800', maxWidth: 'max-w-[160px]' }
-  ], [])
+  // Tendencias obtenidas dinámicamente (estado: trendingTopics)
 
   // Memoized trending topic component
   const TrendingTopic = memo(({ topic }: { topic: any }) => (
@@ -294,15 +527,7 @@ function MainPageInner() {
     const [localComments, setLocalComments] = useState<number>(post.comments ?? 0)
     const [localReposts, setLocalReposts] = useState<number>((post as any).reposts ?? 0)
     const [localReposted, setLocalReposted] = useState<boolean>(false)
-    const [bookmarked, setBookmarked] = useState<boolean>(() => {
-      try {
-        const raw = localStorage.getItem('palabreo-bookmarks')
-        const ids: number[] = raw ? JSON.parse(raw) : []
-        return ids.includes(post.id)
-      } catch {
-        return false
-      }
-    })
+    const [bookmarked, setBookmarked] = useState<boolean>(false)
     const [comments, setComments] = useState<{ id: string; author: any; text: string; time: number }[]>(() => {
       try {
         const raw = localStorage.getItem(`palabreo-comments-${post.id}`)
@@ -330,11 +555,33 @@ function MainPageInner() {
       } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
-    const onLike = () => {
-      setLocalLikes(prev => (localIsLiked ? Math.max(0, prev - 1) : prev + 1))
-      setLocalIsLiked(v => !v)
+    const onLike = async () => {
+      const supabase = getSupabaseBrowserClient()
+      if (!currentUserId) {
+        setLocalLikes(prev => (localIsLiked ? Math.max(0, prev - 1) : prev + 1))
+        setLocalIsLiked(v => !v)
+        return
+      }
+      try {
+        if (!localIsLiked) {
+          await supabase.from('likes').insert({ user_id: currentUserId, work_id: post.id })
+          setLocalLikes(prev => prev + 1)
+          setLocalIsLiked(true)
+          
+          // Create notification for the author
+          if (currentUserId !== post.author_id) {
+            const { data: userData } = await supabase.auth.getUser()
+            const currentUserName = userData?.user?.user_metadata?.name || userData?.user?.email || 'Alguien'
+            createLikeNotification(post.id, post.title, post.author_id, currentUserId, currentUserName)
+          }
+        } else {
+          await supabase.from('likes').delete().eq('user_id', currentUserId).eq('work_id', post.id)
+          setLocalLikes(prev => Math.max(0, prev - 1))
+          setLocalIsLiked(false)
+        }
+      } catch {}
     }
-    const onAddComment = (text: string) => {
+    const onAddComment = async (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
       const newItem = { id: `${Date.now()}-${Math.random().toString(36).slice(2,6)}`, author: { name: 'Tú', username: '@tu' }, text: trimmed, time: Date.now() }
@@ -343,22 +590,44 @@ function MainPageInner() {
         try { localStorage.setItem(`palabreo-comments-${post.id}`, JSON.stringify(next)) } catch {}
         return next
       })
+      try {
+        if (currentUserId) {
+          const supabase = getSupabaseBrowserClient()
+          await supabase.from('comments').insert({ work_id: post.id, author_id: currentUserId, text: trimmed })
+          
+          // Create notification for the author
+          if (currentUserId !== post.author_id) {
+            const { data: userData } = await supabase.auth.getUser()
+            const currentUserName = userData?.user?.user_metadata?.name || userData?.user?.email || 'Alguien'
+            createCommentNotification(post.id, post.title, post.author_id, currentUserId, currentUserName)
+          }
+        }
+      } catch {}
     }
-    const onRepost = () => {
+    const onRepost = async () => {
       setLocalReposts(prev => (localReposted ? Math.max(0, prev - 1) : prev + 1))
       setLocalReposted(v => !v)
       try {
-        const key = 'palabreo-reposts'
-        const raw = localStorage.getItem(key)
-        const list: any[] = raw ? JSON.parse(raw) : []
-        if (!localReposted) {
-          const item = { id: post.id, title: post.title, author: post.author, excerpt: (post.content || '').slice(0, 160), image: post.image || null, time: Date.now() }
-          const exists = list.some(x => x && x.id === post.id)
-          const next = exists ? list : [...list, item]
-          localStorage.setItem(key, JSON.stringify(next))
+        if (currentUserId) {
+          const supabase = getSupabaseBrowserClient()
+          if (!localReposted) {
+            await supabase.from('reposts').insert({ user_id: currentUserId, work_id: post.id })
+          } else {
+            await supabase.from('reposts').delete().eq('user_id', currentUserId).eq('work_id', post.id)
+          }
         } else {
-          const next = list.filter(x => x && x.id !== post.id)
-          localStorage.setItem(key, JSON.stringify(next))
+          const key = 'palabreo-reposts'
+          const raw = localStorage.getItem(key)
+          const list: any[] = raw ? JSON.parse(raw) : []
+          if (!localReposted) {
+            const item = { id: post.id, title: post.title, author: post.author, excerpt: (post.content || '').slice(0, 160), image: post.image || null, time: Date.now() }
+            const exists = list.some(x => x && x.id === post.id)
+            const next = exists ? list : [...list, item]
+            localStorage.setItem(key, JSON.stringify(next))
+          } else {
+            const next = list.filter(x => x && x.id !== post.id)
+            localStorage.setItem(key, JSON.stringify(next))
+          }
         }
       } catch {}
     }
@@ -374,21 +643,27 @@ function MainPageInner() {
     }
     // Mobile long-press (Pinterest-like) overlay state
     
-    const toggleBookmark = () => {
-      setBookmarked(prev => {
-        const next = !prev
-        try {
+    const toggleBookmark = async () => {
+      const supabase = getSupabaseBrowserClient()
+      setBookmarked(prev => !prev)
+      try {
+        if (currentUserId) {
+          if (!bookmarked) {
+            await supabase.from('bookmarks').insert({ user_id: currentUserId, work_id: post.id })
+          } else {
+            await supabase.from('bookmarks').delete().eq('user_id', currentUserId).eq('work_id', post.id)
+          }
+        } else {
           const raw = localStorage.getItem('palabreo-bookmarks')
-          let ids: number[] = raw ? JSON.parse(raw) : []
-          if (next) {
+          let ids: any[] = raw ? JSON.parse(raw) : []
+          if (!bookmarked) {
             if (!ids.includes(post.id)) ids.push(post.id)
           } else {
-            ids = ids.filter(id => id !== post.id)
+            ids = ids.filter((id: any) => id !== post.id)
           }
           localStorage.setItem('palabreo-bookmarks', JSON.stringify(ids))
-        } catch {}
-        return next
-      })
+        }
+      } catch {}
     }
     return (
     <Card
@@ -527,12 +802,7 @@ function MainPageInner() {
     { tag: '#TeatroIndependiente', posts: '890' }
   ], [])
 
-  // Memoized suggested authors data
-  const suggestedAuthors = useMemo(() => [
-    { name: 'Elena Martínez', username: '@elena_writes', followers: '12.5k', genre: 'Poesía', verified: true },
-    { name: 'Carlos Ruiz', username: '@carlos_stories', followers: '8.9k', genre: 'Narrativa', verified: false },
-    { name: 'Ana García', username: '@ana_teatro', followers: '6.2k', genre: 'Teatro', verified: true }
-  ], [])
+  // Autores sugeridos obtenidos dinámicamente (estado: suggestedAuthors)
 
   // Memoized sidebar trend component
   const SidebarTrend = memo(({ trend }: { trend: any }) => (
@@ -554,7 +824,7 @@ function MainPageInner() {
         return ids.includes(author.username)
       } catch { return false }
     })
-    const toggleFollow = () => {
+    const toggleFollow = async () => {
       setIsFollowing(prev => {
         const next = !prev
         try {
@@ -569,6 +839,49 @@ function MainPageInner() {
         } catch {}
         return next
       })
+
+      // Handle Supabase follow/unfollow and notifications
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        
+        if (userData?.user && !isFollowing) {
+          // Get the followed user's ID by username
+          const { data: followedUser } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .eq('username', author.username.replace('@', ''))
+            .single()
+          
+          if (followedUser) {
+            // Insert follow record
+            await supabase
+              .from('follows')
+              .insert({ follower_id: userData.user.id, followed_id: followedUser.id })
+            
+            // Create notification
+            const currentUserName = userData.user.user_metadata?.name || userData.user.email || 'Alguien'
+            createFollowNotification(followedUser.id, userData.user.id, currentUserName)
+          }
+        } else if (userData?.user && isFollowing) {
+          // Get the followed user's ID and unfollow
+          const { data: followedUser } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('username', author.username.replace('@', ''))
+            .single()
+          
+          if (followedUser) {
+            await supabase
+              .from('follows')
+              .delete()
+              .eq('follower_id', userData.user.id)
+              .eq('followed_id', followedUser.id)
+          }
+        }
+      } catch (error) {
+        console.error('Error handling follow:', error)
+      }
     }
     return (
       <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
@@ -783,8 +1096,17 @@ function MainPageInner() {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-3">
-                  {trendingTopics.map((topic, index) => (
-                    <TrendingTopic key={topic.tag} topic={topic} />
+                  {(trendingTopics.length > 0 ? trendingTopics : [
+                    { tag: '#General', count: '—' },
+                  ]).map((topic) => (
+                    <TrendingTopic key={topic.tag} topic={{
+                      tag: topic.tag,
+                      count: topic.count,
+                      bgClass: 'bg-red-50',
+                      textClass: 'text-red-700',
+                      hoverClass: 'group-hover:text-red-800',
+                      maxWidth: 'max-w-[160px]'
+                    }} />
                   ))}
                 </div>
               </CardContent>
@@ -796,9 +1118,19 @@ function MainPageInner() {
             <div className="space-y-4 sm:space-y-6">
               {/* Posts Feed */}
               <div className="mt-0">
-                {memoizedPosts.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
+                <div className="flex items-center justify-end mb-2">
+                  <label className="text-xs text-gray-600 inline-flex items-center gap-2">
+                    <input type="checkbox" checked={onlyFollowing} onChange={(e) => setOnlyFollowing(e.target.checked)} />
+                    Solo seguidos
+                  </label>
+                </div>
+                {posts.length > 0 ? (
+                  posts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-600">No hay publicaciones por ahora.</div>
+                )}
               </div>
             </div>
           </div>
@@ -814,9 +1146,12 @@ function MainPageInner() {
               </CardHeader>
               <CardContent className="p-3 md:p-4 lg:p-6 pt-3 md:pt-4 lg:pt-6">
                 <div className="space-y-3">
-                  {suggestedAuthors.map((author, index) => (
+                  {(suggestedAuthors.length > 0 ? suggestedAuthors : []).map((author, index) => (
                     <SuggestedAuthor key={index} author={author} />
                   ))}
+                  {suggestedAuthors.length === 0 && (
+                    <div className="text-sm text-gray-600">Sin sugerencias por ahora.</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -831,11 +1166,7 @@ function MainPageInner() {
               </CardHeader>
               <CardContent className="p-3 md:p-4 lg:p-4 pt-3 md:pt-4 lg:pt-6">
                 <div className="space-y-3">
-                  {[
-                    { title: "El Arte de la Escritura", author: "Alejandra Ruiz", subscribers: "2.3k", frequency: "Semanal", genre: "Escritura Creativa" },
-                    { title: "Ficción y Realidad", author: "Miguel Santos", subscribers: "1.8k", frequency: "Quincenal", genre: "Análisis Literario" },
-                    { title: "Cuentos de Medianoche", author: "Carmen López", subscribers: "3.1k", frequency: "Mensual", genre: "Cuentos Originales" },
-                  ].map((newsletter, index) => (
+                  {(spotlightNewsletters.length > 0 ? spotlightNewsletters : []).map((newsletter, index) => (
                     <div key={index} className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
@@ -853,17 +1184,20 @@ function MainPageInner() {
                             {newsletter.genre}
                           </Badge>
                         </div>
-                        <span className="text-gray-600 text-xs font-medium flex-shrink-0">{newsletter.frequency}</span>
+                           <span className="text-gray-600 text-xs font-medium flex-shrink-0">{newsletter.frequency}</span>
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-gray-500 text-xs font-medium">{newsletter.subscribers} suscriptores</span>
+                         <span className="text-gray-500 text-xs font-medium">{newsletter.subscribers} suscriptores</span>
                         <div className="flex items-center space-x-1">
                           <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
                           <span className="text-xs text-green-600 font-medium">Activo</span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                   ))}
+                  {spotlightNewsletters.length === 0 && (
+                    <div className="text-sm text-gray-600">Aún no hay newsletters destacados.</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -875,11 +1209,7 @@ function MainPageInner() {
               </CardHeader>
               <CardContent className="p-3 md:p-4 lg:p-6 pt-3 md:pt-4 lg:pt-6">
                 <div className="space-y-3">
-                  {[
-                    { title: "El último guardián - Novela completa", author: "Laura Martín", reads: "12.5k", genre: "Fantasía Épica" },
-                    { title: "Códigos del futuro - Serie", author: "Roberto Silva", reads: "8.3k", genre: "Ciencia Ficción" },
-                    { title: "Memorias de una generación perdida", author: "Elena García", reads: "15.2k", genre: "Ensayo Autobiográfico" },
-                  ].map((story, index) => (
+                  {(popularStories.length > 0 ? popularStories : []).map((story, index) => (
                     <div key={index} className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
@@ -900,11 +1230,14 @@ function MainPageInner() {
                         </div>
                         <div className="flex items-center space-x-1 text-gray-500 text-xs">
                           <Eye className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium">{story.reads}</span>
+                           <span className="font-medium">{story.reads}</span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                   ))}
+                  {popularStories.length === 0 && (
+                    <div className="text-sm text-gray-600">Sin obras destacadas aún.</div>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon } from 'lucide-react'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -29,6 +30,7 @@ export default function ProfilePage() {
     avatar: '/api/placeholder/112/112',
     banner: '',
   })
+  const [userId, setUserId] = useState<string | null>(null)
   const [editProfile, setEditProfile] = useState<Profile>(profile)
   const [showEdit, setShowEdit] = useState(false)
   const defaultProfile: Profile = {
@@ -71,6 +73,29 @@ export default function ProfilePage() {
         if (Array.isArray(list)) setReposts(list.sort((a: any, b: any) => b.time - a.time))
       }
     } catch {}
+    ;(async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData?.user) {
+          setUserId(userData.user.id)
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('username,name,bio,avatar_url,banner_url')
+            .eq('id', userData.user.id)
+            .single()
+          if (prof) {
+            setProfile({
+              name: prof.name || defaultProfile.name,
+              username: (prof.username || defaultProfile.username).replace(/^@+/, ''),
+              bio: prof.bio ?? defaultProfile.bio,
+              avatar: prof.avatar_url || defaultProfile.avatar,
+              banner: prof.banner_url || '',
+            })
+          }
+        }
+      } catch {}
+    })()
   }, [])
 
   const openEdit = () => {
@@ -78,7 +103,7 @@ export default function ProfilePage() {
     setShowEdit(true)
   }
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     const currentErrors = validate(editProfile)
     setErrors(currentErrors)
     const hasErrors = Object.keys(currentErrors).length > 0
@@ -91,7 +116,22 @@ export default function ProfilePage() {
       banner: editProfile.banner.trim(),
     }
     setProfile(cleaned)
-    try { localStorage.setItem('palabreo-profile', JSON.stringify(cleaned)) } catch {}
+    try {
+      localStorage.setItem('palabreo-profile', JSON.stringify(cleaned))
+    } catch {}
+    try {
+      if (userId) {
+        const supabase = getSupabaseBrowserClient()
+        await supabase.from('profiles').upsert({
+          id: userId,
+          username: cleaned.username,
+          name: cleaned.name,
+          bio: cleaned.bio,
+          avatar_url: cleaned.avatar,
+          banner_url: cleaned.banner,
+        })
+      }
+    } catch {}
     setShowEdit(false)
   }
 
@@ -139,11 +179,15 @@ export default function ProfilePage() {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const activationTriggeredRef = React.useRef<boolean>(false)
   const lastHoverIndexRef = React.useRef<number | null>(null)
-  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null)
-  const LONG_PRESS_MS = 350
-  const MOVE_THRESHOLD_PX = 10
+  const touchStartRef = React.useRef<{ x: number; y: number; time: number } | null>(null)
+  const LONG_PRESS_MS = 500 // Increased for better reliability
+  const MOVE_THRESHOLD_PX = 15 // Increased threshold for better touch handling
   const scrollLockedRef = React.useRef<boolean>(false)
   const scrollLockPosRef = React.useRef<number>(0)
+  const rafMoveIdRef = React.useRef<number | null>(null)
+  const pendingMoveRef = React.useRef<{ x: number; y: number } | null>(null)
+  const isLongPressActiveRef = React.useRef<boolean>(false)
+  const touchMoveCountRef = React.useRef<number>(0)
 
   const preventScrollEvent = React.useCallback((e: Event) => { e.preventDefault() }, [])
   const lockBodyScroll = React.useCallback(() => {
@@ -193,6 +237,10 @@ export default function ProfilePage() {
     return () => {
       clearOverlayTimer()
       unlockBodyScroll()
+      if (rafMoveIdRef.current) {
+        cancelAnimationFrame(rafMoveIdRef.current)
+        rafMoveIdRef.current = null
+      }
     }
   }, [unlockBodyScroll])
 
@@ -211,6 +259,9 @@ export default function ProfilePage() {
       body.style.right = '0'
       body.style.width = '100%'
       body.style.overflow = 'hidden'
+      body.style.WebkitTouchCallout = 'none'
+      body.style.WebkitUserSelect = 'none'
+      body.style.userSelect = 'none'
       // Add non-passive listeners to block touch/scroll at root
       window.addEventListener('touchmove', prevent, { passive: false })
       window.addEventListener('wheel', prevent, { passive: false })
@@ -276,6 +327,96 @@ export default function ProfilePage() {
     if (!activeWorkOverlayId) {
       unlockBodyScroll()
     }
+  }
+
+  // Pointer Events version (unified for touch/pen; ignore mouse)
+  const onPointerDownWork = (workId: number) => (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, input, textarea, [role="button"]')) return
+    if (e.pointerType === 'mouse') return
+    
+    const px = e.clientX
+    const py = e.clientY
+    const currentTime = Date.now()
+    
+    touchStartRef.current = { x: px, y: py, time: currentTime }
+    touchMoveCountRef.current = 0
+    isLongPressActiveRef.current = false
+    clearOverlayTimer()
+    setActiveOverlayPos({ x: px, y: py })
+    activationTriggeredRef.current = false
+    
+    // Prevent default behavior to avoid conflicts
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try { (e.currentTarget as any).setPointerCapture(e.pointerId) } catch {}
+    
+    overlayTimerRef.current = window.setTimeout(() => {
+      if (touchStartRef.current && touchMoveCountRef.current < 3) {
+        isLongPressActiveRef.current = true
+        setActiveWorkOverlayId(workId)
+        lockBodyScroll()
+        try { 
+          if (navigator.vibrate) navigator.vibrate([50])
+        } catch {}
+      }
+    }, LONG_PRESS_MS)
+  }
+
+  const onPointerMoveWork = (e: React.PointerEvent) => {
+    if (!touchStartRef.current) return
+    
+    const px = e.clientX
+    const py = e.clientY
+    const dx = Math.abs(px - touchStartRef.current.x)
+    const dy = Math.abs(py - touchStartRef.current.y)
+    const totalMove = Math.sqrt(dx * dx + dy * dy)
+    
+    touchMoveCountRef.current++
+    
+    // If we're moving too much before long press activates, cancel it
+    if (totalMove > MOVE_THRESHOLD_PX && !isLongPressActiveRef.current) {
+      clearOverlayTimer()
+      if (!activeWorkOverlayId) {
+        unlockBodyScroll()
+      }
+    }
+    
+    // Prevent default to avoid scroll conflicts
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const onPointerUpWork = (e: React.PointerEvent) => {
+    clearOverlayTimer()
+    touchStartRef.current = null
+    touchMoveCountRef.current = 0
+    isLongPressActiveRef.current = false
+    setHoverIndex(null)
+    
+    if (!activeWorkOverlayId) {
+      unlockBodyScroll()
+    }
+    
+    try { (e.currentTarget as any).releasePointerCapture(e.pointerId) } catch {}
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const onPointerCancelWork = (e: React.PointerEvent) => {
+    clearOverlayTimer()
+    touchStartRef.current = null
+    touchMoveCountRef.current = 0
+    isLongPressActiveRef.current = false
+    setHoverIndex(null)
+    
+    if (!activeWorkOverlayId) {
+      unlockBodyScroll()
+    }
+    
+    e.preventDefault()
+    e.stopPropagation()
   }
 
   const shareWork = async (w: any) => {
@@ -401,11 +542,21 @@ export default function ProfilePage() {
             {works.map(w => (
               <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden relative">
                 <div
-                  className="relative h-48 sm:h-56 lg:h-64 w-full touch-manipulation"
-                  onTouchStart={onTouchStartWork(w.id)}
-                  onTouchMove={onTouchMoveWork}
-                  onTouchEnd={onTouchEndWork}
-                  style={{ touchAction: 'none' }}
+                  className="relative h-48 sm:h-56 lg:h-64 w-full touch-manipulation select-none"
+                  onPointerDown={onPointerDownWork(w.id)}
+                  onPointerMove={onPointerMoveWork}
+                  onPointerUp={onPointerUpWork}
+                  onPointerCancel={onPointerCancelWork}
+                  onContextMenu={(e) => { e.preventDefault() }}
+                  onTouchStart={(e) => { e.stopPropagation() }}
+                  onTouchMove={(e) => { e.stopPropagation() }}
+                  onTouchEnd={(e) => { e.stopPropagation() }}
+                  style={{ 
+                    touchAction: 'none',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none'
+                  }}
                 >
                   <img src={w.cover} alt={w.title} className="absolute inset-0 w-full h-full object-cover"/>
                 </div>
@@ -440,6 +591,9 @@ export default function ProfilePage() {
                 {activeWorkOverlayId === w.id && activeOverlayPos && (
                   <div
                     className="sm:hidden fixed inset-0 z-30 overscroll-none select-none"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Acciones de obra"
                     onClick={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); unlockBodyScroll() }}
                     onTouchMove={(e) => { e.preventDefault(); e.stopPropagation() }}
                     onTouchStart={(e) => { e.preventDefault(); e.stopPropagation() }}
@@ -447,7 +601,13 @@ export default function ProfilePage() {
                     onTouchEnd={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); activationTriggeredRef.current = false; unlockBodyScroll() }}
                     onTouchCancel={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); activationTriggeredRef.current = false; unlockBodyScroll() }}
                     onPointerMove={(e) => { e.preventDefault() }}
-                    style={{ touchAction: 'none' }}
+                    style={{ 
+                      touchAction: 'none',
+                      WebkitTouchCallout: 'none',
+                      WebkitUserSelect: 'none',
+                      userSelect: 'none',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
                   >
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm radial-overlay-fade" />
                     {(() => {
@@ -471,37 +631,63 @@ export default function ProfilePage() {
                           { label: 'Eliminar', icon: Trash2, onClick: () => deleteWork(w), tone: 'danger' as const },
                           { label: 'Compartir', icon: Share2, onClick: () => shareWork(w), tone: 'default' as const },
                         ]
-                        const handleTouchMove: React.TouchEventHandler<HTMLDivElement> = (ev) => {
-                          if (!activeOverlayPos) return
-                          const t = ev.touches[0]
-                          const dx = t.clientX - centerX
-                          const dy = t.clientY - centerY
+                        const processMove = (x: number, y: number) => {
+                          const dx = x - centerX
+                          const dy = y - centerY
                           const r = Math.hypot(dx, dy)
-                          if (r < safeRadius * 0.6) {
+                          
+                          // Dead zone in center - no selection
+                          if (r < safeRadius * 0.4) {
                             setHoverIndex(null)
                             return
                           }
-                          // Angle in degrees [0,360)
-                          let deg = Math.atan2(dy, dx) * (180 / Math.PI)
-                          if (deg < 0) deg += 360
-                          // Normalize relative to startDeg
-                          const start = startDeg < 0 ? startDeg + 360 : startDeg
-                          const angleNorm = (deg - start + 360) % 360
-                          const idx = Math.floor((angleNorm + (stepDeg / 2)) / stepDeg) % actions.length
-                          if (idx !== lastHoverIndexRef.current) {
-                            try { (navigator as any).vibrate && (navigator as any).vibrate(8) } catch {}
-                            lastHoverIndexRef.current = idx
+                          
+                          // Selection zone - highlight option
+                          if (r >= safeRadius * 0.4 && r < safeRadius * 0.8) {
+                            let deg = Math.atan2(dy, dx) * (180 / Math.PI)
+                            if (deg < 0) deg += 360
+                            const start = startDeg < 0 ? startDeg + 360 : startDeg
+                            const angleNorm = (deg - start + 360) % 360
+                            const idx = Math.floor((angleNorm + (stepDeg / 2)) / stepDeg) % actions.length
+                            
+                            if (idx !== lastHoverIndexRef.current) {
+                              try { 
+                                if (navigator.vibrate) navigator.vibrate([15])
+                              } catch {}
+                              lastHoverIndexRef.current = idx
+                            }
+                            setHoverIndex(idx)
                           }
-                          setHoverIndex(idx)
-                          // Ejecutar acción al alcanzar el anillo exterior
-                          if (r >= safeRadius * 0.7 && !activationTriggeredRef.current) {
+                          
+                          // Activation zone - trigger action
+                          if (r >= safeRadius * 0.8 && !activationTriggeredRef.current && hoverIndex !== null) {
                             activationTriggeredRef.current = true
-                            const a = actions[idx]
+                            const a = actions[hoverIndex]
+                            try { 
+                              if (navigator.vibrate) navigator.vibrate([30])
+                            } catch {}
                             a.onClick()
                             setActiveWorkOverlayId(null)
                             setActiveOverlayPos(null)
                             setHoverIndex(null)
                             unlockBodyScroll()
+                          }
+                        }
+                        const scheduleProcess = (x: number, y: number) => {
+                          pendingMoveRef.current = { x, y }
+                          if (rafMoveIdRef.current == null) {
+                            rafMoveIdRef.current = window.requestAnimationFrame(() => {
+                              const p = pendingMoveRef.current
+                              if (p) processMove(p.x, p.y)
+                              rafMoveIdRef.current = null
+                            })
+                          }
+                        }
+                        const handleTouchMove: React.TouchEventHandler<HTMLDivElement> = (ev) => {
+                          if (!activeOverlayPos || ev.touches.length === 0) return
+                          const t = ev.touches[0]
+                          if (t) {
+                            scheduleProcess(t.clientX, t.clientY)
                           }
                           ev.preventDefault()
                           ev.stopPropagation()
@@ -513,40 +699,18 @@ export default function ProfilePage() {
                         }
                         const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (ev) => {
                           if (!activeOverlayPos) return
-                          const px = ev.clientX
-                          const py = ev.clientY
-                          const dx = px - centerX
-                          const dy = py - centerY
-                          const r = Math.hypot(dx, dy)
-                          if (r < safeRadius * 0.6) {
-                            setHoverIndex(null)
-                            return
-                          }
-                          let deg = Math.atan2(dy, dx) * (180 / Math.PI)
-                          if (deg < 0) deg += 360
-                          const start = startDeg < 0 ? startDeg + 360 : startDeg
-                          const angleNorm = (deg - start + 360) % 360
-                          const idx = Math.floor((angleNorm + (stepDeg / 2)) / stepDeg) % actions.length
-                          if (idx !== lastHoverIndexRef.current) {
-                            try { (navigator as any).vibrate && (navigator as any).vibrate(8) } catch {}
-                            lastHoverIndexRef.current = idx
-                          }
-                          setHoverIndex(idx)
-                          if (r >= safeRadius * 0.7 && !activationTriggeredRef.current) {
-                            activationTriggeredRef.current = true
-                            const a = actions[idx]
-                            a.onClick()
-                            setActiveWorkOverlayId(null)
-                            setActiveOverlayPos(null)
-                            setHoverIndex(null)
-                            unlockBodyScroll()
-                          }
+                          scheduleProcess(ev.clientX, ev.clientY)
                           ev.preventDefault()
                           ev.stopPropagation()
                         }
                         const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (ev) => {
                           ev.preventDefault()
                           ev.stopPropagation()
+                          if (rafMoveIdRef.current != null) {
+                            cancelAnimationFrame(rafMoveIdRef.current)
+                            rafMoveIdRef.current = null
+                          }
+                          pendingMoveRef.current = null
                           setActiveWorkOverlayId(null)
                           setActiveOverlayPos(null)
                           setHoverIndex(null)
@@ -556,6 +720,11 @@ export default function ProfilePage() {
                         const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (ev) => {
                           ev.preventDefault()
                           ev.stopPropagation()
+                          if (rafMoveIdRef.current != null) {
+                            cancelAnimationFrame(rafMoveIdRef.current)
+                            rafMoveIdRef.current = null
+                          }
+                          pendingMoveRef.current = null
                           setActiveWorkOverlayId(null)
                           setActiveOverlayPos(null)
                           setHoverIndex(null)
@@ -576,7 +745,7 @@ export default function ProfilePage() {
                                 <button
                                   key={a.label}
                                   className={`${common} ${tone} ${ring} w-10 h-10 flex items-center justify-center`}
-                                  style={{ top, left, animationDelay: `${i * 40}ms` }}
+                                  style={{ top, left, animationDelay: `${i * 40}ms`, willChange: 'transform' }}
                                   onClick={(e) => { e.stopPropagation(); a.onClick(); setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
                                   aria-label={a.label}
                                 >

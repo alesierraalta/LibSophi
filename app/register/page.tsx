@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Button from '../../components/Button'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -33,14 +34,18 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true)
-    
-    // Simulación de registro
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    console.log('Register attempt:', formData)
-    
-    // Redirect to main page
-    router.push('/main')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.auth.signUp({ email: formData.email, password: formData.password })
+      if (error) {
+        alert(error.message)
+        return
+      }
+      alert('Revisa tu correo para confirmar tu cuenta')
+      router.push('/login')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
 

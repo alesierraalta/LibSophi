@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookOpen, Edit3, Eye, Plus } from 'lucide-react'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 type Work = {
-  id: number
+  id: string
   title: string
   type: string
   reads: string
@@ -32,11 +33,31 @@ export default function MisObrasPage() {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
           setWorks(parsed as Work[])
-          return
         }
       }
     } catch {}
-    setWorks(defaultWorks)
+    ;(async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        if (!userData?.user) return
+        const { data: dbWorks } = await supabase
+          .from('works')
+          .select('id,title,genre,cover_url,updated_at')
+          .eq('author_id', userData.user.id)
+          .order('updated_at', { ascending: false })
+        if (dbWorks) {
+          setWorks(dbWorks.map((w: any) => ({
+            id: w.id,
+            title: w.title,
+            type: w.genre || 'Obra',
+            reads: '0',
+            cover: w.cover_url || '/api/placeholder/640/360',
+            updatedAt: w.updated_at ? new Date(w.updated_at).toLocaleDateString() : undefined,
+          })))
+        }
+      } catch {}
+    })()
   }, [])
 
   const stats = useMemo(() => ({

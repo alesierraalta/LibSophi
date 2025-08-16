@@ -162,6 +162,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${poppins.variable} ${rubik.variable} ${merriweather.variable} ${lora.variable} ${robotoSlab.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased bg-white text-gray-900`}>
+        {/* Supabase cookies will be managed via @supabase/ssr in server actions and route handlers */}
         <StructuredData />
         <a href="#main-content" className="skip-link">
           Saltar al contenido principal
