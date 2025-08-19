@@ -1,71 +1,17 @@
 import type { Metadata } from 'next'
-import { Poppins, Rubik, Merriweather, Lora, Roboto_Slab, Playfair_Display, JetBrains_Mono } from 'next/font/google'
 import StructuredData from '../components/StructuredData'
 import dynamic from 'next/dynamic'
 import './globals.css'
-
-const poppins = Poppins({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-poppins',
-  weight: ['300', '400', '500', '600', '700'],
-  preload: true,
-  fallback: ['system-ui', 'arial'],
-})
-
-const rubik = Rubik({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-rubik',
-  weight: ['300', '400', '500', '600', '700'],
-  preload: true,
-  fallback: ['system-ui', 'arial'],
-})
-
-const merriweather = Merriweather({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-merriweather',
-  weight: ['300', '400', '700', '900'],
-  preload: true,
-  fallback: ['Georgia', 'serif'],
-})
-
-const lora = Lora({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-lora',
-  weight: ['400', '500', '600', '700'],
-  preload: true,
-  fallback: ['Georgia', 'serif'],
-})
-
-const robotoSlab = Roboto_Slab({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-robotoslab',
-  weight: ['300', '400', '500', '700', '900'],
-  preload: true,
-  fallback: ['Georgia', 'serif'],
-})
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-playfair',
-  weight: ['400', '500', '600', '700', '800', '900'],
-  preload: true,
-  fallback: ['Garamond', 'serif'],
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-jetbrains-mono',
-  weight: ['300', '400', '500', '600', '700', '800'],
-  preload: true,
-  fallback: ['Consolas', 'monospace'],
-})
+// Import Fontsource fonts
+import '@fontsource/inter/300.css'
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/roboto/300.css'
+import '@fontsource/roboto/400.css'
+import '@fontsource/roboto/500.css'
+import '@fontsource/roboto/700.css'
 
 /*
 MARCO CRÍTICO OBLIGATORIO - RESUMEN EJECUTIVO
@@ -161,7 +107,7 @@ export default function RootLayout({
   const MobileFooter = dynamic(() => import('../components/MobileFooter'), { ssr: false })
   return (
     <html lang="es" className="scroll-smooth" suppressHydrationWarning>
-      <body className={`${poppins.variable} ${rubik.variable} ${merriweather.variable} ${lora.variable} ${robotoSlab.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased bg-white text-gray-900`}>
+      <body className="font-inter antialiased bg-white text-gray-900">
         {/* Supabase cookies will be managed via @supabase/ssr in server actions and route handlers */}
         <StructuredData />
         <a href="#main-content" className="skip-link">

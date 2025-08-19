@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import ProfileWorksGrid from '@/components/GridStack/ProfileWorksGridImproved'
+import { WorkType } from '@/lib/validations'
+import { dateUtils } from '@/lib/date-utils'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -166,11 +169,67 @@ export default function ProfilePage() {
     following: 312,
   }), [])
 
-  const works = useMemo(() => [
-    { id: 1, title: 'El susurro del viento', type: 'Novela', reads: '12.5k', cover: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=640&h=360&fit=crop' },
-    { id: 2, title: 'Versos de medianoche', type: 'Poesía', reads: '8.1k', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=640&h=360&fit=crop' },
-    { id: 3, title: 'Crónicas del andén', type: 'Relato', reads: '5.7k', cover: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=640&h=360&fit=crop' },
+  const works = useMemo((): WorkType[] => [
+    { 
+      id: '1', 
+      title: 'El susurro del viento', 
+      description: 'Una novela sobre los secretos que el viento lleva entre las montañas y los corazones que encuentra en su camino.',
+      content: 'El viento susurraba secretos entre las montañas...',
+      author_id: 'user-1',
+      genre: 'Novela', 
+      tags: ['romance', 'misterio', 'montañas'],
+      published: true,
+      reading_time: 45,
+      views: 12500, 
+      likes: 892,
+      created_at: new Date('2024-01-15'),
+      updated_at: new Date('2024-01-20'),
+    },
+    { 
+      id: '2', 
+      title: 'Versos de medianoche', 
+      description: 'Una colección de poemas escritos en las horas más silenciosas de la noche, cuando el alma habla más claro.',
+      content: 'En la medianoche, cuando el mundo duerme...',
+      author_id: 'user-1',
+      genre: 'Poesía', 
+      tags: ['noche', 'soledad', 'reflexión'],
+      published: true,
+      reading_time: 15,
+      views: 8100, 
+      likes: 567,
+      created_at: new Date('2024-02-01'),
+      updated_at: new Date('2024-02-05'),
+    },
+    { 
+      id: '3', 
+      title: 'Crónicas del andén', 
+      description: 'Historias breves de personas que se cruzan en estaciones de tren, cada una llevando su propio destino.',
+      content: 'El andén número tres siempre estaba lleno de historias...',
+      author_id: 'user-1',
+      genre: 'Relato', 
+      tags: ['viajes', 'encuentros', 'destino'],
+      published: false,
+      reading_time: 25,
+      views: 5700, 
+      likes: 234,
+      created_at: new Date('2024-02-10'),
+      updated_at: new Date('2024-02-12'),
+    },
   ], [])
+
+  const [savedLayout, setSavedLayout] = useState<any[]>([])
+
+  // Load saved layout from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('palabreo-profile-layout')
+      if (saved) {
+        setSavedLayout(JSON.parse(saved))
+      }
+    } catch (error) {
+      console.error('Error loading saved layout:', error)
+    }
+  }, [])
 
   // Quick actions for works (mobile long-press and desktop menu)
   const [activeWorkOverlayId, setActiveWorkOverlayId] = useState<number | null>(null)
@@ -445,6 +504,31 @@ export default function ProfilePage() {
     }
   }
 
+  const handleWorkEdit = (work: WorkType) => {
+    router.push(`/writer?edit=${work.id}`)
+  }
+
+  const handleWorkDelete = (workId: string) => {
+    const work = works.find(w => w.id === workId)
+    if (work && confirm(`¿Eliminar "${work.title}"? Esta acción no se puede deshacer.`)) {
+      alert('Eliminado (demo)')
+    }
+  }
+
+  const handleWorkShare = async (work: WorkType) => {
+    try {
+      const url = `${window.location.origin}/work/${work.id}`
+      if (navigator.share) {
+        await navigator.share({ url, title: work.title, text: 'Mira mi obra en Palabreo' })
+      } else {
+        await navigator.clipboard.writeText(url)
+        alert('Enlace copiado al portapapeles')
+      }
+    } catch (error) {
+      console.error('Error sharing work:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
       {/* Header (brand) */}
@@ -538,6 +622,27 @@ export default function ProfilePage() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24">
         {activeTab === 'works' && (
+          <ProfileWorksGrid
+            works={works}
+            onWorkClick={(work) => {
+              console.log('Clicked work:', work.title)
+              // You can navigate to work detail page here
+              // router.push(`/work/${work.id}`)
+            }}
+            onLayoutChange={(layout) => {
+              try {
+                localStorage.setItem('palabreo-profile-layout', JSON.stringify(layout))
+                setSavedLayout(layout)
+              } catch (error) {
+                console.error('Error saving layout:', error)
+              }
+            }}
+            editable={isOwnProfile}
+            savedLayout={savedLayout}
+          />
+        )}
+
+        {activeTab === 'works' && false && ( // Hide old grid implementation
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {works.map(w => (
               <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden relative">

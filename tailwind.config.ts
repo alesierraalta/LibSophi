@@ -44,10 +44,13 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
-        heading: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
-        subheading: ['var(--font-rubik)', 'Rubik', 'system-ui', 'sans-serif'],
-        body: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
+        inter: ['Inter', 'system-ui', 'sans-serif'],
+        roboto: ['Roboto', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Inter', 'system-ui', 'sans-serif'],
+        subheading: ['Roboto', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
       },
       // Using default Tailwind breakpoints for better compatibility
       // screens: sm: '640px', md: '768px', lg: '1024px', xl: '1280px'

@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -17,12 +18,72 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
+  const [usernameError, setUsernameError] = useState('')
+
+  const checkUsernameAvailability = async (username: string) => {
+    if (!username || username.length < 3) {
+      setUsernameStatus('idle')
+      setUsernameError('')
+      return
+    }
+
+    // Format username
+    let formattedUsername = username.trim().toLowerCase()
+    if (!formattedUsername.startsWith('@')) {
+      formattedUsername = '@' + formattedUsername
+    }
+
+    // Validate format
+    const usernameRegex = /^@[a-zA-Z0-9_]{3,20}$/
+    if (!usernameRegex.test(formattedUsername)) {
+      setUsernameStatus('invalid')
+      setUsernameError('El username debe tener entre 3-20 caracteres y solo letras, números y _')
+      return
+    }
+
+    setUsernameStatus('checking')
+    setUsernameError('')
+
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { data, error } = await supabase.rpc('check_username_availability', {
+        username_input: formattedUsername
+      })
+
+      if (error) {
+        console.error('Error checking username:', error)
+        setUsernameStatus('idle')
+        return
+      }
+
+      if (data === true) {
+        setUsernameStatus('available')
+        setUsernameError('')
+      } else {
+        setUsernameStatus('taken')
+        setUsernameError('Este username ya está en uso')
+      }
+    } catch (error) {
+      console.error('Error checking username:', error)
+      setUsernameStatus('idle')
+    }
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+
+    // Check username availability in real-time
+    if (field === 'username') {
+      const timeoutId = setTimeout(() => {
+        checkUsernameAvailability(value)
+      }, 500) // Debounce 500ms
+
+      return () => clearTimeout(timeoutId)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,15 +94,46 @@ export default function RegisterPage() {
       return
     }
 
+    if (usernameStatus !== 'available') {
+      alert('Por favor, elige un username válido y disponible')
+      return
+    }
+
     setIsLoading(true)
     try {
       const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase.auth.signUp({ email: formData.email, password: formData.password })
+      
+      // Format username
+      let formattedUsername = formData.username.trim().toLowerCase()
+      if (!formattedUsername.startsWith('@')) {
+        formattedUsername = '@' + formattedUsername
+      }
+
+      const { data, error } = await supabase.auth.signUp({ 
+        email: formData.email, 
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            username: formattedUsername
+          }
+        }
+      })
+      
       if (error) {
         alert(error.message)
         return
       }
-      alert('Revisa tu correo para confirmar tu cuenta')
+
+      // If user is immediately confirmed (no email confirmation required)
+      if (data.user && !data.user.email_confirmed_at) {
+        alert('¡Registro exitoso! Revisa tu correo para confirmar tu cuenta y poder iniciar sesión.')
+      } else if (data.user) {
+        alert('¡Bienvenido a Palabreo! Tu cuenta ha sido creada exitosamente.')
+        router.push('/main')
+        return
+      }
+      
       router.push('/login')
     } finally {
       setIsLoading(false)
@@ -84,6 +176,48 @@ export default function RegisterPage() {
                   <span className="text-gray-400">👤</span>
                 </div>
               </div>
+            </div>
+
+            {/* Username Field */}
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2 [font-family:var(--font-rubik)]">
+                Nombre de usuario
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => handleInputChange('username', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent transition-colors placeholder-gray-400 ${
+                    usernameStatus === 'available' ? 'border-green-300 focus:ring-green-500' :
+                    usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-red-300 focus:ring-red-500' :
+                    'border-gray-300 focus:ring-primary'
+                  }`}
+                  placeholder="tu_username (sin @)"
+                  required
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  {usernameStatus === 'checking' && (
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  {usernameStatus === 'available' && (
+                    <span className="text-green-500">✓</span>
+                  )}
+                  {(usernameStatus === 'taken' || usernameStatus === 'invalid') && (
+                    <span className="text-red-500">✗</span>
+                  )}
+                  {usernameStatus === 'idle' && (
+                    <span className="text-gray-400">@</span>
+                  )}
+                </div>
+              </div>
+              {usernameError && (
+                <p className="text-sm text-red-600 mt-1">{usernameError}</p>
+              )}
+              {usernameStatus === 'available' && (
+                <p className="text-sm text-green-600 mt-1">✓ Username disponible</p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -185,7 +319,7 @@ export default function RegisterPage() {
               type="submit"
               variant="gradient"
               size="lg"
-              disabled={isLoading || (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword)}
+              disabled={isLoading || (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) || usernameStatus !== 'available' || !formData.username}
               className="w-full py-3 text-lg font-semibold"
             >
               {isLoading ? (
@@ -208,12 +342,32 @@ export default function RegisterPage() {
 
           {/* Social Register */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = getSupabaseBrowserClient()
+                await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: { redirectTo: `${window.location.origin}/auth/callback?next=/main` },
+                })
+              }}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <span className="mr-3">🔍</span>
               <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con Google</span>
             </button>
             
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = getSupabaseBrowserClient()
+                await supabase.auth.signInWithOAuth({
+                  provider: 'github',
+                  options: { redirectTo: `${window.location.origin}/auth/callback?next=/main` },
+                })
+              }}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <span className="mr-3">🐙</span>
               <span className="font-medium text-gray-700 [font-family:var(--font-rubik)]">Continuar con GitHub</span>
             </button>

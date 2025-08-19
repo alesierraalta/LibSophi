@@ -23,7 +23,11 @@ export default function LoginPage() {
         alert(error.message)
         return
       }
-      router.push('/main')
+      
+      // Check for redirect parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      const redirectTo = urlParams.get('redirect') || '/main'
+      router.push(redirectTo)
     } finally {
       setIsLoading(false)
     }

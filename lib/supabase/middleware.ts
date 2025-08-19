@@ -27,8 +27,56 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh session (safe server-side validation)
-  await supabase.auth.getUser()
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Define protected routes that require authentication
+  const protectedRoutes = [
+    '/main',
+    '/writer', 
+    '/profile',
+    '/mis-obras',
+    '/favorites',
+    '/notifications',
+    '/work',
+    '/explore',
+    '/demo',
+    '/gridstack-demo'
+  ]
+
+  // Define public routes that don't require authentication
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/register',
+    '/auth',
+    '/landing',
+    '/terms',
+    '/privacy'
+  ]
+
+  const pathname = request.nextUrl.pathname
+
+  // Check if current path is a protected route
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
+
+  // If user is not authenticated and trying to access protected route
+  if (!user && isProtectedRoute) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // If user is authenticated and trying to access auth pages, redirect to main
+  if (user && (pathname === '/login' || pathname === '/register')) {
+    return NextResponse.redirect(new URL('/main', request.url))
+  }
+
+  // If user is authenticated and on landing page, redirect to main
+  if (user && pathname === '/') {
+    return NextResponse.redirect(new URL('/main', request.url))
+  }
 
   return response
 }

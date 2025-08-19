@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, UserPlus, AtSign, BookOpen, Eye, Mail, Copy, Repeat2 } from 'lucide-react'
 import ProfileHoverCard from '@/components/ProfileHoverCard'
+import AuthHeader from '@/components/AuthHeader'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { createLikeNotification, createCommentNotification, createFollowNotification } from '@/lib/notifications'
 
@@ -929,123 +930,8 @@ function MainPageInner() {
       </Suspense>
       
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-10 sm:px-16 lg:px-24 xl:px-32">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 overflow-hidden rounded-md flex items-center justify-center bg-transparent">
-                <div className="relative h-[200%] w-[200%] -m-[50%]">
-                  <Image
-                    src="/1.png"
-                    alt="Palabreo logo"
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-              </div>
-              <h1 className="text-xl md:text-2xl font-bold text-red-600 [font-family:var(--font-poppins)]">
-                Palabreo
-              </h1>
-            </div>
+      <AuthHeader />
 
-            {/* Search Bar */}
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar obras, autores..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-slate-400 focus:border-slate-400 bg-white text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Header Actions */}
-            <div className="flex items-center space-x-3 relative">
-              <MemoizedButton variant="ghost" size="sm" className="md:hidden">
-                <Search className="h-4 w-4" />
-              </MemoizedButton>
-              
-              <MemoizedButton
-                variant="ghost"
-                size="sm"
-                className="relative text-gray-600 hover:text-red-600 hover:bg-red-50"
-                onClick={() => setShowNotifications((v) => !v)}
-                aria-expanded={showNotifications}
-                aria-haspopup="menu"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
-              </MemoizedButton>
-              
-              <MemoizedButton className="hidden md:inline-flex bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm" onClick={() => router.push('/writer')}>
-                <PenTool className="h-4 w-4 mr-2" />
-                Publicar
-              </MemoizedButton>
-              
-              <button onClick={() => router.push('/profile')} aria-label="Ir a mi perfil" className="rounded-full focus:outline-none focus:ring-2 focus:ring-red-600">
-                <MemoizedAvatar className="h-8 w-8">
-                  <AvatarImage src="/api/placeholder/32/32" />
-                  <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
-                </MemoizedAvatar>
-              </button>
-
-              {showNotifications && (
-                <div
-                  role="menu"
-                  aria-label="Notificaciones recientes"
-                  className="absolute right-0 top-10 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden"
-                >
-                  <div className="px-4 py-2 bg-red-50 border-b border-red-100 text-sm font-semibold text-red-800">Recientes</div>
-                  <ul className="max-h-80 overflow-auto divide-y divide-gray-100">
-                    <li className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <MessageCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                        <div>
-                          <div className="font-medium text-gray-900">Nuevo comentario</div>
-                          <div className="text-xs text-gray-600">Ana comentó tu capítulo “El último tren”.</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <UserPlus className="h-4 w-4 text-green-600 mt-0.5" />
-                        <div>
-                          <div className="font-medium text-gray-900">Nuevo seguidor</div>
-                          <div className="text-xs text-gray-600">Carlos empezó a seguirte.</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <AtSign className="h-4 w-4 text-red-600 mt-0.5" />
-                        <div>
-                          <div className="font-medium text-gray-900">Mención</div>
-                          <div className="text-xs text-gray-600">Te mencionaron en “Versos al amanecer”.</div>
-                        </div>
-                      </div>
-                    </li>
-                  </ul>
-                  <div className="px-4 py-2 border-t border-gray-100">
-                    <button
-                      onClick={() => { setShowNotifications(false); router.push('/notifications') }}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
-                      aria-label="Ver más notificaciones"
-                    >
-                      Ver más
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Mobile Navigation Carousel - moved to top */}
       <div className="lg:hidden max-w-full mx-auto px-0 sm:px-14 lg:px-24 xl:px-32">

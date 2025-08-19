@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Bell, Library, Bookmark } from 'lucide-react'
+import { BookOpen, Bell, Library, Bookmark, LogOut } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 type NavItem = {
   href: string
@@ -19,7 +20,14 @@ const navItems: NavItem[] = [
 
 export default function MobileFooter() {
   const pathname = usePathname()
-  if (pathname === '/writer' || pathname.startsWith('/writer/')) return null
+  const { user, signOut } = useAuth()
+
+  // Don't show footer on auth pages or writer pages
+  if (pathname === '/writer' || pathname.startsWith('/writer/') || 
+      pathname === '/login' || pathname === '/register' || pathname === '/') return null
+
+  // Don't show footer if user is not authenticated
+  if (!user) return null
 
   return (
     <footer
@@ -48,6 +56,17 @@ export default function MobileFooter() {
               </li>
             )
           })}
+          {/* Logout button */}
+          <li className="flex-1">
+            <button
+              onClick={signOut}
+              aria-label="Cerrar sesión"
+              className="flex flex-col items-center gap-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 rounded-md transition-colors text-gray-500 hover:text-red-600 w-full"
+            >
+              <LogOut className="h-5 w-5 stroke-[2]" />
+              <span className="text-[11px] leading-none">Salir</span>
+            </button>
+          </li>
         </ul>
       </nav>
     </footer>

@@ -15,9 +15,7 @@ import WritingSocialPreview from '../components/WritingSocialPreview'
 
 export default function Home() {
   const router = useRouter()
-  useEffect(() => {
-    router.replace('/main')
-  }, [router])
+  // No automatic redirect - let middleware handle authentication logic
   return (
     <main id="main-content" className="w-full min-h-screen">
       {/* Theme Selector for Red Evaluation */}
