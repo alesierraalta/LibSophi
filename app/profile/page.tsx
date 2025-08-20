@@ -473,8 +473,8 @@ export default function ProfilePage() {
       body.style.right = '0'
       body.style.width = '100%'
       body.style.overflow = 'hidden'
-      body.style.WebkitTouchCallout = 'none'
-      body.style.WebkitUserSelect = 'none'
+      ;(body.style as any).WebkitTouchCallout = 'none'
+      ;(body.style as any).WebkitUserSelect = 'none'
       body.style.userSelect = 'none'
       // Add non-passive listeners to block touch/scroll at root
       window.addEventListener('touchmove', prevent, { passive: false })
