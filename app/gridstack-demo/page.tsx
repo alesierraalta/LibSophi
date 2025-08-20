@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
-import ProfileWorksGrid from '@/components/GridStack/ProfileWorksGridImproved';
+import ProfileWorksGrid from '@/components/GridStack/ProfileWorksGridFixed';
 import { WorkType } from '@/lib/validations';
 
 // Mock data for demonstration
