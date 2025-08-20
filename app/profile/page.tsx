@@ -506,7 +506,7 @@ export default function ProfilePage() {
 
   const onTouchStartWork = (workId: number) => (e: React.TouchEvent) => {
     const t = e.touches[0]
-    touchStartRef.current = { x: t.clientX, y: t.clientY }
+    touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() }
     clearOverlayTimer()
     // Save viewport coordinates for a fixed overlay (can extend beyond card)
     setActiveOverlayPos({ x: t.clientX, y: t.clientY })
