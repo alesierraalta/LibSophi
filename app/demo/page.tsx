@@ -67,34 +67,45 @@ const mockChartData = {
   }
 };
 
-const mockTasks = [
+type TaskStatus = 'pending' | 'in-progress' | 'completed';
+type TaskPriority = 'low' | 'medium' | 'high';
+
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+}
+
+const mockTasks: Task[] = [
   {
     id: '1',
     title: 'Revisar capítulo 3',
     description: 'Corregir errores de gramática y estilo',
-    status: 'pending' as const,
-    priority: 'high' as const,
+    status: 'pending',
+    priority: 'high',
   },
   {
     id: '2',
     title: 'Escribir sinopsis',
     description: 'Crear resumen ejecutivo de la obra',
-    status: 'in-progress' as const,
-    priority: 'medium' as const,
+    status: 'in-progress',
+    priority: 'medium',
   },
   {
     id: '3',
     title: 'Diseñar portada',
     description: 'Crear diseño visual para la publicación',
-    status: 'completed' as const,
-    priority: 'low' as const,
+    status: 'completed',
+    priority: 'low',
   },
 ];
 
 export default function DemoPage() {
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
   const [selectedWork, setSelectedWork] = useState<WorkType | null>(null);
-  const [tasks, setTasks] = useState(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [dragItems, setDragItems] = useState<{ id: string; content: React.ReactNode }[]>([
     { id: '1', content: <div className="p-2">Elemento arrastrable 1</div> },
     { id: '2', content: <div className="p-2">Elemento arrastrable 2</div> },
