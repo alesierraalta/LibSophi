@@ -26,7 +26,7 @@ const MemoizedAvatar = memo(Avatar)
 function MainPageInner() {
   const [posts, setPosts] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [onlyFollowing, setOnlyFollowing] = useState<boolean>(false)
+
   const [activeTab, setActiveTab] = useState('feed')
   const [currentTheme, setCurrentTheme] = useState<string>('variant-1')
   const [showNotifications, setShowNotifications] = useState(false)
@@ -44,29 +44,72 @@ function MainPageInner() {
         const supabase = getSupabaseBrowserClient()
         const { data: userData } = await supabase.auth.getUser()
         if (userData?.user) setCurrentUserId(userData.user.id)
-        // Determine author filter if onlyFollowing
+        // Get followed users for main page (always shows followed content)
         let authorFilterIds: string[] | null = null
-        if (onlyFollowing && userData?.user) {
-          const { data: flw } = await supabase
-            .from('follows')
-            .select('followee_id')
-            .eq('follower_id', userData.user.id)
-          authorFilterIds = Array.from(new Set((flw || []).map((r: any) => r.followee_id)))
-          if (authorFilterIds.length === 0) {
-            setPosts([])
-            return
+        // /main page ALWAYS shows only content from people you follow
+        let works: any[] = []
+        
+        if (userData?.user) {
+          // Always get followed users for main page
+          if (!authorFilterIds) {
+            const { data: flw } = await supabase
+              .from('follows')
+              .select('followee_id')
+              .eq('follower_id', userData.user.id)
+            authorFilterIds = Array.from(new Set((flw || []).map((r: any) => r.followee_id)))
+          }
+          
+          if (authorFilterIds && authorFilterIds.length > 0) {
+            // Main page shows content from followed users only
+            const { data: followedWorks } = await supabase
+              .from('works')
+              .select('id,title,genre,cover_url,created_at,author_id,chapters,content,views,likes')
+              .in('author_id', authorFilterIds)
+              .eq('published', true)
+              .order('created_at', { ascending: false })
+              .limit(25)
+            
+            works = (followedWorks || []).map((w: any) => ({
+              work_id: w.id,
+              title: w.title,
+              genre: w.genre,
+              author_id: w.author_id,
+              cover_url: w.cover_url,
+              created_at: w.created_at,
+              chapters: w.chapters,
+              content: w.content,
+              views: w.views,
+              likes: w.likes,
+              recommendation_score: 0,
+              recommendation_type: 'following'
+            }))
           }
         }
-        // Fetch latest works
-        let query = supabase
-          .from('works')
-          .select('id,title,genre,cover_url,created_at,author_id,chapters,content')
-          .order('created_at', { ascending: false })
-          .limit(25)
-        if (authorFilterIds && authorFilterIds.length > 0) {
-          query = query.in('author_id', authorFilterIds)
+        
+        // Fallback to basic query if no works found
+        if (works.length === 0) {
+          const { data: basicWorks } = await supabase
+            .from('works')
+            .select('id,title,genre,cover_url,created_at,author_id,chapters,content,views,likes')
+            .eq('published', true)
+            .order('created_at', { ascending: false })
+            .limit(25)
+          
+          works = (basicWorks || []).map((w: any) => ({
+            work_id: w.id,
+            title: w.title,
+            genre: w.genre,
+            author_id: w.author_id,
+            cover_url: w.cover_url,
+            created_at: w.created_at,
+            chapters: w.chapters,
+            content: w.content,
+            views: w.views || 0,
+            likes: w.likes || 0,
+            recommendation_score: 0,
+            recommendation_type: 'basic'
+          }))
         }
-        const { data: works, error: worksError } = await query
         if (Array.isArray(works)) {
           // Bulk fetch authors
           const authorIds = Array.from(new Set(works.map((w: any) => w.author_id).filter(Boolean)))
@@ -84,23 +127,26 @@ function MainPageInner() {
             const author = profilesMap[w.author_id] || {}
             const body = w.chapters && Array.isArray(w.chapters) && w.chapters.length > 0 ? (w.chapters[0]?.content || '') : (w.content || '')
             return {
-              id: w.id,
+              id: w.work_id || w.id, // Handle both recommendation and basic queries
               author: {
                 name: author.name || 'Autor',
-                username: author.username ? `@${author.username}` : '@autor',
+                username: author.username ? (author.username.startsWith('@') ? author.username : `@${author.username}`) : '@autor',
                 avatar: author.avatar_url || '/api/placeholder/40/40',
               },
               title: w.title,
               content: body,
               genre: w.genre || 'Obra',
               readTime: '—',
-              likes: 0,
+              likes: w.likes || 0,
               comments: 0,
               shares: 0,
               isLiked: false,
               bookmarked: false,
               timestamp: new Date(w.created_at || Date.now()).toLocaleString(),
               image: w.cover_url || null,
+              recommendationScore: w.recommendation_score || 0,
+              recommendationType: w.recommendation_type || 'basic',
+              author_id: w.author_id // Keep for excluding user's own works
             }
           })
           // aggregate counts
@@ -148,7 +194,7 @@ function MainPageInner() {
         setPosts([])
       }
     })()
-  }, [onlyFollowing])
+  }, [])
 
   // Sidebar data: tendencias, autores sugeridos, newsletters y obras destacadas
   React.useEffect(() => {
@@ -209,7 +255,7 @@ function MainPageInner() {
           })
           authors = (profs || []).map((p: any) => ({
             name: p?.name || 'Autor',
-            username: p?.username ? `@${p.username}` : '@autor',
+            username: p?.username ? (p.username.startsWith('@') ? p.username : `@${p.username}`) : '@autor',
             followers: String(followCounts[p.id] || 0),
             genre: authorToGenre[p.id] || 'Obra',
             verified: false,
@@ -326,11 +372,10 @@ function MainPageInner() {
     { icon: PenTool, label: 'Mis Obras', id: 'my-stories' }
   ], [])
 
-  // Mobile top carousel items only: Inicio, Explorar, Guardados
+  // Mobile top carousel items only: Inicio, Explorar
   const mobileNavItems = useMemo(() => [
     { icon: Home, label: 'Inicio', id: 'feed' },
     { icon: Compass, label: 'Explorar', id: 'explore' },
-    { icon: Bookmark, label: 'Guardados', id: 'saved' },
   ], [])
 
   // Memoized navigation button component
@@ -449,7 +494,7 @@ function MainPageInner() {
               id: comment.id,
               author: {
                 name: comment.profiles?.name || 'Usuario',
-                username: comment.profiles?.username ? `@${comment.profiles.username}` : '@usuario',
+                username: comment.profiles?.username ? (comment.profiles.username.startsWith('@') ? comment.profiles.username : `@${comment.profiles.username}`) : '@usuario',
                 avatar: comment.profiles?.avatar_url
               },
               text: comment.content,
@@ -531,7 +576,7 @@ function MainPageInner() {
           id: newComment.id,
           author: {
             name: userProfile?.name || userData?.user?.user_metadata?.name || 'Tú',
-            username: userProfile?.username ? `@${userProfile.username}` : '@tu',
+            username: userProfile?.username ? (userProfile.username.startsWith('@') ? userProfile.username : `@${userProfile.username}`) : '@tu',
             avatar: userProfile?.avatar_url
           },
           text: trimmed,
@@ -655,12 +700,21 @@ function MainPageInner() {
         </div>
         {/* Post Content */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 hover:text-red-700 transition-colors duration-200 cursor-pointer">
+          <h3 
+            className="text-lg font-semibold text-gray-900 mb-3 hover:text-red-700 transition-colors duration-200 cursor-pointer"
+            onClick={() => router.push(`/work/${post.id}`)}
+          >
             {post.title}
           </h3>
-          <p className="text-gray-700 leading-relaxed mb-4 line-clamp-3" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+          <p className="text-gray-700 leading-relaxed mb-2 line-clamp-3" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
             {post.content}
           </p>
+          <button 
+            onClick={() => router.push(`/work/${post.id}`)}
+            className="text-red-600 hover:text-red-700 text-sm font-medium transition-colors duration-200 mb-2"
+          >
+            Leer más →
+          </button>
           {post.image && (
             <div className="relative rounded-xl overflow-hidden mb-4 group">
               <img 
@@ -970,10 +1024,10 @@ function MainPageInner() {
               {/* Posts Feed */}
               <div className="mt-0">
                 <div className="flex items-center justify-end mb-2">
-                  <label className="text-xs text-gray-600 inline-flex items-center gap-2">
-                    <input type="checkbox" checked={onlyFollowing} onChange={(e) => setOnlyFollowing(e.target.checked)} />
-                    Solo seguidos
-                  </label>
+                  <span className="text-xs text-gray-600 inline-flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Contenido de personas que sigues
+                  </span>
                 </div>
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">

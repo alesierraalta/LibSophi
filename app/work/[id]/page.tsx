@@ -9,8 +9,102 @@ import { BookOpen, Heart, Bookmark, MessageCircle, Share2, ChevronLeft } from 'l
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { createLikeNotification, createCommentNotification } from '@/lib/notifications'
 import AppHeader from '@/components/AppHeader'
+import ReadingToolbar, { useReadingPreferences } from '@/components/ReadingToolbar'
 
 type Chapter = { title?: string; content?: string }
+
+// Función para renderizar markdown básico
+const renderMarkdownHtml = (raw: string) => {
+  if (!raw) return { __html: '' }
+  
+  const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const lines = raw.split('\n')
+  const htmlLines: string[] = []
+  let inList = false
+  let inCodeBlock = false
+  
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      if (!inCodeBlock) {
+        inCodeBlock = true
+        htmlLines.push(`<pre class="bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto my-4"><code>`)
+      } else {
+        inCodeBlock = false
+        htmlLines.push('</code></pre>')
+      }
+      continue
+    }
+    
+    if (inCodeBlock) {
+      htmlLines.push(escapeHtml(line || ' '))
+      continue
+    }
+    
+    if (/^\s*[-*]\s+/.test(line)) {
+      if (!inList) {
+        inList = true
+        htmlLines.push('<ul class="list-disc pl-6 mb-4">')
+      }
+      const item = line.replace(/^\s*[-*]\s+/, '')
+      htmlLines.push(`<li class="mb-1">${escapeHtml(item)}</li>`)
+      continue
+    }
+    
+    if (inList) {
+      htmlLines.push('</ul>')
+      inList = false
+    }
+    
+    if (/^\s*[-*_]{3,}\s*$/.test(line)) {
+      htmlLines.push('<hr class="my-6 border-gray-200"/>')
+      continue
+    }
+    
+    if (/^\s*#\s+/.test(line)) {
+      htmlLines.push(`<h1 class="text-3xl font-bold mt-12 mb-6 text-gray-900" style="font-family: Georgia, serif; line-height: 1.2;">${escapeHtml(line.replace(/^\s*#\s+/, ''))}</h1>`) 
+      continue
+    }
+    
+    if (/^\s*##\s+/.test(line)) {
+      htmlLines.push(`<h2 class="text-2xl font-semibold mt-10 mb-4 text-gray-900" style="font-family: Georgia, serif; line-height: 1.3;">${escapeHtml(line.replace(/^\s*##\s+/, ''))}</h2>`) 
+      continue
+    }
+    
+    if (/^\s*>\s+/.test(line)) {
+      htmlLines.push(`<blockquote class="border-l-4 border-red-300 pl-6 italic text-gray-700 my-6 bg-red-50/30 py-4 rounded-r-lg" style="font-size: 1.1em; line-height: 1.6;">${escapeHtml(line.replace(/^\s*>\s+/, ''))}</blockquote>`) 
+      continue
+    }
+    
+    // Formateo en línea
+    let processedLine = line
+    processedLine = processedLine.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    processedLine = processedLine.replace(/\*(.+?)\*/g, '<em>$1</em>')
+    processedLine = processedLine.replace(/~~(.+?)~~/g, '<del>$1</del>')
+    processedLine = processedLine.replace(/`([^`]+?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>')
+    
+    if (processedLine.trim().length === 0) {
+      htmlLines.push('<br class="my-2"/>')
+    } else {
+      const escaped = escapeHtml(processedLine).replace(/&lt;(strong|em|del|code)&gt;|&lt;\/(strong|em|del|code)&gt;/g, (m) => {
+        const replacements: Record<string, string> = {
+          '&lt;strong&gt;': '<strong>',
+          '&lt;/strong&gt;': '</strong>',
+          '&lt;em&gt;': '<em>',
+          '&lt;/em&gt;': '</em>',
+          '&lt;del&gt;': '<del>',
+          '&lt;/del&gt;': '</del>',
+          '&lt;code': '<code',
+          '&lt;/code&gt;': '</code>'
+        }
+        return replacements[m] || m
+      })
+      htmlLines.push(`<p class="leading-8 mb-6 text-gray-800" style="font-size: inherit; line-height: inherit;">${escaped}</p>`) 
+    }
+  }
+  
+  if (inList) htmlLines.push('</ul>')
+  return { __html: htmlLines.join('\n') }
+}
 
 export default function WorkDetailPage() {
   const router = useRouter()
@@ -28,6 +122,20 @@ export default function WorkDetailPage() {
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [activeChapterIndex, setActiveChapterIndex] = useState(0)
+  const [readingProgress, setReadingProgress] = useState(0)
+
+  // Reading preferences hook
+  const { preferences, getReadingStyles } = useReadingPreferences()
+
+  // Aplicar tema de fondo al contenedor principal
+  const getContainerStyles = () => {
+    const themeStyles = {
+      light: { backgroundColor: '#ffffff' },
+      dark: { backgroundColor: '#1f2937' },
+      sepia: { backgroundColor: '#f7f3e9' }
+    }
+    return themeStyles[preferences.theme]
+  }
 
   useEffect(() => {
     if (!workId) return
@@ -76,10 +184,19 @@ export default function WorkDetailPage() {
           } catch {}
         }
 
-        // comments list (latest 50)
+        // comments list (latest 50) with author info
         const { data: comms } = await supabase
           .from('comments')
-          .select('id, text, author_id, created_at')
+          .select(`
+            id, 
+            text, 
+            author_id, 
+            created_at,
+            profiles:author_id (
+              username,
+              name
+            )
+          `)
           .eq('work_id', workId)
           .order('created_at', { ascending: true })
           .limit(50)
@@ -104,6 +221,17 @@ export default function WorkDetailPage() {
     const idx = Math.min(Math.max(0, activeChapterIndex), chapters.length - 1)
     return chapters[idx]?.content || ''
   }, [chapters, activeChapterIndex])
+
+  // Calcular progreso de lectura
+  useEffect(() => {
+    if (chapters.length > 1) {
+      const progress = ((activeChapterIndex + 1) / chapters.length) * 100
+      setReadingProgress(progress)
+    } else {
+      // Para obras de un solo capítulo, simular progreso basado en scroll
+      setReadingProgress(50) // Por ahora un valor fijo
+    }
+  }, [activeChapterIndex, chapters.length])
 
   const toggleLike = async () => {
     if (!workId) return
@@ -208,89 +336,271 @@ export default function WorkDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <AppHeader />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {/* Área principal de lectura */}
+      <main className="transition-colors duration-300" style={getContainerStyles()}>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          {/* Navegación de regreso */}
+          <div className="mb-8">
+            <Button 
+              variant="ghost" 
+              onClick={() => router.back()} 
+              className="text-gray-600 hover:text-gray-900 transition-colors"
+              size="sm"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+          </div>
+          {/* Imagen de portada (si existe) */}
           {work.cover_url && (
-            <div className="relative w-full h-48 sm:h-64">
+            <div className="relative w-full h-64 sm:h-80 mb-8 rounded-lg overflow-hidden shadow-lg">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={work.cover_url} alt={work.title} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
             </div>
           )}
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl text-gray-900">{work.title}</CardTitle>
-            <div className="mt-2 flex items-center gap-3 text-xs text-gray-600">
-              <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {work.genre || 'Obra'}</span>
-              <span>•</span>
-              <span>{new Date(work.created_at).toLocaleString()}</span>
-            </div>
+
+          {/* Meta información del artículo */}
+          <header className="text-center mb-8 sm:mb-12">
+            <h1 
+              className="text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6 transition-colors duration-300" 
+              style={{ 
+                fontFamily: 'Georgia, serif',
+                color: preferences.theme === 'dark' ? '#f9fafb' : (preferences.theme === 'sepia' ? '#5d4e37' : '#1f2937')
+              }}
+            >
+              {work.title}
+            </h1>
+            
             {author && (
-              <div className="mt-4 flex items-center gap-3">
-                <Avatar className="h-9 w-9 ring-2 ring-red-100">
-                  <AvatarImage src={author.avatar_url || '/api/placeholder/40/40'} />
-                  <AvatarFallback className="text-xs bg-red-50 text-red-700">{(author.name || 'A').split(' ').map((n:string)=>n[0]).join('')}</AvatarFallback>
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <Avatar className="h-12 w-12 ring-2 ring-red-100 shadow-sm">
+                  <AvatarImage src={author.avatar_url || '/api/placeholder/48/48'} />
+                  <AvatarFallback className="text-sm bg-red-50 text-red-700 font-semibold">
+                    {(author.name || 'A').split(' ').map((n:string)=>n[0]).join('')}
+                  </AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">{author.name || 'Autor'}</div>
-                  <div className="text-xs text-gray-600">{author.username ? `@${author.username}` : '@autor'}</div>
+                <div className="text-left">
+                  <div 
+                    className="text-lg font-semibold transition-colors duration-300"
+                    style={{ color: preferences.theme === 'dark' ? '#f9fafb' : (preferences.theme === 'sepia' ? '#5d4e37' : '#1f2937') }}
+                  >
+                    {author.name || 'Autor'}
+                  </div>
+                  <div 
+                    className="text-sm transition-colors duration-300"
+                    style={{ color: preferences.theme === 'dark' ? '#d1d5db' : (preferences.theme === 'sepia' ? '#8b7355' : '#6b7280') }}
+                  >
+                    {author.username ? (author.username.startsWith('@') ? author.username : `@${author.username}`) : '@autor'}
+                  </div>
                 </div>
               </div>
             )}
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            {chapters && chapters.length > 1 && (
-              <div className="mb-4 flex flex-wrap items-center gap-2">
+            
+            <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
+              <span className="inline-flex items-center gap-1.5">
+                <BookOpen className="h-4 w-4" /> 
+                {work.genre || 'Obra'}
+              </span>
+              <span className="text-gray-400">•</span>
+              <span>{new Date(work.created_at).toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</span>
+              <span className="text-gray-400">•</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Heart className="h-4 w-4" />
+                {likesCount}
+              </span>
+            </div>
+          </header>
+
+          {/* Navegación de capítulos mejorada */}
+          {chapters && chapters.length > 1 && (
+            <div className="mb-8 sm:mb-12">
+              <div className="flex items-center justify-center mb-4">
+                <span className="text-sm text-gray-500 font-medium">Capítulos</span>
+              </div>
+              <div className="flex flex-wrap justify-center items-center gap-3">
                 {chapters.map((ch, i) => (
-                  <button key={i} onClick={() => setActiveChapterIndex(i)} className={`px-2.5 py-1 text-xs rounded-full border ${i===activeChapterIndex ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-                    {i+1}. {ch.title || 'Capítulo'}
+                  <button 
+                    key={i} 
+                    onClick={() => setActiveChapterIndex(i)} 
+                    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-200 ${
+                      i === activeChapterIndex 
+                        ? 'bg-red-600 text-white border-red-600 shadow-md' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                    }`}
+                  >
+                    {i + 1}. {ch.title || `Capítulo ${i + 1}`}
                   </button>
                 ))}
               </div>
-            )}
-            <article className="prose prose-sm sm:prose max-w-none text-gray-900" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-              <pre className="whitespace-pre-wrap break-words text-[15px] leading-7" style={{ fontFamily: 'inherit' }}>{activeContent}</pre>
-            </article>
+            </div>
+          )}
 
-            <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-3">
-              <div className="flex items-center gap-5">
-                <button onClick={toggleLike} className={`flex items-center gap-2 text-sm ${isLiked ? 'text-red-600' : 'text-gray-600 hover:text-red-700'}`}>
-                  <Heart className={`h-5 w-5 ${isLiked ? 'fill-red-600 text-red-600' : ''}`} /> {likesCount}
-                </button>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MessageCircle className="h-5 w-5" /> {commentsCount}
-                </div>
-              </div>
-              <button onClick={async () => { try { const url = typeof window !== 'undefined' ? window.location.href : ''; if (navigator.share) await navigator.share({ url, title: work.title }); else await navigator.clipboard.writeText(url) } catch {} }} className="text-gray-600 hover:text-gray-800 text-sm">
+          {/* Contenido principal del artículo */}
+          <article 
+            className="prose prose-lg max-w-none transition-all duration-300" 
+            style={getReadingStyles()}
+          >
+            <div 
+              className="leading-inherit" 
+              dangerouslySetInnerHTML={renderMarkdownHtml(activeContent)} 
+            />
+          </article>
+
+          {/* Footer con acciones sociales mejorado */}
+          <footer className="mt-12 sm:mt-16 border-t border-gray-200 pt-8">
+            <div className="flex items-center justify-center gap-8 mb-8">
+              <button 
+                onClick={toggleLike} 
+                className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isLiked 
+                    ? 'text-red-600 bg-red-50 hover:bg-red-100' 
+                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                }`}
+              >
+                <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
+                <span className="font-medium">{likesCount}</span>
+                <span className="text-sm">{likesCount === 1 ? 'Me gusta' : 'Me gusta'}</span>
+              </button>
+              
+              <button 
+                onClick={() => setIsBookmarked(!isBookmarked)}
+                className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isBookmarked 
+                    ? 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100' 
+                    : 'text-gray-600 hover:text-yellow-600 hover:bg-yellow-50'
+                }`}
+              >
+                <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-current' : ''}`} />
+                <span className="text-sm">{isBookmarked ? 'Guardado' : 'Guardar'}</span>
+              </button>
+              
+              <button 
+                onClick={async () => { 
+                  try { 
+                    const url = typeof window !== 'undefined' ? window.location.href : ''; 
+                    if (navigator.share) {
+                      await navigator.share({ url, title: work.title });
+                    } else {
+                      await navigator.clipboard.writeText(url);
+                      // TODO: Mostrar toast de confirmación
+                    }
+                  } catch {} 
+                }}
+                className="flex items-center gap-3 px-4 py-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200"
+              >
                 <Share2 className="h-5 w-5" />
+                <span className="text-sm">Compartir</span>
               </button>
             </div>
+          </footer>
 
-            <section className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Comentarios</h3>
-              {comments.length === 0 ? (
-                <div className="text-sm text-gray-600">Sé el primero en comentar.</div>
-              ) : (
-                <ul className="space-y-3">
-                  {comments.map((c) => (
-                    <li key={c.id} className="flex items-start gap-2">
-                      <div className="h-8 w-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-xs font-bold">{(c.author_id || 'U').toString().slice(0,2).toUpperCase()}</div>
-                      <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 max-w-full">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-gray-500">{new Date(c.created_at).toLocaleString()}</span>
-                        </div>
-                        <div className="text-sm text-gray-900 whitespace-pre-wrap break-words">{c.text}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="mt-3 flex items-center gap-2">
-                <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe un comentario..." className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm" />
-                <Button onClick={addComment} className="bg-red-600 hover:bg-red-700 text-white text-sm">Comentar</Button>
+          {/* Sección de comentarios mejorada */}
+          <section className="mt-12 sm:mt-16 border-t border-gray-200 pt-8">
+            <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+              Comentarios ({commentsCount})
+            </h3>
+            
+            {currentUserId && (
+              <div className="mb-8 max-w-2xl mx-auto">
+                <div className="flex gap-3">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarFallback className="bg-red-50 text-red-700 text-sm font-semibold">
+                      Tú
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <textarea 
+                      value={newComment} 
+                      onChange={(e) => setNewComment(e.target.value)} 
+                      placeholder="Comparte tu opinión sobre esta obra..." 
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                      rows={3}
+                    />
+                    <div className="flex justify-end mt-3">
+                      <Button 
+                        onClick={addComment} 
+                        disabled={!newComment.trim()}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Publicar comentario
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </section>
-          </CardContent>
-        </Card>
+            )}
+            
+            {comments.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">Sé el primero en comentar esta obra.</p>
+                {!currentUserId && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    <button className="text-red-600 hover:text-red-700 underline">Inicia sesión</button> para dejar un comentario.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6 max-w-2xl mx-auto">
+                {comments.map((c) => (
+                  <div key={c.id} className="flex gap-3">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarFallback className="bg-gray-100 text-gray-700 text-sm font-semibold">
+                        {(c.profiles?.name || c.profiles?.username || 'U').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="bg-gray-50 rounded-lg px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-gray-900 text-sm">
+                            {c.profiles?.name || c.profiles?.username || 'Usuario'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(c.created_at).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-relaxed">{c.text}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </main>
+
+      {/* Reading Toolbar */}
+      <ReadingToolbar
+        genre={work.genre || 'cuento'}
+        currentChapter={activeChapterIndex}
+        totalChapters={chapters.length}
+        readingProgress={readingProgress}
+        content={activeContent}
+        onChapterChange={(chapter) => setActiveChapterIndex(chapter)}
+        onBookmark={() => setIsBookmarked(!isBookmarked)}
+        onShare={async () => {
+          try {
+            const url = typeof window !== 'undefined' ? window.location.href : ''
+            if (navigator.share) {
+              await navigator.share({ url, title: work.title })
+            } else {
+              await navigator.clipboard.writeText(url)
+            }
+          } catch (error) {
+            // Silently handle share errors
+          }
+        }}
+      />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bell, MessageCircle, UserPlus, AtSign, Eye, TrendingUp, ChevronRight, Users, BadgeCheck, Repeat2, Share2 } from 'lucide-react'
 import OptimizedImage from '@/components/OptimizedImage'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { getUnreadNotificationsCount } from '@/lib/notifications'
 
 export default function ExplorePage() {
   const router = useRouter()
@@ -18,6 +19,8 @@ export default function ExplorePage() {
   const [tag, setTag] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'saved'>('explore')
   const [showNotifications, setShowNotifications] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [userId, setUserId] = useState<string | null>(null)
   const [saved, setSaved] = useState<Record<string, boolean>>({})
 
   const toggleSaved = (id: string) =>
@@ -31,17 +34,66 @@ export default function ExplorePage() {
   const [items, setItems] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
-  // Load works data
+  // Load recommended works data using smart recommendation algorithm
   useEffect(() => {
-    const loadWorks = async () => {
+    const loadRecommendedWorks = async () => {
       try {
         const supabase = getSupabaseBrowserClient()
-        const { data: works } = await supabase
-          .from('works')
-          .select('id,title,genre,cover_url,chapters,content,author_id,created_at,views,likes')
-          .order('created_at', { ascending: false })
-          .limit(24)
-        const authorIds = Array.from(new Set((works || []).map((w: any) => w.author_id)))
+        const { data: userData } = await supabase.auth.getUser()
+        
+        let works: any[] = []
+        
+        if (userData?.user) {
+          // Use smart recommendations for authenticated users
+          const { data: recommendedWorks } = await supabase
+            .rpc('get_smart_recommendations', {
+              target_user_id: userData.user.id,
+              page_type: 'explore',
+              limit_count: 24
+            })
+          
+          works = recommendedWorks || []
+        }
+        
+        // If no recommendations or user is not authenticated, fall back to popular content
+        if (works.length === 0) {
+          const { data: popularWorks } = await supabase
+            .rpc('get_popular_recommendations', {
+              target_user_id: userData?.user?.id || null,
+              limit_count: 24
+            })
+          works = popularWorks || []
+        }
+        
+        // If still no works, fall back to basic query (for new databases) BUT exclude user's own works
+        if (works.length === 0) {
+          let basicQuery = supabase
+            .from('works')
+            .select('id,title,genre,cover_url,chapters,content,author_id,created_at,views,likes')
+            .eq('published', true)
+            .order('created_at', { ascending: false })
+            .limit(24)
+          
+          // CRITICAL: Always exclude user's own works in explore page
+          if (userData?.user) {
+            basicQuery = basicQuery.neq('author_id', userData.user.id)
+          }
+          
+          const { data: basicWorks } = await basicQuery
+          
+          works = (basicWorks || []).map((w: any) => ({
+            work_id: w.id,
+            title: w.title,
+            genre: w.genre,
+            author_id: w.author_id,
+            cover_url: w.cover_url,
+            created_at: w.created_at,
+            recommendation_score: 0
+          }))
+        }
+        
+        // Get author information for all works
+        const authorIds = Array.from(new Set(works.map((w: any) => w.author_id).filter(Boolean)))
         let profilesMap: Record<string, any> = {}
         if (authorIds.length > 0) {
           const { data: profs } = await supabase
@@ -50,31 +102,56 @@ export default function ExplorePage() {
             .in('id', authorIds)
           profilesMap = (profs || []).reduce((acc: any, p: any) => { acc[p.id] = p; return acc }, {})
         }
-        const mapped = (works || []).map((w: any) => {
+        
+        // Get content for excerpt generation
+        const workIds = works.map((w: any) => w.work_id)
+        let worksContent: Record<string, any> = {}
+        if (workIds.length > 0) {
+          const { data: workData } = await supabase
+            .from('works')
+            .select('id,chapters,content,views,likes')
+            .in('id', workIds)
+          worksContent = (workData || []).reduce((acc: any, w: any) => { acc[w.id] = w; return acc }, {})
+        }
+        
+        const mapped = works.map((w: any) => {
           const author = profilesMap[w.author_id] || {}
-          const excerpt = w.chapters && Array.isArray(w.chapters) && w.chapters.length > 0 ? (w.chapters[0]?.content || '') : (w.content || '')
+          const workData = worksContent[w.work_id] || {}
+          const excerpt = workData.chapters && Array.isArray(workData.chapters) && workData.chapters.length > 0 
+            ? (workData.chapters[0]?.content || '') 
+            : (workData.content || '')
+          
           return {
-            id: w.id,
+            id: w.work_id,
             title: w.title,
             excerpt: (excerpt || '').slice(0, 200),
-            author: { name: author.name || 'Autor', username: author.username ? `@${author.username}` : '@autor', avatar: author.avatar_url || '/api/placeholder/40/40' },
+            author: { 
+              name: author.name || 'Autor', 
+              username: author.username ? `@${author.username.startsWith('@') ? author.username.slice(1) : author.username}` : '@autor', 
+              avatar: author.avatar_url || '/api/placeholder/40/40' 
+            },
             cover: w.cover_url || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=630&fit=crop',
             genre: w.genre || 'Obra',
             readTime: '—',
             type: 'fiction',
-            views: w.views || 0,
-            likes: w.likes || 0,
+            views: workData.views || 0,
+            likes: workData.likes || 0,
+            recommendationScore: w.recommendation_score || 0,
+            recommendationType: w.recommendation_type || 'popular'
           }
         })
+        
         setItems(mapped)
       } catch (error) {
-        console.error('Error loading works:', error)
+        console.error('Error loading recommended works:', error)
+        // Fallback to empty array on error
+        setItems([])
       } finally {
         setIsLoading(false)
       }
     }
     
-    loadWorks()
+    loadRecommendedWorks()
   }, [])
 
   // Load trending tags from database
@@ -242,7 +319,7 @@ export default function ExplorePage() {
               
               return {
                 name: author.name || 'Autor',
-                username: author.username ? `@${author.username}` : '@autor',
+                username: author.username ? `@${author.username.startsWith('@') ? author.username.slice(1) : author.username}` : '@autor',
                 followers: followersCount ? `${followersCount}` : '0',
                 genre: mostCommonGenre,
                 verified: Math.random() > 0.5, // Random for now
@@ -273,7 +350,90 @@ export default function ExplorePage() {
     loadSuggestedAuthors()
   }, [])
 
-  const filtered = items.filter(i => (type === 'all' || i.type === type) && (!tag || i.genre.toLowerCase().includes(tag.toLowerCase()) || i.title.toLowerCase().includes(tag.toLowerCase())))
+  // Load user ID and unread count
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        
+        if (userData?.user) {
+          setUserId(userData.user.id)
+          const count = await getUnreadNotificationsCount(userData.user.id)
+          setUnreadCount(count)
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+      }
+    }
+    
+    loadUser()
+  }, [])
+
+  // Set up real-time subscription for notification updates
+  useEffect(() => {
+    if (!userId) return
+
+    const supabase = getSupabaseBrowserClient()
+    
+    const subscription = supabase
+      .channel('notification_updates_explore')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        async () => {
+          // Reload unread count when notifications change
+          const count = await getUnreadNotificationsCount(userId)
+          setUnreadCount(count)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [userId])
+
+  const filtered = useMemo(() => {
+    const now = new Date()
+    let periodStart: Date
+    
+    switch (period) {
+      case 'today':
+        periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        break
+      case 'week':
+        periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case 'month':
+        periodStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+        break
+      default:
+        periodStart = new Date(0) // Show all if no period specified
+    }
+    
+    return items.filter(i => {
+      // Period filter
+      const itemDate = new Date(i.createdAt)
+      const matchesPeriod = itemDate >= periodStart
+      
+      // Type filter
+      const matchesType = type === 'all' || i.type === type
+      
+      // Tag/search filter
+      const matchesTag = !tag || 
+        i.genre.toLowerCase().includes(tag.toLowerCase()) || 
+        i.title.toLowerCase().includes(tag.toLowerCase()) ||
+        i.authorName?.toLowerCase().includes(tag.toLowerCase())
+      
+      return matchesPeriod && matchesType && matchesTag
+    })
+  }, [items, period, type, tag])
 
   const navigationItems = useMemo(() => [
     { icon: Home, label: 'Inicio', id: 'feed' },
@@ -310,8 +470,12 @@ export default function ExplorePage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-full mx-auto px-10 sm:px-16 lg:px-24 xl:px-32">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
+            {/* Logo - Clickable to go to /main */}
+            <button 
+              onClick={() => router.push('/main')}
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded-lg p-1 -m-1"
+              aria-label="Ir a página principal"
+            >
               <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 overflow-hidden rounded-md flex items-center justify-center bg-transparent">
                 <div className="relative h-[200%] w-[200%] -m-[50%]">
                   <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" className="object-cover" priority />
@@ -320,7 +484,7 @@ export default function ExplorePage() {
               <h1 className="text-xl md:text-2xl font-bold text-red-600 [font-family:var(--font-poppins)]">
                 Palabreo
               </h1>
-            </div>
+            </button>
 
             {/* Search Bar */}
             <div className="hidden md:flex flex-1 max-w-md mx-8">
@@ -331,6 +495,12 @@ export default function ExplorePage() {
                   placeholder="Buscar obras, autores..."
                   value={tag}
                   onChange={(e) => setTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tag.trim()) {
+                      e.preventDefault()
+                      router.push(`/search?q=${encodeURIComponent(tag.trim())}`)
+                    }
+                  }}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-slate-400 focus:border-slate-400 bg-white text-sm"
                 />
               </div>
@@ -351,9 +521,11 @@ export default function ExplorePage() {
                 aria-haspopup="menu"
               >
                 <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Button>
               
               <Button className="hidden md:inline-flex bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm" onClick={() => router.push('/writer')}>
@@ -589,15 +761,48 @@ export default function ExplorePage() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-7">
-                {filtered.map(card => (
-                  <ExploreItemCard
-                    key={card.id}
-                    card={card}
-                    saved={!!saved[card.id]}
-                    onToggleSaved={() => toggleSaved(card.id)}
-                  />
-                ))}
+              <div data-testid="explore-items" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-7">
+                {filtered.length > 0 ? (
+                  filtered.map(card => (
+                    <ExploreItemCard
+                      key={card.id}
+                      card={card}
+                      saved={!!saved[card.id]}
+                      onToggleSaved={() => toggleSaved(card.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12">
+                    <div className="max-w-md mx-auto">
+                      <div className="text-gray-400 mb-4">
+                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">¡Eres pionero!</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        No hay otras obras para recomendar en este momento. Sigue escribiendo y pronto habrá más autores en la plataforma para descubrir contenido increíble.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button 
+                          onClick={() => router.push('/writer')}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Crear Nueva Obra
+                        </button>
+                        <button 
+                          onClick={() => router.push('/main')}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          Ver Mi Feed
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -683,6 +888,7 @@ function ExploreItemCard({ card, saved, onToggleSaved }: { card: any; saved: boo
 
   return (
     <Card
+      data-testid="work-card"
       className={`relative group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all focus-within:ring-2 focus-within:ring-red-500 ${isLongPressActive ? 'scale-[0.98] brightness-95' : ''}`}
       ref={cardRef}
       onTouchStart={onTouchStartCard}
@@ -729,7 +935,7 @@ function ExploreItemCard({ card, saved, onToggleSaved }: { card: any; saved: boo
           </div>
         </div>
         <CardContent className="flex-1 p-4 md:p-5 lg:p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-1.5 md:mb-2 line-clamp-2 md:line-clamp-2">
+          <h3 data-testid="work-title" className="text-base font-semibold text-gray-900 mb-1.5 md:mb-2 line-clamp-2 md:line-clamp-2">
             {card.title}
           </h3>
           <p className="text-sm text-gray-600 line-clamp-3 md:line-clamp-3 mb-3 md:mb-4">{card.excerpt}</p>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle } from 'lucide-react'
@@ -11,11 +11,14 @@ import AppHeader from '@/components/AppHeader'
 
 export default function WriterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editWorkId = searchParams.get('edit')
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [genre, setGenre] = useState('cuento')
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(!!editWorkId)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [coverUrl, setCoverUrl] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -28,6 +31,7 @@ export default function WriterPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [undoStack, setUndoStack] = useState<{ title: string; content: string }[]>([])
   const [redoStack, setRedoStack] = useState<{ title: string; content: string }[]>([])
+  const [error, setError] = useState<string | null>(null)
   // Guided tour state
   const [showTutorial, setShowTutorial] = useState(false)
   const [tourStepIndex, setTourStepIndex] = useState(0)
@@ -72,7 +76,7 @@ export default function WriterPage() {
 
   // Capítulos y obras
   type Chapter = { id: string; title: string; content: string }
-  type Work = { id: string; title: string; genre: string; coverUrl?: string; tags: string[]; chapters: Chapter[]; createdAt: number; updatedAt: number }
+  type Work = { id: string; title: string; genre: string; coverUrl?: string; tags: string[]; chapters: Chapter[]; content?: string; createdAt: number; updatedAt: number }
 
   const [chapters, setChapters] = useState<Chapter[]>([{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: '' }])
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0)
@@ -150,37 +154,43 @@ export default function WriterPage() {
     if (isMobile) setFocusMode(true)
   }, [isMobile])
 
+  // Handle edit parameter and load work for editing
   useEffect(() => {
-    // Restaurar borrador
-    try {
-      const raw = localStorage.getItem('palabreo-writer-draft')
-      if (raw) {
-        const saved = JSON.parse(raw) as { title?: string; content?: string; genre?: string; coverUrl?: string; tags?: string[]; chapters?: any; currentWorkId?: string | null; currentChapterIndex?: number; useChapters?: boolean }
-        if (saved.title) setTitle(saved.title)
-        if (saved.content) setContent(saved.content)
-        if (saved.genre) setGenre(saved.genre)
-        if (saved.coverUrl) setCoverUrl(saved.coverUrl)
-        if (Array.isArray(saved.tags)) setTags(saved.tags)
-        if (Array.isArray(saved.chapters)) setChapters(saved.chapters as any)
-        if (typeof saved.currentWorkId !== 'undefined') setCurrentWorkId(saved.currentWorkId ?? null)
-        if (typeof saved.currentChapterIndex === 'number') setCurrentChapterIndex(saved.currentChapterIndex)
-        if (typeof saved.useChapters === 'boolean') setUseChapters(saved.useChapters)
-        const hadSelection = (
-          (saved.currentWorkId && saved.currentWorkId.length > 0) ||
-          (saved.title && saved.title.trim().length > 0) ||
-          (Array.isArray(saved.chapters) && saved.chapters.some((ch: any) => ch && typeof ch.content === 'string' && ch.content.trim().length > 0))
-        )
-        setDraftAvailable(!!hadSelection)
-        // Siempre pedir selección al abrir
-        setHasSelectedWork(false)
-      }
-      const worksRaw = localStorage.getItem('palabreo-works')
-      if (worksRaw) {
-        const works = JSON.parse(worksRaw) as Work[]
-        setExistingWorks(works)
-      }
-    } catch {}
-  }, [])
+    if (editWorkId) {
+      // If we have an edit parameter, load that work
+      loadWorkForEditing(editWorkId)
+    } else {
+      // Otherwise restore from draft if available
+      try {
+        const raw = localStorage.getItem('palabreo-writer-draft')
+        if (raw) {
+          const saved = JSON.parse(raw) as { title?: string; content?: string; genre?: string; coverUrl?: string; tags?: string[]; chapters?: any; currentWorkId?: string | null; currentChapterIndex?: number; useChapters?: boolean }
+          if (saved.title) setTitle(saved.title)
+          if (saved.content) setContent(saved.content)
+          if (saved.genre) setGenre(saved.genre)
+          if (saved.coverUrl) setCoverUrl(saved.coverUrl)
+          if (Array.isArray(saved.tags)) setTags(saved.tags)
+          if (Array.isArray(saved.chapters)) setChapters(saved.chapters as any)
+          if (typeof saved.currentWorkId !== 'undefined') setCurrentWorkId(saved.currentWorkId ?? null)
+          if (typeof saved.currentChapterIndex === 'number') setCurrentChapterIndex(saved.currentChapterIndex)
+          if (typeof saved.useChapters === 'boolean') setUseChapters(saved.useChapters)
+          const hadSelection = (
+            (saved.currentWorkId && saved.currentWorkId.length > 0) ||
+            (saved.title && saved.title.trim().length > 0) ||
+            (Array.isArray(saved.chapters) && saved.chapters.some((ch: any) => ch && typeof ch.content === 'string' && ch.content.trim().length > 0))
+          )
+          setDraftAvailable(!!hadSelection)
+          // Siempre pedir selección al abrir (unless editing)
+          setHasSelectedWork(false)
+        }
+        const worksRaw = localStorage.getItem('palabreo-works')
+        if (worksRaw) {
+          const works = JSON.parse(worksRaw) as Work[]
+          setExistingWorks(works)
+        }
+      } catch {}
+    }
+  }, [editWorkId])
 
   useEffect(() => {
     // sincronizar contenido con capítulo activo
@@ -741,6 +751,88 @@ export default function WriterPage() {
     setChapters((prev) => prev.map((ch, i) => (i === index ? { ...ch, title: value } : ch)))
   }
 
+  // Load work for editing
+  const loadWorkForEditing = async (workId: string) => {
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      
+      if (!userData?.user) {
+        setError('Debes iniciar sesión para editar obras')
+        router.push('/login')
+        return
+      }
+
+      console.log('🔍 Loading work for editing:', workId)
+      const { data: work, error: workError } = await supabase
+        .from('works')
+        .select(`
+          id,
+          title,
+          content,
+          genre,
+          cover_url,
+          tags,
+          published,
+          chapters,
+          created_at,
+          updated_at
+        `)
+        .eq('id', workId)
+        .eq('author_id', userData.user.id)
+        .single()
+
+      if (workError) {
+        console.error('❌ Error loading work:', workError)
+        setError('No se pudo cargar la obra para editar')
+        return
+      }
+
+      if (!work) {
+        setError('Obra no encontrada')
+        return
+      }
+
+      console.log('📚 Loaded work for editing:', work)
+
+      // Set all the form fields with the work data
+      setTitle(work.title || '')
+      setGenre(work.genre || 'cuento')
+      setCoverUrl(work.cover_url || '')
+      setTags(Array.isArray(work.tags) ? work.tags : [])
+      setCurrentWorkId(work.id)
+      setHasSelectedWork(true)
+
+      // Handle chapters vs single content
+      if (Array.isArray(work.chapters) && work.chapters.length > 0) {
+        setUseChapters(true)
+        setChapters(work.chapters.map((ch: any, index: number) => ({
+          id: ch.id || `${Date.now()}-${index}`,
+          title: ch.title || `Capítulo ${index + 1}`,
+          content: ch.content || ''
+        })))
+        setCurrentChapterIndex(0)
+        setContent(work.chapters[0]?.content || '')
+      } else {
+        setUseChapters(false)
+        setContent(work.content || '')
+        setChapters([{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: work.content || '' }])
+        setCurrentChapterIndex(0)
+      }
+
+      console.log('✅ Work loaded successfully for editing')
+
+    } catch (error) {
+      console.error('❌ Error loading work for editing:', error)
+      setError('Error inesperado al cargar la obra')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Obras (continuación/nueva)
   const refreshWorks = async () => {
     try {
@@ -754,7 +846,7 @@ export default function WriterPage() {
       }
       const { data: dbWorks } = await supabase
         .from('works')
-        .select('id,title,genre,cover_url,chapters,updated_at')
+        .select('id,title,genre,cover_url,chapters,content,updated_at')
         .eq('author_id', userData.user.id)
         .order('updated_at', { ascending: false })
       if (dbWorks) {
@@ -764,7 +856,8 @@ export default function WriterPage() {
           genre: w.genre || 'obra',
           coverUrl: w.cover_url || '',
           tags: [],
-          chapters: Array.isArray(w.chapters) && w.chapters.length > 0 ? w.chapters : [{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: '' }],
+          chapters: Array.isArray(w.chapters) && w.chapters.length > 0 ? w.chapters : [{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: w.content || '' }],
+          content: w.content || '', // ✅ Incluir el contenido
           createdAt: Date.now(),
           updatedAt: w.updated_at ? new Date(w.updated_at).getTime() : Date.now(),
         })))
@@ -807,87 +900,143 @@ export default function WriterPage() {
     setGenre(work.genre)
     setCoverUrl(work.coverUrl ?? '')
     setTags(work.tags ?? [])
-    setChapters(work.chapters.length ? work.chapters : [{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: '' }])
-    setCurrentChapterIndex(0)
-    setContent(work.chapters[0]?.content ?? '')
+    
+    // Manejar capítulos y contenido
+    if (work.chapters.length > 0) {
+      setUseChapters(true)
+      setChapters(work.chapters)
+      setCurrentChapterIndex(0)
+      setContent(work.chapters[0]?.content ?? '')
+    } else {
+      setUseChapters(false)
+      setChapters([{ id: `${Date.now()}-1`, title: 'Capítulo 1', content: work.content ?? '' }])
+      setCurrentChapterIndex(0)
+      setContent(work.content ?? '')
+    }
+    
+
   }
 
   const handlePublish = async () => {
-    const supabase = getSupabaseBrowserClient()
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData?.user) {
-      alert('Inicia sesión para publicar tu obra')
-      router.push('/login')
-      return
-    }
-
-    const finalChapters: { title: string; content: string }[] = (useChapters ? chapters : [{ id: currentWorkId ?? `${Date.now()}`, title: title || 'Contenido', content }])
-      .map((ch) => ({ title: ch.title, content: ch.content }))
-
-    // Insertar o actualizar obra
-    let workId = currentWorkId || null
-    if (!workId) {
-      const { data, error } = await supabase
-        .from('works')
-        .insert({
-          author_id: userData.user.id,
-          title,
-          content: useChapters ? null : content,
-          genre,
-          cover_url: coverUrl || null,
-          tags: tags || [],
-          chapters: finalChapters,
-        })
-        .select('id')
-        .single()
-      if (error) {
-        alert(error.message)
-        return
-      }
-      workId = data?.id
-      setCurrentWorkId(workId)
-    } else {
-      const { error } = await supabase
-        .from('works')
-        .update({
-          title,
-          content: useChapters ? null : content,
-          genre,
-          cover_url: coverUrl || null,
-          tags: tags || [],
-          chapters: finalChapters,
-        })
-        .eq('id', workId)
-        .eq('author_id', userData.user.id)
-      if (error) {
-        alert(error.message)
-        return
-      }
-      
-      // Sincronizar capítulos normalizados (borrado e inserción simple)
-      await supabase.from('chapters').delete().eq('work_id', workId)
-      const rows = finalChapters.map((ch, i) => ({ work_id: workId, index_in_work: i, title: ch.title, content: ch.content }))
-      if (rows.length > 0) {
-        await supabase.from('chapters').insert(rows)
-      }
-    }
-
-    // Fallback: guardar copia local para overlay de continuación
+    setIsSaving(true)
+    setError(null)
+    
     try {
-      const work: Work = {
-        id: workId || `${Date.now()}`,
-        title,
-        genre,
-        coverUrl,
-        tags,
-        chapters: (useChapters ? chapters : [{ id: workId || `${Date.now()}`, title: title || 'Contenido', content }]),
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      
+      if (!userData?.user) {
+        setError('Debes iniciar sesión para publicar tu obra')
+        router.push('/login')
+        return
       }
-      saveWorkToStorage(work)
-    } catch {}
 
-    router.push('/main')
+      console.log('📝 Publishing work:', { title, currentWorkId })
+
+      const finalChapters: { title: string; content: string }[] = (useChapters ? chapters : [{ id: currentWorkId ?? `${Date.now()}`, title: title || 'Contenido', content }])
+        .map((ch) => ({ title: ch.title, content: ch.content }))
+
+      // Insertar o actualizar obra
+      let workId = currentWorkId || null
+      if (!workId) {
+        console.log('Creating new work...')
+        const { data, error } = await supabase
+          .from('works')
+          .insert({
+            author_id: userData.user.id,
+            title,
+            content: useChapters ? null : content,
+            genre,
+            cover_url: coverUrl || null,
+            tags: tags || [],
+            chapters: finalChapters,
+            published: true,
+            views: 0,
+            likes: 0
+          })
+          .select('id')
+          .single()
+          
+        if (error) {
+          console.error('❌ Error creating work:', error)
+          setError(`Error al crear la obra: ${error.message}`)
+          return
+        }
+        
+        workId = data?.id
+        setCurrentWorkId(workId)
+        console.log('✅ Work created with ID:', workId)
+      } else {
+        console.log('Updating existing work:', workId)
+        const { error } = await supabase
+          .from('works')
+          .update({
+            title,
+            content: useChapters ? null : content,
+            genre,
+            cover_url: coverUrl || null,
+            tags: tags || [],
+            chapters: finalChapters,
+            published: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', workId)
+          .eq('author_id', userData.user.id)
+          
+        if (error) {
+          console.error('❌ Error updating work:', error)
+          setError(`Error al actualizar la obra: ${error.message}`)
+          return
+        }
+        
+        console.log('✅ Work updated successfully')
+        
+        // Sincronizar capítulos normalizados (borrado e inserción simple)
+        await supabase.from('chapters').delete().eq('work_id', workId)
+        const rows = finalChapters.map((ch, i) => ({ work_id: workId, index_in_work: i, title: ch.title, content: ch.content }))
+        if (rows.length > 0) {
+          const { error: chaptersError } = await supabase.from('chapters').insert(rows)
+          if (chaptersError) {
+            console.warn('⚠️ Warning updating chapters:', chaptersError)
+            // Don't fail the whole operation for chapter sync issues
+          }
+        }
+      }
+
+      // Fallback: guardar copia local para overlay de continuación
+      try {
+        const work: Work = {
+          id: workId || `${Date.now()}`,
+          title,
+          genre,
+          coverUrl,
+          tags,
+          chapters: (useChapters ? chapters : [{ id: workId || `${Date.now()}`, title: title || 'Contenido', content }]),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }
+        saveWorkToStorage(work)
+      } catch (storageError) {
+        console.warn('⚠️ Warning saving to localStorage:', storageError)
+      }
+
+      // Clear draft after successful publish
+      try {
+        localStorage.removeItem('palabreo-writer-draft')
+      } catch {}
+
+      console.log('✅ Work published successfully')
+      setLastSavedAt(new Date())
+      
+      // Redirect to the published work or main page
+      router.push(workId ? `/work/${workId}` : '/main')
+      
+    } catch (error) {
+      console.error('❌ Unexpected error publishing work:', error)
+      setError('Error inesperado al publicar la obra')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -982,7 +1131,31 @@ export default function WriterPage() {
         </button>
       )}
 
-      <main className={`w-full max-w-none px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-24 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6`}>
+      {/* Error Display */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <div className="text-sm text-gray-600">Cargando obra para editar...</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className={`w-full max-w-none px-0 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-24 sm:pb-8 grid grid-cols-1 ${focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-0 sm:gap-6 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
         <section className={`${focusMode ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
           <Card className="bg-white border-none shadow-none rounded-none sm:border sm:shadow-sm sm:rounded-lg overflow-hidden">
             <CardContent className="p-0 sm:p-6 space-y-4">
@@ -1122,10 +1295,20 @@ export default function WriterPage() {
                   {/* Content preview */}
                   {!useChapters || !previewWholeWork ? (
                     <div className="min-h-[240px] sm:min-h-[300px] border border-gray-200 rounded-md p-3 sm:p-4 bg-white text-[15px] sm:text-base" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-                      <div className="text-gray-900" dangerouslySetInnerHTML={renderPreviewHtml(content)} />
+
+                      {content && content.trim() ? (
+                        <div className="text-gray-900" dangerouslySetInnerHTML={renderPreviewHtml(content)} />
+                      ) : (
+                        <div className="text-gray-500 italic text-center py-8">
+                          No hay contenido para mostrar en el preview.
+                          <br />
+                          <small>Asegúrate de que la obra tenga contenido guardado.</small>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="min-h-[240px] sm:min-h-[300px] border border-gray-200 rounded-md p-3 sm:p-4 bg-white text-[15px] sm:text-base" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+
                       <div className="mb-6">
                         <h1 className="text-xl md:text-2xl font-bold mb-2 text-gray-900">{title || 'Sin título'}</h1>
                         <div className="text-xs text-gray-600">{genre} · {totalWordCount} palabras</div>
@@ -1133,7 +1316,14 @@ export default function WriterPage() {
                       {chapters.map((ch, i) => (
                         <div key={ch.id} className="mb-6">
                           <h2 className="text-lg md:text-xl font-semibold mb-2 text-gray-900">{i + 1}. {ch.title || `Capítulo ${i + 1}`}</h2>
-                          <div className="text-gray-900" dangerouslySetInnerHTML={renderPreviewHtml(ch.content)} />
+
+                          {ch.content && ch.content.trim() ? (
+                            <div className="text-gray-900" dangerouslySetInnerHTML={renderPreviewHtml(ch.content)} />
+                          ) : (
+                            <div className="text-gray-500 italic text-center py-4">
+                              Este capítulo no tiene contenido.
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

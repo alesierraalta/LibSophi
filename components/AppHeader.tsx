@@ -17,7 +17,7 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ 
-  searchValue = '', 
+  searchValue: externalSearchValue = '', 
   onSearchChange, 
   showSearch = true,
   className = ''
@@ -28,6 +28,11 @@ export default function AppHeader({
   const [unreadCount, setUnreadCount] = useState(0)
   const [loadingNotifications, setLoadingNotifications] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [internalSearchValue, setInternalSearchValue] = useState('')
+
+  // Use external search value if provided, otherwise use internal state
+  const searchValue = externalSearchValue || internalSearchValue
+  const handleSearchChange = onSearchChange || setInternalSearchValue
 
   // Load user ID and unread count
   useEffect(() => {
@@ -48,6 +53,39 @@ export default function AppHeader({
     
     loadUser()
   }, [])
+
+  // Set up real-time subscription for notification updates
+  useEffect(() => {
+    if (!userId) return
+
+    const supabase = getSupabaseBrowserClient()
+    
+    const subscription = supabase
+      .channel('notification_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        async () => {
+          // Reload unread count when notifications change
+          const count = await getUnreadNotificationsCount(userId)
+          setUnreadCount(count)
+          // Also reload notifications if dropdown is open
+          if (showNotifications) {
+            loadRecentNotifications()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [userId, showNotifications])
 
   // Load recent notifications when dropdown opens
   useEffect(() => {
@@ -167,8 +205,12 @@ export default function AppHeader({
     <header className={`bg-white border-b border-gray-200 sticky top-0 z-50 ${className}`}>
       <div className="max-w-full mx-auto px-10 sm:px-16 lg:px-24 xl:px-32">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
+          {/* Logo - Clickable to go to /main */}
+          <button 
+            onClick={() => router.push('/main')}
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded-lg p-1 -m-1"
+            aria-label="Ir a página principal"
+          >
             <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 overflow-hidden rounded-md flex items-center justify-center bg-transparent">
               <div className="relative h-[200%] w-[200%] -m-[50%]">
                 <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" className="object-cover" priority />
@@ -177,7 +219,7 @@ export default function AppHeader({
             <h1 className="text-xl md:text-2xl font-bold text-red-600 [font-family:var(--font-poppins)]">
               Palabreo
             </h1>
-          </div>
+          </button>
 
           {/* Search Bar */}
           {showSearch && (
@@ -188,7 +230,13 @@ export default function AppHeader({
                   type="text"
                   placeholder="Buscar obras, autores..."
                   value={searchValue}
-                  onChange={(e) => onSearchChange?.(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchValue.trim()) {
+                      e.preventDefault()
+                      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`)
+                    }
+                  }}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-slate-400 focus:border-slate-400 bg-white text-sm"
                 />
               </div>
@@ -197,7 +245,13 @@ export default function AppHeader({
 
           {/* Header Actions */}
           <div className="flex items-center space-x-3 relative">
-            <Button variant="ghost" size="sm" className="md:hidden">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="md:hidden"
+              onClick={() => router.push('/search')}
+              aria-label="Abrir búsqueda"
+            >
               <Search className="h-4 w-4" />
             </Button>
             

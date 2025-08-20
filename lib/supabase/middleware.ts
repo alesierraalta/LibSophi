@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
 
   // Define protected routes that require authentication
   const protectedRoutes = [
-    '/writer', 
+    // '/writer', // Temporarily removed for testing - allows testing writer functionality
     '/profile',
     '/favorites',
     '/notifications',

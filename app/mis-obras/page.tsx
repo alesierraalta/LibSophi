@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { BookOpen, Edit3, Eye, Plus, Home, Compass, PenTool } from 'lucide-react'
+import { BookOpen, Edit3, Eye, Plus, Home, Compass, PenTool, Heart, FileText } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import AppHeader from '@/components/AppHeader'
 
@@ -12,16 +12,16 @@ type Work = {
   id: string
   title: string
   type: string
-  reads: string
+  reads: number
+  likes: number
   cover: string
   updatedAt?: string
+  createdAt?: string
+  published: boolean
+  wordCount?: number
 }
 
-const defaultWorks: Work[] = [
-  { id: '1', title: 'El susurro del viento', type: 'Novela', reads: '12.5k', cover: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=640&h=360&fit=crop', updatedAt: 'hoy' },
-  { id: '2', title: 'Versos de medianoche', type: 'Poesía', reads: '8.1k', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=640&h=360&fit=crop', updatedAt: 'ayer' },
-  { id: '3', title: 'Crónicas del andén', type: 'Relato', reads: '5.7k', cover: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=640&h=360&fit=crop', updatedAt: 'hace 3 días' },
-]
+// Removed defaultWorks - now always shows real database data or empty state
 
 export default function MisObrasPage() {
   const router = useRouter()
@@ -42,7 +42,18 @@ export default function MisObrasPage() {
           console.log('🔍 Loading works for authenticated user:', userData.user.id)
           const { data: dbWorks, error: worksError } = await supabase
             .from('works')
-            .select('id,title,genre,cover_url,updated_at,views')
+            .select(`
+              id,
+              title,
+              genre,
+              cover_url,
+              updated_at,
+              created_at,
+              views,
+              likes,
+              published,
+              content
+            `)
             .eq('author_id', userData.user.id)
             .order('updated_at', { ascending: false })
           
@@ -57,9 +68,13 @@ export default function MisObrasPage() {
               id: w.id,
               title: w.title,
               type: w.genre || 'Obra',
-              reads: w.views ? `${w.views}` : '0',
+              reads: w.views || 0,
+              likes: w.likes || 0,
               cover: w.cover_url || '/api/placeholder/640/360',
-              updatedAt: w.updated_at ? new Date(w.updated_at).toLocaleDateString() : undefined,
+              updatedAt: w.updated_at ? new Date(w.updated_at).toLocaleDateString('es-ES') : undefined,
+              createdAt: w.created_at ? new Date(w.created_at).toLocaleDateString('es-ES') : undefined,
+              published: w.published || false,
+              wordCount: w.content ? w.content.split(' ').length : undefined,
             }))
             setWorks(formattedWorks)
           } else {
@@ -72,7 +87,18 @@ export default function MisObrasPage() {
           const demoUserId = '9f8ff736-aec0-458f-83ae-309b923c5556'
           const { data: dbWorks, error: demoError } = await supabase
             .from('works')
-            .select('id,title,genre,cover_url,updated_at,views')
+            .select(`
+              id,
+              title,
+              genre,
+              cover_url,
+              updated_at,
+              created_at,
+              views,
+              likes,
+              published,
+              content
+            `)
             .eq('author_id', demoUserId)
             .order('updated_at', { ascending: false })
             .limit(6) // Limit to show a reasonable amount
@@ -88,20 +114,24 @@ export default function MisObrasPage() {
               id: w.id,
               title: w.title,
               type: w.genre || 'Obra',
-              reads: w.views ? `${w.views}` : '0',
+              reads: w.views || 0,
+              likes: w.likes || 0,
               cover: w.cover_url || '/api/placeholder/640/360',
-              updatedAt: w.updated_at ? new Date(w.updated_at).toLocaleDateString() : undefined,
+              updatedAt: w.updated_at ? new Date(w.updated_at).toLocaleDateString('es-ES') : undefined,
+              createdAt: w.created_at ? new Date(w.created_at).toLocaleDateString('es-ES') : undefined,
+              published: w.published || false,
+              wordCount: w.content ? w.content.split(' ').length : undefined,
             }))
             setWorks(formattedWorks)
           } else {
-            // Fallback to default works if no demo data
-            setWorks(defaultWorks)
+            // No demo data found - show empty state
+            setWorks([])
           }
         }
       } catch (error) {
         console.error('Error loading works:', error)
-        // Fallback to default works on error
-        setWorks(defaultWorks)
+        // Show empty state on error instead of static fallback data
+        setWorks([])
       } finally {
         setIsLoading(false)
       }
@@ -110,9 +140,22 @@ export default function MisObrasPage() {
     loadWorks()
   }, [])
 
+  // Helper function to format numbers
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`
+    }
+    return num.toString()
+  }
+
   const stats = useMemo(() => ({
     total: works.length,
-    reads: works.reduce((acc, w) => acc + (Number((w.reads || '0').replace(/[^0-9.]/g, '')) || 0), 0),
+    reads: works.reduce((acc, w) => acc + (w.reads || 0), 0),
+    likes: works.reduce((acc, w) => acc + (w.likes || 0), 0),
+    published: works.filter(w => w.published).length,
+    drafts: works.filter(w => !w.published).length,
   }), [works])
 
   // Navigation items
@@ -173,10 +216,28 @@ export default function MisObrasPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mis Obras</h1>
               <p className="text-sm text-gray-600 mt-1">Administra y edita tus obras publicadas y borradores.</p>
-              <div className="flex gap-2 mt-3 text-xs">
+              <div className="flex flex-wrap gap-2 mt-3 text-xs">
                 <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700">
                   <strong className="text-gray-900">{stats.total}</strong> obras
                 </span>
+                <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700">
+                  <Eye className="h-3 w-3 inline mr-1" />
+                  <strong className="text-gray-900">{formatNumber(stats.reads)}</strong> vistas
+                </span>
+                <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700">
+                  <Heart className="h-3 w-3 inline mr-1" />
+                  <strong className="text-gray-900">{formatNumber(stats.likes)}</strong> likes
+                </span>
+                {stats.published > 0 && (
+                  <span className="px-3 py-1 rounded-full bg-green-50 border border-green-200 shadow-sm text-green-700">
+                    <strong className="text-green-800">{stats.published}</strong> publicadas
+                  </span>
+                )}
+                {stats.drafts > 0 && (
+                  <span className="px-3 py-1 rounded-full bg-yellow-50 border border-yellow-200 shadow-sm text-yellow-700">
+                    <strong className="text-yellow-800">{stats.drafts}</strong> borradores
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -247,7 +308,7 @@ export default function MisObrasPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {works.map((w) => (
-              <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <Card key={w.id} data-testid="work-card" className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <div className="relative h-36 w-full">
                   <img src={w.cover} alt={w.title} className="absolute inset-0 w-full h-full object-cover" />
                 </div>
@@ -255,12 +316,36 @@ export default function MisObrasPage() {
                   <CardTitle className="text-base font-semibold text-gray-900 truncate">{w.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-1">
-                  <div className="text-xs text-gray-600 flex items-center justify-between">
-                    <span>{w.type}</span>
-                    <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {w.reads} lecturas</span>
+                  <div className="text-xs text-gray-600 flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-1">
+                      <FileText className="h-3 w-3" />
+                      {w.type}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      w.published 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {w.published ? 'Publicada' : 'Borrador'}
+                    </span>
                   </div>
+                  
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <span className="inline-flex items-center gap-1">
+                      <Eye className="h-3 w-3" /> {formatNumber(w.reads)} vistas
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="h-3 w-3" /> {formatNumber(w.likes)} likes
+                    </span>
+                    {w.wordCount && (
+                      <span className="inline-flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" /> {formatNumber(w.wordCount)} palabras
+                      </span>
+                    )}
+                  </div>
+                  
                   {w.updatedAt && (
-                    <div className="text-[11px] text-gray-500 mt-1">Actualizado {w.updatedAt}</div>
+                    <div className="text-[11px] text-gray-400 mt-1">Actualizado {w.updatedAt}</div>
                   )}
                 </CardContent>
                 <CardFooter className="p-3 pt-0 flex items-center justify-between">

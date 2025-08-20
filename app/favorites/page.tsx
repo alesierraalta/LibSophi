@@ -61,7 +61,7 @@ export default function FavoritesPage() {
             const body = w.chapters && Array.isArray(w.chapters) && w.chapters.length > 0 ? (w.chapters[0]?.content || '') : (w.content || '')
             return {
               id: w.id,
-              author: { name: author.name || 'Autor', username: author.username ? `@${author.username}` : '@autor', avatar: author.avatar_url || '/api/placeholder/40/40' },
+              author: { name: author.name || 'Autor', username: author.username ? `@${author.username.startsWith('@') ? author.username.slice(1) : author.username}` : '@autor', avatar: author.avatar_url || '/api/placeholder/40/40' },
               title: w.title,
               content: body,
               genre: w.genre || 'Obra',

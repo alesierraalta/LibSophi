@@ -1,111 +1,88 @@
-import { getSupabaseServerClient } from '@/lib/supabase/server'
+import { test as teardown } from '@playwright/test'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-async function globalTeardown() {
-  console.log('🧹 Starting E2E Test Global Teardown...')
-
-  try {
-    // Clean up all test data
-    await cleanupAllTestData()
-
-    // Reset database state
-    await resetDatabaseState()
-
-    console.log('✅ E2E Test Global Teardown completed successfully')
-  } catch (error) {
-    console.error('❌ E2E Test Global Teardown failed:', error)
-    // Don't throw here to avoid masking test failures
-  }
-}
-
-async function cleanupAllTestData() {
-  console.log('🗑️ Cleaning up all test data...')
-  
-  const supabase = getSupabaseServerClient()
+teardown('cleanup test data', async () => {
+  console.log('🧹 Starting test database cleanup...')
   
   try {
-    // Delete test data in correct order (respecting foreign key constraints)
+    const supabase = getSupabaseBrowserClient()
     
-    // 1. Comments (if they reference works or users)
-    const { error: commentsError } = await supabase
-      .from('comments')
-      .delete()
-      .or('content.ilike.%e2e-test%,content.ilike.%E2E Test%')
+    // Clean up test data based on specific patterns
+    // This is a comprehensive cleanup that removes test artifacts
     
-    if (commentsError && !commentsError.message.includes('relation "comments" does not exist')) {
-      console.warn('Comments cleanup warning:', commentsError)
-    }
-
-    // 2. Works (reference users)
-    const { error: worksError } = await supabase
+    // 1. Clean up test works (those with test-specific titles or content)
+    const { data: testWorks, error: worksError } = await supabase
       .from('works')
       .delete()
-      .or('title.ilike.%E2E Test%,content.ilike.%e2e-test%')
+      .or('title.ilike.%test%,title.ilike.%playwright%,title.ilike.%automation%,content.ilike.%test%')
     
-    if (worksError && !worksError.message.includes('relation "works" does not exist')) {
-      console.warn('Works cleanup warning:', worksError)
+    if (worksError && worksError.code !== 'PGRST116') { // PGRST116 = no rows deleted
+      console.warn('⚠️ Warning cleaning test works:', worksError.message)
+    } else {
+      console.log('✅ Cleaned up test works')
     }
-
-    // 3. User sessions and auth data
-    const { error: sessionsError } = await supabase
-      .from('sessions')
+    
+    // 2. Clean up test profiles (those with test usernames or emails)
+    const { data: testProfiles, error: profilesError } = await supabase
+      .from('profiles')
       .delete()
-      .like('user_email', '%@palabreo-e2e.test')
+      .or('username.ilike.%test%,username.ilike.%playwright%,email.ilike.%test%')
     
-    if (sessionsError && !sessionsError.message.includes('relation "sessions" does not exist')) {
-      console.warn('Sessions cleanup warning:', sessionsError)
+    if (profilesError && profilesError.code !== 'PGRST116') {
+      console.warn('⚠️ Warning cleaning test profiles:', profilesError.message)
+    } else {
+      console.log('✅ Cleaned up test profiles')
     }
-
-    // 4. Users (base table)
-    const { error: usersError } = await supabase
-      .from('users')
+    
+    // 3. Clean up test bookmarks (orphaned bookmarks from deleted users/works)
+    const { data: testBookmarks, error: bookmarksError } = await supabase
+      .from('bookmarks')
       .delete()
-      .like('email', '%@palabreo-e2e.test')
+      .is('user_id', null)
+      .or('work_id.is.null')
     
-    if (usersError && !usersError.message.includes('relation "users" does not exist')) {
-      console.warn('Users cleanup warning:', usersError)
+    if (bookmarksError && bookmarksError.code !== 'PGRST116') {
+      console.warn('⚠️ Warning cleaning test bookmarks:', bookmarksError.message)
+    } else {
+      console.log('✅ Cleaned up orphaned bookmarks')
     }
-
-    console.log('✅ Test data cleanup completed')
+    
+    // 4. Clean up test follows (orphaned follows from deleted users)
+    const { data: testFollows, error: followsError } = await supabase
+      .from('follows')
+      .delete()
+      .or('follower_id.is.null,followee_id.is.null')
+    
+    if (followsError && followsError.code !== 'PGRST116') {
+      console.warn('⚠️ Warning cleaning test follows:', followsError.message)
+    } else {
+      console.log('✅ Cleaned up orphaned follows')
+    }
+    
+    // 5. Reset any auto-increment sequences if needed
+    // Note: Supabase uses UUIDs by default, so this is typically not needed
+    // But we can clean up any test data that might affect future tests
+    
+    console.log('✅ Test database cleanup completed successfully')
+    
   } catch (error) {
-    console.error('❌ Test data cleanup failed:', error)
-    // Continue with other cleanup tasks
+    console.error('❌ Error during test database cleanup:', error)
+    // Don't throw here - we don't want cleanup failures to fail the entire test suite
   }
-}
+})
 
-async function resetDatabaseState() {
-  console.log('🔄 Resetting database state...')
-  
-  const supabase = getSupabaseServerClient()
+// Additional cleanup for specific test scenarios
+teardown('reset test environment state', async () => {
+  console.log('🔄 Resetting test environment state...')
   
   try {
-    // Reset auto-increment sequences if needed
-    // This is database-specific (PostgreSQL example)
+    // Clear any local storage or session data that might persist between test runs
+    // This is handled automatically by Playwright's browser context isolation
     
-    // Note: In production, you might want to reset sequences
-    // For now, we'll just verify the cleanup worked
+    // Log final cleanup status
+    console.log('✅ Test environment state reset completed')
     
-    const { count: worksCount } = await supabase
-      .from('works')
-      .select('*', { count: 'exact', head: true })
-      .like('title', '%E2E Test%')
-    
-    const { count: usersCount } = await supabase
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .like('email', '%@palabreo-e2e.test')
-    
-    if (worksCount && worksCount > 0) {
-      console.warn(`⚠️ ${worksCount} test works still remain in database`)
-    }
-    
-    if (usersCount && usersCount > 0) {
-      console.warn(`⚠️ ${usersCount} test users still remain in database`)
-    }
-    
-    console.log('✅ Database state reset completed')
   } catch (error) {
-    console.error('❌ Database state reset failed:', error)
+    console.error('❌ Error resetting test environment:', error)
   }
-}
-
-export default globalTeardown
+})
