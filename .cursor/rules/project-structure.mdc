@@ -1,0 +1,130 @@
+---
+alwaysApply: true
+description: "Palabreo project structure and architecture guidelines"
+---
+
+# Palabreo Project Structure & Architecture
+
+## 🏗️ Project Overview
+Palabreo is a Next.js 14 literary platform combining writing tools, community features, and content management. The project uses the App Router with TypeScript, Tailwind CSS, Supabase for backend services, and Zustand for state management.
+
+**Key Technologies:**
+- Next.js 14 with App Router
+- TypeScript for type safety
+- Tailwind CSS for styling
+- Supabase for authentication and database
+- Zustand for state management
+- Framer Motion for animations
+- NextAuth.js for authentication
+
+## 📁 Directory Structure Rules
+
+### App Router Structure (`app/`)
+- **Pages**: Each route is a `page.tsx` file in its directory
+- **Layouts**: Use `layout.tsx` for shared layouts
+- **API Routes**: Place in `api/` subdirectories with `route.ts` files
+- **Route Groups**: Use parentheses for route organization without URL impact
+
+### Components Organization (`components/`)
+- **UI Components**: Reusable UI elements in `components/ui/`
+- **Feature Components**: Complex components in feature-specific folders
+- **Charts**: Data visualization components in `components/Charts/`
+- **GridStack**: Grid layout components in `components/GridStack/`
+- **DragAndDrop**: Interactive components in `components/DragAndDrop/`
+
+### Library Structure (`lib/`)
+- **Auth**: Authentication utilities in `lib/auth/`
+- **Stores**: Zustand stores in `lib/stores/`
+- **Supabase**: Database client configurations in `lib/supabase/`
+- **Utils**: Utility functions organized by purpose
+
+### Hooks (`hooks/`)
+- Custom React hooks for reusable logic
+- Authentication hooks in `useAuth.ts`
+- Animation hooks for scroll and reveal effects
+
+## 🎯 Architecture Patterns
+
+### Component Patterns
+- **Client Components**: Use `'use client'` directive for interactive components
+- **Server Components**: Default for data fetching and static content
+- **Dynamic Imports**: Use `next/dynamic` for code splitting heavy components
+
+### State Management
+- **Zustand Stores**: For global application state
+- **React State**: For component-local state
+- **URL State**: For shareable application state
+
+### Data Fetching
+- **Server Actions**: For form submissions and mutations
+- **Supabase Client**: For real-time subscriptions
+- **Route Handlers**: For API endpoints
+
+## 🚀 File Naming Conventions
+
+### Components
+- **PascalCase**: `AppHeader.tsx`, `DataTable.tsx`
+- **Descriptive Names**: Reflect component purpose
+- **Feature Prefixes**: Use consistent prefixes for related components
+
+### Pages and Routes
+- **kebab-case**: Directory names like `mis-obras/`, `grid-stack-demo/`
+- **Dynamic Routes**: Use square brackets `[id]/`
+- **Catch-all Routes**: Use `[...nextauth]/` for flexible routing
+
+### Utilities and Hooks
+- **camelCase**: `useAuth.ts`, `date-utils.ts`
+- **Descriptive**: Clear purpose indication
+
+## 🔧 Import Conventions
+
+### Path Aliases
+- Use `@/` for root-relative imports
+- `@/components/` for component imports
+- `@/lib/` for utility imports
+- `@/hooks/` for custom hooks
+
+### Import Order
+1. React and Next.js imports
+2. Third-party libraries
+3. Internal components and utilities
+4. Relative imports
+5. Type-only imports (with `type` keyword)
+
+## 📋 Critical Requirements
+
+### Header Requirements
+- **Logo + Name**: Always include both logo and "Palabreo" name in headers
+- **Consistent Icons**: Use Lucide React icons throughout the application
+- **No Emojis**: Avoid emojis in favor of consistent iconography
+
+### Memory Guidelines
+- Follow established user preferences for design consistency
+- Maintain header logo and name requirements
+- Preserve icon consistency across components
+
+### Testing & Quality
+- Implement database cleanup for all tests
+- Use proper rollback procedures for data integrity
+- Test with PowerShell commands: `powershell -Command Invoke-WebRequest`
+
+## 🔄 User Input Workflow
+- Always implement `userinput.py` for interactive task loops
+- Continue user input until explicit "stop" command
+- Execute tasks immediately upon user input
+- Propose next steps after task completion
+
+## 📝 Code Quality Standards
+- **TypeScript**: Strict type checking enabled
+- **ESLint**: Follow Next.js configuration
+- **Prettier**: Consistent code formatting
+- **Comments**: Document complex business logic
+- **TODOs**: Mark validation requirements and pending tasks
+
+## 🎨 Design System
+- **Colors**: Red-based palette with variants defined in Tailwind config
+- **Typography**: Inter for headings, Roboto for body text
+- **Spacing**: Consistent padding and margins using Tailwind classes
+- **Animations**: Subtle animations using Framer Motion and Tailwind
+
+This structure ensures maintainable, scalable code that aligns with Palabreo's literary platform goals while maintaining consistency across the development team.

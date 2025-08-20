@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark, BookOpen, ArrowLeft } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import AppHeader from '@/components/AppHeader'
 
 type Author = {
   name: string
@@ -98,36 +99,7 @@ export default function FavoritesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => router.push('/main')}
-              className="h-12 w-12 overflow-hidden rounded-md flex items-center justify-center bg-transparent"
-              aria-label="Ir al inicio"
-            >
-              <div className="relative h-[200%] w-[200%] -m-[50%]">
-                <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" className="object-cover" priority />
-              </div>
-            </button>
-            <h1
-              onClick={() => router.push('/main')}
-              className="text-xl md:text-2xl font-bold text-red-600 cursor-pointer [font-family:var(--font-poppins)]"
-            >
-              Palabreo
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.back()} className="hidden sm:inline-flex">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Atrás
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/main')}>
-              Ir al feed
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center gap-2 mb-4 sm:mb-6">

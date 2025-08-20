@@ -1,0 +1,412 @@
+---
+globs: *.tsx,*.jsx,*.css
+description: "Tailwind CSS and design system guidelines for Palabreo"
+---
+
+# Tailwind CSS & Design System
+
+## 🎨 Color Palette
+
+### Primary Colors
+```css
+/* Red-based palette for literary platform */
+primary: '#B91C1C'      /* Dark red - main brand color */
+secondary: '#DC2626'    /* Medium red - secondary actions */
+pastel: '#FEE2E2'      /* Light red - backgrounds and highlights */
+white: '#FFFFFF'       /* Pure white - main background */
+```
+
+### Color Variants
+```css
+/* Red Variant 1 - Darker theme */
+red-variant-1: {
+  primary: '#B91C1C',    /* Darker red */
+  secondary: '#DC2626',  /* Current red */
+  pastel: '#FEE2E2',    /* Light background */
+  dark: '#7F1D1D',      /* Very dark red */
+  bg: '#1C1917'         /* Dark background */
+}
+
+/* Red Variant 2 - Current theme */
+red-variant-2: {
+  primary: '#DC2626',    /* Current red */
+  secondary: '#EF4444',  /* Brighter red */
+  pastel: '#FEE2E2',    /* Light background */
+  dark: '#991B1B',      /* Dark red */
+  bg: '#0C0A09'         /* Very dark background */
+}
+```
+
+### Usage Guidelines
+```tsx
+// Primary actions and branding
+<button className="bg-red-600 hover:bg-red-700 text-white">
+  Primary Action
+</button>
+
+// Secondary actions
+<button className="text-red-600 hover:text-red-700 hover:bg-red-50">
+  Secondary Action
+</button>
+
+// Backgrounds and highlights
+<div className="bg-red-50 border border-red-200">
+  Highlighted content
+</div>
+```
+
+## 🔤 Typography System
+
+### Font Families
+```css
+/* Primary fonts */
+font-inter: ['Inter', 'system-ui', 'sans-serif']     /* Main UI font */
+font-roboto: ['Roboto', 'system-ui', 'sans-serif']   /* Body text */
+font-mono: ['JetBrains Mono', 'Consolas', 'monospace'] /* Code */
+
+/* Semantic font assignments */
+font-heading: ['Inter', 'system-ui', 'sans-serif']    /* Headings */
+font-subheading: ['Roboto', 'system-ui', 'sans-serif'] /* Subheadings */
+font-body: ['Inter', 'system-ui', 'sans-serif']       /* Body text */
+```
+
+### Typography Scale
+```tsx
+// Headings
+<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-heading">
+  Main Heading
+</h1>
+
+<h2 className="text-2xl md:text-3xl font-semibold font-heading">
+  Section Heading
+</h2>
+
+<h3 className="text-xl md:text-2xl font-medium font-subheading">
+  Subsection Heading
+</h3>
+
+// Body text
+<p className="text-base md:text-lg font-body leading-relaxed">
+  Body content with good readability
+</p>
+
+// Small text
+<span className="text-sm text-gray-600">
+  Supporting information
+</span>
+```
+
+## 📐 Spacing & Layout
+
+### Container Patterns
+```tsx
+// Main content containers
+<div className="max-w-full mx-auto px-10 sm:px-16 lg:px-24 xl:px-32">
+  Main content area
+</div>
+
+// Section spacing
+<section className="py-12 md:py-16 lg:py-20">
+  Section content
+</section>
+
+// Component spacing
+<div className="space-y-6 md:space-y-8">
+  Vertically spaced elements
+</div>
+```
+
+### Responsive Breakpoints
+```css
+/* Tailwind default breakpoints (optimized for compatibility) */
+sm: '640px'   /* Small screens */
+md: '768px'   /* Medium screens */
+lg: '1024px'  /* Large screens */
+xl: '1280px'  /* Extra large screens */
+```
+
+### Grid Patterns
+```tsx
+// Responsive grid layouts
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  Grid items
+</div>
+
+// Flexible layouts
+<div className="flex flex-col md:flex-row gap-4 items-center">
+  Flexible content
+</div>
+```
+
+## 🎭 Animation System
+
+### Custom Animations
+```css
+/* Defined in tailwind.config.ts */
+animate-fade-in: 'fadeIn 0.4s ease-out'
+animate-slide-up: 'slideUp 0.4s ease-out'  
+animate-pulse-gentle: 'pulseGentle 2s infinite'
+```
+
+### Animation Usage
+```tsx
+// Page entry animations
+<div className="animate-fade-in">
+  Content that fades in
+</div>
+
+// Interactive elements
+<button className="transform hover:scale-105 transition-transform duration-200">
+  Hover to scale
+</button>
+
+// Loading states
+<div className="animate-pulse-gentle">
+  Loading content
+</div>
+```
+
+### Transition Patterns
+```tsx
+// Smooth transitions
+<div className="transition-all duration-300 ease-in-out hover:shadow-lg">
+  Smooth hover effect
+</div>
+
+// Color transitions
+<button className="bg-red-600 hover:bg-red-700 transition-colors duration-200">
+  Color transition
+</button>
+```
+
+## 🧩 Component Styling Patterns
+
+### Button Variants
+```tsx
+// Primary button
+<button className="
+  bg-red-600 hover:bg-red-700 
+  text-white font-medium
+  px-4 py-2 rounded-lg
+  transition-colors duration-200
+  focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+">
+  Primary Button
+</button>
+
+// Secondary button
+<button className="
+  border border-red-600 text-red-600
+  hover:bg-red-50 hover:border-red-700
+  px-4 py-2 rounded-lg
+  transition-all duration-200
+">
+  Secondary Button
+</button>
+
+// Ghost button
+<button className="
+  text-gray-600 hover:text-red-600 hover:bg-red-50
+  px-3 py-2 rounded-md
+  transition-colors duration-200
+">
+  Ghost Button
+</button>
+```
+
+### Input Styles
+```tsx
+// Standard input
+<input className="
+  w-full px-3 py-2
+  border border-gray-300 rounded-lg
+  focus:ring-1 focus:ring-red-500 focus:border-red-500
+  bg-white text-gray-900
+  placeholder-gray-500
+  transition-colors duration-200
+" />
+
+// Search input with icon
+<div className="relative">
+  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+  <input className="
+    w-full pl-10 pr-4 py-2
+    border border-gray-300 rounded-lg
+    focus:ring-1 focus:ring-red-500 focus:border-red-500
+  " />
+</div>
+```
+
+### Card Patterns
+```tsx
+// Standard card
+<div className="
+  bg-white rounded-lg shadow-sm border border-gray-200
+  p-6 hover:shadow-md
+  transition-shadow duration-200
+">
+  Card content
+</div>
+
+// Interactive card
+<div className="
+  bg-white rounded-lg border border-gray-200
+  p-6 cursor-pointer
+  hover:shadow-lg hover:border-red-200
+  transform hover:scale-[1.02]
+  transition-all duration-200
+">
+  Interactive card
+</div>
+```
+
+## 📱 Mobile-First Patterns
+
+### Responsive Typography
+```tsx
+// Mobile-first text sizing
+<h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl">
+  Responsive heading
+</h1>
+
+// Mobile-optimized reading
+<p className="text-base md:text-lg leading-relaxed md:leading-loose">
+  Readable body text
+</p>
+```
+
+### Mobile Navigation
+```tsx
+// Mobile-friendly header
+<header className="sticky top-0 z-50 bg-white border-b">
+  <div className="px-4 sm:px-6 md:px-8">
+    <div className="flex items-center justify-between h-16">
+      {/* Logo always visible */}
+      <div className="flex items-center space-x-3">
+        <Image src="/1.png" alt="Logo" className="h-8 w-8" />
+        <span className="font-bold text-red-600">Palabreo</span>
+      </div>
+      
+      {/* Mobile-hidden elements */}
+      <div className="hidden md:flex items-center space-x-4">
+        Desktop navigation
+      </div>
+      
+      {/* Mobile-only elements */}
+      <div className="md:hidden">
+        Mobile navigation
+      </div>
+    </div>
+  </div>
+</header>
+```
+
+### Touch-Friendly Interactions
+```tsx
+// Minimum 44px touch targets
+<button className="
+  min-h-[44px] min-w-[44px]
+  px-4 py-2
+  touch-manipulation
+">
+  Touch-friendly button
+</button>
+
+// Swipe-friendly cards
+<div className="
+  touch-pan-x
+  overflow-x-auto
+  flex space-x-4 pb-4
+  snap-x snap-mandatory
+">
+  <div className="snap-start flex-shrink-0">Card 1</div>
+  <div className="snap-start flex-shrink-0">Card 2</div>
+</div>
+```
+
+## 🎯 Accessibility Patterns
+
+### Focus States
+```tsx
+// Visible focus indicators
+<button className="
+  focus:outline-none 
+  focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+  rounded-md
+">
+  Accessible button
+</button>
+
+// Skip links
+<a href="#main-content" className="
+  skip-link
+  sr-only focus:not-sr-only
+  absolute top-4 left-4 z-50
+  bg-red-600 text-white
+  px-4 py-2 rounded-md
+">
+  Skip to main content
+</a>
+```
+
+### Screen Reader Support
+```tsx
+// Screen reader only content
+<span className="sr-only">
+  Screen reader only text
+</span>
+
+// Proper contrast ratios
+<div className="bg-red-600 text-white"> {/* WCAG AA compliant */}
+  High contrast content
+</div>
+```
+
+## 🔧 Utility Patterns
+
+### Common Combinations
+```tsx
+// Centered content
+<div className="flex items-center justify-center min-h-screen">
+  Centered content
+</div>
+
+// Sticky header
+<header className="sticky top-0 z-50 bg-white shadow-sm">
+  Sticky header
+</header>
+
+// Full-width sections with max-width content
+<section className="w-full bg-gray-50">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    Constrained content
+  </div>
+</section>
+```
+
+### Dark Mode Support (Future)
+```tsx
+// Prepare for dark mode
+<div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+  Dark mode ready content
+</div>
+```
+
+## 📏 Performance Optimization
+
+### CSS Purging
+- Tailwind automatically purges unused styles in production
+- Use dynamic class names carefully to avoid purging issues
+- Use safelist in `tailwind.config.ts` for dynamic classes
+
+### Critical CSS
+```tsx
+// Inline critical styles for above-the-fold content
+<style jsx>{`
+  .hero-section {
+    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  }
+`}</style>
+```
+
+This design system ensures consistent visual language, optimal user experience, and maintainable styling across the Palabreo platform while adhering to accessibility standards and performance best practices.

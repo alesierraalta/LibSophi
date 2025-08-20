@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, UserPlus, AtSign, BookOpen, Eye, Mail, Copy, Repeat2 } from 'lucide-react'
 import ProfileHoverCard from '@/components/ProfileHoverCard'
-import AuthHeader from '@/components/AuthHeader'
+import AppHeader from '@/components/AppHeader'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { createLikeNotification, createCommentNotification, createFollowNotification } from '@/lib/notifications'
 
@@ -21,26 +21,7 @@ const MemoizedBadge = memo(Badge)
 const MemoizedButton = memo(Button)
 const MemoizedAvatar = memo(Avatar)
 
-// Initial posts data - moved outside component to prevent recreation
-const initialPosts = [
-  {
-    id: 1,
-    author: {
-      name: "María González",
-      username: "@mariagonzalez",
-      avatar: "/api/placeholder/40/40"
-    },
-    title: "El susurro del viento - Capítulo 3",
-    content: "En las montañas de los Andes, donde el viento susurra secretos ancestrales, una joven escritora descubre que las palabras tienen el poder de cambiar el destino. El manuscrito que había encontrado en la biblioteca de su abuela no era solo una colección de cuentos, sino un grimorio de historias que cobraban vida cuando eran leídas en voz alta...",
-    genre: "Fantasía",
-    readTime: "12 min",
-    likes: 24,
-    comments: 8,
-    shares: 3,
-    isLiked: false,
-    timestamp: "hace 2 horas"
-  }
-]
+// Removed static initial posts data to prevent showing static data before real data loads
 
 function MainPageInner() {
   const [posts, setPosts] = useState<any[]>([])
@@ -53,6 +34,7 @@ function MainPageInner() {
   const [suggestedAuthors, setSuggestedAuthors] = useState<any[]>([])
   const [spotlightNewsletters, setSpotlightNewsletters] = useState<any[]>([])
   const [popularStories, setPopularStories] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -84,7 +66,7 @@ function MainPageInner() {
         if (authorFilterIds && authorFilterIds.length > 0) {
           query = query.in('author_id', authorFilterIds)
         }
-        const { data: works } = await query
+        const { data: works, error: worksError } = await query
         if (Array.isArray(works)) {
           // Bulk fetch authors
           const authorIds = Array.from(new Set(works.map((w: any) => w.author_id).filter(Boolean)))
@@ -158,8 +140,13 @@ function MainPageInner() {
             }))
           }
           setPosts(mapped)
+        } else {
+          setPosts([])
         }
-      } catch {}
+      } catch (error) {
+        console.error('Error loading posts:', error)
+        setPosts([])
+      }
     })()
   }, [onlyFollowing])
 
@@ -285,6 +272,9 @@ function MainPageInner() {
           genre: w.genre || 'Obra',
         })))
       } catch {}
+      finally {
+        setIsLoading(false)
+      }
     })()
   }, [])
 
@@ -333,9 +323,7 @@ function MainPageInner() {
   const navigationItems = useMemo(() => [
     { icon: Home, label: 'Inicio', id: 'feed' },
     { icon: Compass, label: 'Explorar', id: 'explore' },
-    { icon: PenTool, label: 'Mis Obras', id: 'my-stories' },
-    { icon: Library, label: 'Biblioteca', id: 'library' },
-    { icon: Bookmark, label: 'Favoritos', id: 'saved' }
+    { icon: PenTool, label: 'Mis Obras', id: 'my-stories' }
   ], [])
 
   // Mobile top carousel items only: Inicio, Explorar, Guardados
@@ -379,16 +367,6 @@ function MainPageInner() {
       router.push('/mis-obras')
       return
     }
-    if (tabId === 'library') {
-      router.push('/main?tab=library')
-      setActiveTab('library')
-      return
-    }
-    if (tabId === 'saved') {
-      router.push('/main?tab=saved')
-      setActiveTab('saved')
-      return
-    }
     setActiveTab(tabId)
   }, [router])
 
@@ -426,98 +404,7 @@ function MainPageInner() {
     </button>
   ))
 
-  // Memoized posts data with expanded content
-  const memoizedPosts = useMemo(() => [
-    {
-      id: 1,
-      author: {
-        name: "María González",
-        username: "@mariagonzalez",
-        avatar: "/api/placeholder/40/40"
-      },
-      title: "El susurro del viento - Capítulo 3",
-      content: "En las montañas de los Andes, donde el viento susurra secretos ancestrales, una joven escritora descubre que las palabras tienen el poder de cambiar el destino. El manuscrito que había encontrado en la biblioteca de su abuela no era solo una colección de cuentos, sino un grimorio de historias que cobraban vida cuando eran leídas en voz alta...",
-      genre: "Fantasía",
-      readTime: "12 min",
-      likes: 24,
-      comments: 8,
-      shares: 3,
-      isLiked: false,
-      timestamp: "hace 2 horas",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop"
-    },
-    {
-      id: 2,
-      author: {
-        name: "Carlos Mendoza",
-        username: "@carlosmendoza",
-        avatar: "/api/placeholder/40/40"
-      },
-      title: "Versos al amanecer",
-      content: "Cuando la luz toca las montañas / y el silencio se vuelve canción, / mi alma despierta entre las ramas / de un sueño que no tiene razón. / El viento susurra promesas / que solo el corazón puede entender, / mientras las estrellas se desvanecen / en el lienzo del amanecer...",
-      genre: "Poesía",
-      readTime: "3 min",
-      likes: 18,
-      comments: 5,
-      shares: 2,
-      isLiked: true,
-      timestamp: "hace 4 horas",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop"
-    },
-    {
-      id: 3,
-      author: {
-        name: "Ana Rodríguez",
-        username: "@anarodriguez",
-        avatar: "/api/placeholder/40/40"
-      },
-      title: "Capítulo 1: El último tren",
-      content: "La estación estaba desierta a esa hora de la madrugada. Solo el eco de mis pasos resonaba entre los andenes vacíos, creando una sinfonía melancólica que parecía narrar todas las despedidas que habían ocurrido en ese lugar. El último tren de la noche se acercaba, y con él, la oportunidad de cambiar mi destino para siempre. Pero ¿estaba realmente preparada para dejar atrás todo lo que conocía?",
-      genre: "Novela",
-      readTime: "8 min",
-      likes: 42,
-      comments: 15,
-      shares: 8,
-      isLiked: false,
-      timestamp: "hace 6 horas",
-      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=400&fit=crop"
-    },
-    {
-      id: 4,
-      author: {
-        name: "Diego Herrera",
-        username: "@diegoherrera",
-        avatar: "/api/placeholder/40/40"
-      },
-      title: "Monólogo del tiempo perdido",
-      content: "(El personaje camina lentamente por el escenario, con una maleta en la mano) / PERSONAJE: ¿Cuántas veces hemos dejado que el tiempo se escurra entre nuestros dedos como arena? Yo he sido coleccionista de momentos perdidos, archivero de oportunidades que nunca tomé. Esta maleta... (la levanta) está llena de todos los 'hubiera' que nunca se convirtieron en 'hice'.",
-      genre: "Teatro",
-      readTime: "5 min",
-      likes: 31,
-      comments: 12,
-      shares: 6,
-      isLiked: true,
-      timestamp: "hace 8 horas"
-    },
-    {
-      id: 5,
-      author: {
-        name: "Sofía Martín",
-        username: "@sofiamartin",
-        avatar: "/api/placeholder/40/40"
-      },
-      title: "Reflexiones semanales: El arte de la paciencia",
-      content: "Queridos lectores, esta semana he estado reflexionando sobre algo que nuestra sociedad acelerada parece haber olvidado: el arte de la paciencia. En un mundo donde todo debe ser instantáneo, donde la gratificación inmediata es la norma, hemos perdido la capacidad de esperar, de saborear el proceso, de encontrar belleza en la lentitud. Les comparto tres ejercicios que he estado practicando...",
-      genre: "Newsletter",
-      readTime: "6 min",
-      likes: 67,
-      comments: 23,
-      shares: 15,
-      isLiked: false,
-      timestamp: "hace 12 horas",
-      image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop"
-    }
-  ], [])
+  // Removed static memoized posts data to prevent showing static data before real data loads
 
   // Memoized post card component
   const PostCard = memo(({ post }: { post: any }) => {
@@ -529,33 +416,57 @@ function MainPageInner() {
     const [localReposts, setLocalReposts] = useState<number>((post as any).reposts ?? 0)
     const [localReposted, setLocalReposted] = useState<boolean>(false)
     const [bookmarked, setBookmarked] = useState<boolean>(false)
-    const [comments, setComments] = useState<{ id: string; author: any; text: string; time: number }[]>(() => {
-      try {
-        const raw = localStorage.getItem(`palabreo-comments-${post.id}`)
-        return raw ? JSON.parse(raw) : []
-      } catch { return [] }
-    })
+    const [comments, setComments] = useState<{ id: string; author: any; text: string; time: number }[]>([])
+    const [isLoadingComments, setIsLoadingComments] = useState(true)
+    
     React.useEffect(() => { setLocalComments(comments.length) }, [comments])
+    
+    // Load comments from database
     React.useEffect(() => {
-      // Seed example comments if none
-      try {
-        const key = `palabreo-comments-${post.id}`
-        const seededKey = `palabreo-comments-seeded-${post.id}`
-        if (localStorage.getItem(seededKey)) return
-        const raw = localStorage.getItem(key)
-        const existing = raw ? JSON.parse(raw) : []
-        if (Array.isArray(existing) && existing.length > 0) return
-        const now = Date.now()
-        const samples = [
-          { id: `${now}-1`, author: { name: 'Elena Martínez', username: '@elena_writes' }, text: `Impresionante atmósfera, @${post.author.username.replace('@','')} 👏`, time: now - 1000*60*20 },
-          { id: `${now}-2`, author: { name: 'Carlos Ruiz', username: '@carlos_stories' }, text: 'Coincido, gran ritmo narrativo.', time: now - 1000*60*12 },
-        ]
-        localStorage.setItem(key, JSON.stringify(samples))
-        localStorage.setItem(seededKey, '1')
-        setComments(samples)
-      } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+      const loadComments = async () => {
+        try {
+          const supabase = getSupabaseBrowserClient()
+          
+          // Get comments with author information
+          const { data: commentsData } = await supabase
+            .from('comments')
+            .select(`
+              id,
+              content,
+              created_at,
+              user_id,
+              profiles:user_id (
+                name,
+                username,
+                avatar_url
+              )
+            `)
+            .eq('work_id', post.id)
+            .order('created_at', { ascending: true })
+          
+          if (commentsData) {
+            const formattedComments = commentsData.map((comment: any) => ({
+              id: comment.id,
+              author: {
+                name: comment.profiles?.name || 'Usuario',
+                username: comment.profiles?.username ? `@${comment.profiles.username}` : '@usuario',
+                avatar: comment.profiles?.avatar_url
+              },
+              text: comment.content,
+              time: new Date(comment.created_at).getTime()
+            }))
+            
+            setComments(formattedComments)
+          }
+        } catch (error) {
+          console.error('Error loading comments:', error)
+        } finally {
+          setIsLoadingComments(false)
+        }
+      }
+      
+      loadComments()
+    }, [post.id])
     const onLike = async () => {
       const supabase = getSupabaseBrowserClient()
       if (!currentUserId) {
@@ -584,26 +495,63 @@ function MainPageInner() {
     }
     const onAddComment = async (text: string) => {
       const trimmed = text.trim()
-      if (!trimmed) return
-      const newItem = { id: `${Date.now()}-${Math.random().toString(36).slice(2,6)}`, author: { name: 'Tú', username: '@tu' }, text: trimmed, time: Date.now() }
-      setComments(prev => {
-        const next = [...prev, newItem]
-        try { localStorage.setItem(`palabreo-comments-${post.id}`, JSON.stringify(next)) } catch {}
-        return next
-      })
+      if (!trimmed || !currentUserId) return
+      
       try {
-        if (currentUserId) {
-          const supabase = getSupabaseBrowserClient()
-          await supabase.from('comments').insert({ work_id: post.id, author_id: currentUserId, text: trimmed })
-          
-          // Create notification for the author
-          if (currentUserId !== post.author_id) {
-            const { data: userData } = await supabase.auth.getUser()
-            const currentUserName = userData?.user?.user_metadata?.name || userData?.user?.email || 'Alguien'
-            createCommentNotification(post.id, post.title, post.author_id, currentUserId, currentUserName)
-          }
+        const supabase = getSupabaseBrowserClient()
+        
+        // Get current user profile for immediate UI update
+        const { data: userData } = await supabase.auth.getUser()
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('name, username, avatar_url')
+          .eq('id', currentUserId)
+          .single()
+        
+        // Insert comment into database
+        const { data: newComment, error } = await supabase
+          .from('comments')
+          .insert({ 
+            work_id: post.id, 
+            user_id: currentUserId, 
+            content: trimmed 
+          })
+          .select(`
+            id,
+            content,
+            created_at,
+            user_id
+          `)
+          .single()
+        
+        if (error) throw error
+        
+        // Immediately update UI with the new comment
+        const newCommentItem = {
+          id: newComment.id,
+          author: {
+            name: userProfile?.name || userData?.user?.user_metadata?.name || 'Tú',
+            username: userProfile?.username ? `@${userProfile.username}` : '@tu',
+            avatar: userProfile?.avatar_url
+          },
+          text: trimmed,
+          time: new Date(newComment.created_at).getTime()
         }
-      } catch {}
+        
+        setComments(prev => [...prev, newCommentItem])
+        
+        // Clear the comment input
+        setCommentText('')
+        
+        // Create notification for the author
+        if (currentUserId !== post.author_id) {
+          const currentUserName = userProfile?.name || userData?.user?.user_metadata?.name || userData?.user?.email || 'Alguien'
+          createCommentNotification(post.id, post.title, post.author_id, currentUserId, currentUserName)
+        }
+        
+      } catch (error) {
+        console.error('Error adding comment:', error)
+      }
     }
     const onRepost = async () => {
       setLocalReposts(prev => (localReposted ? Math.max(0, prev - 1) : prev + 1))
@@ -753,7 +701,19 @@ function MainPageInner() {
 
         {showCommentBox && (
           <div className="mt-3 border-t border-gray-100 pt-3 space-y-3">
-            {comments.length > 0 && (
+            {isLoadingComments ? (
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-2 animate-pulse">
+                    <div className="h-8 w-8 bg-gray-200 rounded-full flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-200 rounded w-20 mb-1"></div>
+                      <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : comments.length > 0 ? (
               <div className="space-y-2">
                 {comments.slice(-5).map((c) => {
                   const displayName = typeof c.author === 'object' && c.author?.name ? c.author.name : (typeof c.author === 'string' ? c.author : 'Usuario')
@@ -776,12 +736,17 @@ function MainPageInner() {
                   </div>)
                 })}
               </div>
+            ) : (
+              <div className="text-center py-4 text-sm text-gray-500">
+                No hay comentarios aún. ¡Sé el primero en comentar!
+              </div>
             )}
             <div className="flex items-center gap-2">
               <input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Escribe un comentario..." className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm" />
               <button
-                onClick={() => { onAddComment(commentText); setCommentText('') }}
-                className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                onClick={() => onAddComment(commentText)}
+                className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!commentText.trim() || !currentUserId}
               >
                 Comentar
               </button>
@@ -930,7 +895,7 @@ function MainPageInner() {
       </Suspense>
       
       {/* Header */}
-      <AuthHeader />
+      <AppHeader />
 
 
       {/* Mobile Navigation Carousel - moved to top */}
@@ -1010,7 +975,14 @@ function MainPageInner() {
                     Solo seguidos
                   </label>
                 </div>
-                {posts.length > 0 ? (
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                      <div className="text-sm text-gray-600">Cargando publicaciones...</div>
+                    </div>
+                  </div>
+                ) : posts.length > 0 ? (
                   posts.map((post) => (
                     <PostCard key={post.id} post={post} />
                   ))

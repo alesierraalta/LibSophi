@@ -7,6 +7,7 @@ import { MessageCircle, UserPlus, AtSign, Bell, Heart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import AppHeader from '@/components/AppHeader'
 
 type NotificationType = 'comment' | 'follow' | 'mention' | 'like'
 
@@ -170,35 +171,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div
-              className="h-12 w-12 overflow-hidden rounded-md flex items-center justify-center bg-transparent cursor-pointer"
-              onClick={() => router.push('/main')}
-              role="link"
-              aria-label="Ir al inicio"
-              title="Ir al inicio"
-              tabIndex={0}
-            >
-              <div className="relative h-[200%] w-[200%] -m-[50%]">
-                <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" className="object-cover" priority />
-              </div>
-            </div>
-            <h1
-              onClick={() => router.push('/main')}
-              className="text-xl md:text-2xl font-bold text-red-600 [font-family:var(--font-poppins)] cursor-pointer"
-              title="Ir al inicio"
-              aria-label="Ir al inicio"
-              role="link"
-              tabIndex={0}
-            >
-              Palabreo
-            </h1>
-          </div>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => router.push('/main')}>Volver al feed</Button>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">

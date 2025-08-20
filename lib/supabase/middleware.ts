@@ -32,14 +32,11 @@ export async function updateSession(request: NextRequest) {
 
   // Define protected routes that require authentication
   const protectedRoutes = [
-    '/main',
     '/writer', 
     '/profile',
-    '/mis-obras',
     '/favorites',
     '/notifications',
     '/work',
-    '/explore',
     '/demo',
     '/gridstack-demo'
   ]
@@ -47,6 +44,9 @@ export async function updateSession(request: NextRequest) {
   // Define public routes that don't require authentication
   const publicRoutes = [
     '/',
+    '/main',
+    '/explore',
+    '/mis-obras', // Added - allow access without authentication, will show demo data
     '/login',
     '/register',
     '/auth',

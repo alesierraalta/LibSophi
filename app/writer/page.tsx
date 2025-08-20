@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import AppHeader from '@/components/AppHeader'
 
 export default function WriterPage() {
   const router = useRouter()
@@ -891,55 +892,10 @@ export default function WriterPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className={`bg-white border-b border-gray-200 sticky top-0 z-50 ${isMobile && focusMode ? 'hidden' : ''}`}>
-        <div className="w-full max-w-none px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-12 sm:h-16">
-            <div className="flex items-center space-x-3">
-              <div
-                onClick={() => router.push('/main')}
-                className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 overflow-hidden rounded-md flex items-center justify-center bg-transparent cursor-pointer"
-                title="Ir al inicio"
-                aria-label="Ir al inicio"
-                role="link"
-              >
-                <div className="relative h-[200%] w-[200%] -m-[50%]">
-                  <Image
-                    src="/1.png"
-                    alt="Palabreo logo"
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-              </div>
-              <h1
-                className="text-xl md:text-2xl font-bold text-red-600 cursor-pointer hover:text-red-700"
-                onClick={() => router.push('/main')}
-                title="Regresar al feed"
-                aria-label="Regresar al feed"
-              >
-                Modo Escritor
-              </h1>
-            </div>
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="hidden sm:flex items-center text-xs text-gray-500">
-                {isSaving ? (
-                  <span className="flex items-center gap-1">Guardando…</span>
-                ) : lastSavedAt ? (
-                  <span className="flex items-center gap-1">Guardado a las {lastSavedAt.toLocaleTimeString()}</span>
-                ) : (
-                  <span className="flex items-center gap-1">Listo para escribir</span>
-                )}
-              </div>
-              <Button variant="outline" onClick={() => router.push('/main')} className="text-sm">Cancelar</Button>
-              <Button ref={publishBtnRef} disabled={isPublishDisabled} onClick={handlePublish} className="bg-red-600 hover:bg-red-700 text-white text-sm">
-                🚀 Publicar
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader 
+        showSearch={false} 
+        className={isMobile && focusMode ? 'hidden' : ''} 
+      />
 
       {/* Mobile mini toolbar under header */}
       <div className={`sm:hidden sticky top-12 z-40 border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 ${isMobile && focusMode ? 'hidden' : ''}` }>

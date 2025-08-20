@@ -37,7 +37,7 @@ export const AnimatedWrapper: React.FC<AnimatedWrapperProps> = ({
     }
   };
 
-  const variants = getVariant();
+  let variants = getVariant();
   
   // Modify transition if duration or delay is provided
   if (duration || delay) {

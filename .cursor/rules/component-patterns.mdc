@@ -1,0 +1,354 @@
+---
+globs: *.tsx,*.jsx
+description: "React and Next.js component patterns for Palabreo"
+---
+
+# React & Next.js Component Patterns
+
+## 🧩 Component Architecture
+
+### Component Types
+- **Server Components** (default): For data fetching and static content
+- **Client Components**: Use `'use client'` for interactivity
+- **Hybrid Components**: Server wrapper with client children
+
+### Component Structure Template
+```tsx
+'use client' // Only if needed
+
+import React, { useState } from 'react'
+import { ComponentProps } from '@/types'
+import { utilityFunction } from '@/lib/utils'
+
+interface ComponentNameProps {
+  required: string
+  optional?: boolean
+  children?: React.ReactNode
+  className?: string
+}
+
+export default function ComponentName({ 
+  required, 
+  optional = false, 
+  children,
+  className = ''
+}: ComponentNameProps) {
+  // Component logic here
+  
+  return (
+    <div className={`base-classes ${className}`}>
+      {children}
+    </div>
+  )
+}
+```
+
+## 📱 Responsive Design Patterns
+
+### Mobile-First Approach
+```tsx
+// Always start with mobile styles, then add larger screens
+<div className="
+  px-4 py-2          // Mobile
+  sm:px-6 sm:py-3    // Small screens (640px+)
+  md:px-8 md:py-4    // Medium screens (768px+)
+  lg:px-12 lg:py-6   // Large screens (1024px+)
+  xl:px-16 xl:py-8   // Extra large (1280px+)
+">
+```
+
+### Conditional Rendering for Devices
+```tsx
+// Hide/show elements based on screen size
+<div className="hidden md:block">Desktop content</div>
+<div className="block md:hidden">Mobile content</div>
+
+// Use dynamic imports for mobile-specific components
+const MobileFooter = dynamic(() => import('./MobileFooter'), { ssr: false })
+```
+
+## 🎨 Styling Patterns
+
+### Header Component Pattern
+```tsx
+// Always include logo AND name (per memory requirements)
+<div className="flex items-center space-x-3">
+  <div className="h-12 w-12 overflow-hidden rounded-md">
+    <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" />
+  </div>
+  <h1 className="text-xl font-bold text-red-600">Palabreo</h1>
+</div>
+```
+
+### Icon Usage (Lucide React)
+```tsx
+import { Search, Bell, PenTool } from 'lucide-react'
+
+// Consistent icon sizing and styling
+<Search className="h-4 w-4" />
+<Bell className="h-5 w-5 text-gray-600 hover:text-red-600" />
+
+// NO emojis - always use icons for consistency
+```
+
+### Button Patterns
+```tsx
+// Primary button
+<Button className="bg-red-600 hover:bg-red-700 text-white">
+  <PenTool className="h-4 w-4 mr-2" />
+  Action Text
+</Button>
+
+// Ghost button
+<Button variant="ghost" size="sm" className="text-gray-600 hover:text-red-600">
+  <Icon className="h-4 w-4" />
+</Button>
+```
+
+## 🔄 State Management Patterns
+
+### Local State
+```tsx
+// Use useState for component-local state
+const [isOpen, setIsOpen] = useState(false)
+const [formData, setFormData] = useState({ name: '', email: '' })
+
+// Use useEffect for side effects
+useEffect(() => {
+  // Effect logic
+}, [dependencies])
+```
+
+### Global State (Zustand)
+```tsx
+import { useAuthStore } from '@/lib/stores/auth-store'
+import { useUIStore } from '@/lib/stores/ui-store'
+
+// Access global state
+const { user, isAuthenticated } = useAuthStore()
+const { theme, setTheme } = useUIStore()
+```
+
+### Form Handling
+```tsx
+// Controlled components
+<input
+  value={formData.name}
+  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+  className="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-red-500"
+/>
+
+// Form submission
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  // Handle form logic
+}
+```
+
+## 🚀 Performance Patterns
+
+### Dynamic Imports
+```tsx
+// Code splitting for heavy components
+const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+})
+
+// Conditional loading
+const ConditionalComponent = dynamic(() => import('./ConditionalComponent'), {
+  ssr: false
+})
+```
+
+### Image Optimization
+```tsx
+import Image from 'next/image'
+
+// Always use Next.js Image component
+<Image
+  src="/image.jpg"
+  alt="Descriptive alt text"
+  width={400}
+  height={300}
+  sizes="(max-width: 768px) 100vw, 400px"
+  priority={isAboveFold}
+/>
+```
+
+### Lazy Loading
+```tsx
+// Use React.lazy for component lazy loading
+const LazySection = React.lazy(() => import('./LazySection'))
+
+// Wrap in Suspense
+<Suspense fallback={<div>Loading...</div>}>
+  <LazySection />
+</Suspense>
+```
+
+## 🎭 Animation Patterns
+
+### Framer Motion
+```tsx
+import { motion } from 'framer-motion'
+
+// Page transitions
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.4 }}
+>
+  Content
+</motion.div>
+
+// Hover animations
+<motion.button
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+>
+  Button
+</motion.button>
+```
+
+### Tailwind Animations
+```tsx
+// Built-in animations
+<div className="animate-fade-in">Fade in content</div>
+<div className="animate-slide-up">Slide up content</div>
+<div className="animate-pulse-gentle">Gentle pulse</div>
+```
+
+## 🔐 Authentication Patterns
+
+### Protected Routes
+```tsx
+import { AuthGuard } from '@/components/AuthGuard'
+
+// Wrap protected content
+<AuthGuard>
+  <ProtectedContent />
+</AuthGuard>
+```
+
+### User Context
+```tsx
+import { useAuth } from '@/hooks/useAuth'
+
+const { user, isLoading, signOut } = useAuth()
+
+if (isLoading) return <LoadingSpinner />
+if (!user) return <LoginPrompt />
+```
+
+## 📊 Data Fetching Patterns
+
+### Server Components
+```tsx
+// Fetch data in server components
+async function ServerComponent() {
+  const data = await fetchData()
+  
+  return (
+    <div>
+      {data.map(item => (
+        <ClientComponent key={item.id} data={item} />
+      ))}
+    </div>
+  )
+}
+```
+
+### Client-side Fetching
+```tsx
+// Use SWR or React Query for client-side data fetching
+import useSWR from 'swr'
+
+const { data, error, isLoading } = useSWR('/api/data', fetcher)
+
+if (error) return <ErrorMessage />
+if (isLoading) return <LoadingSkeleton />
+```
+
+## 🧪 Testing Patterns
+
+### Component Testing
+```tsx
+// Test component props and behavior
+import { render, screen, fireEvent } from '@testing-library/react'
+import Component from './Component'
+
+test('renders component with props', () => {
+  render(<Component title="Test" />)
+  expect(screen.getByText('Test')).toBeInTheDocument()
+})
+
+// Test user interactions
+test('handles click events', () => {
+  const handleClick = jest.fn()
+  render(<Component onClick={handleClick} />)
+  
+  fireEvent.click(screen.getByRole('button'))
+  expect(handleClick).toHaveBeenCalled()
+})
+```
+
+## 🎯 Accessibility Patterns
+
+### ARIA Labels and Roles
+```tsx
+// Proper accessibility attributes
+<button
+  aria-label="Close dialog"
+  aria-expanded={isOpen}
+  aria-haspopup="menu"
+  role="button"
+>
+  <X className="h-4 w-4" />
+</button>
+
+// Skip links for navigation
+<a href="#main-content" className="skip-link">
+  Skip to main content
+</a>
+```
+
+### Focus Management
+```tsx
+// Focus management for modals and dropdowns
+const dialogRef = useRef<HTMLDivElement>(null)
+
+useEffect(() => {
+  if (isOpen && dialogRef.current) {
+    dialogRef.current.focus()
+  }
+}, [isOpen])
+```
+
+## 📋 Error Handling
+
+### Error Boundaries
+```tsx
+// Wrap components that might throw errors
+<ErrorBoundary fallback={<ErrorFallback />}>
+  <RiskyComponent />
+</ErrorBoundary>
+```
+
+### Form Validation
+```tsx
+// Client-side validation
+const [errors, setErrors] = useState<Record<string, string>>({})
+
+const validateForm = (data: FormData) => {
+  const newErrors: Record<string, string> = {}
+  
+  if (!data.email) newErrors.email = 'Email is required'
+  if (!data.password) newErrors.password = 'Password is required'
+  
+  setErrors(newErrors)
+  return Object.keys(newErrors).length === 0
+}
+```
+
+These patterns ensure consistent, maintainable, and performant React components that align with Palabreo's design system and user experience goals.

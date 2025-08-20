@@ -7,7 +7,23 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next build"
+    "export": "next build",
+    "test:e2e": "ts-node tests/e2e/run-tests.ts",
+    "test:e2e:headed": "ts-node tests/e2e/run-tests.ts -- --headed",
+    "test:e2e:debug": "ts-node tests/e2e/run-tests.ts -- --debug --headed",
+    "test:e2e:firefox": "ts-node tests/e2e/run-tests.ts -- --browser firefox",
+    "test:e2e:webkit": "ts-node tests/e2e/run-tests.ts -- --browser webkit",
+    "test:e2e:all-browsers": "ts-node tests/e2e/run-tests.ts -- --browser all",
+    "test:e2e:cleanup": "ts-node -e \"import('./tests/e2e/utils/database-cleanup').then(m => m.databaseCleanup.cleanupAll())\"",
+    "test:e2e:emergency-cleanup": "ts-node -e \"import('./tests/e2e/utils/database-cleanup').then(m => m.databaseCleanup.emergencyCleanup())\"",
+    "playwright:install": "npx playwright install",
+    "playwright:report": "npx playwright show-report",
+    "perf:audit": "npx ts-node scripts/database-audit.ts",
+    "perf:optimize": "supabase db reset --linked && psql $DATABASE_URL -f scripts/optimize-database.sql",
+    "perf:test": "bash scripts/run-performance-tests.sh",
+    "perf:lighthouse": "bash scripts/run-performance-tests.sh lighthouse",
+    "perf:load": "bash scripts/run-performance-tests.sh load",
+    "perf:all": "bash scripts/run-performance-tests.sh all"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.6",
@@ -17,6 +33,7 @@
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.55.0",
     "@tanstack/react-table": "^8.21.3",
+    "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
     "dayjs": "^1.11.13",
     "framer-motion": "^12.23.12",
@@ -32,14 +49,17 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.0",
+    "playwright": "^1.54.2",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

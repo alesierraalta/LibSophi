@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { BookOpen, Heart, Bookmark, MessageCircle, Share2, ChevronLeft } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { createLikeNotification, createCommentNotification } from '@/lib/notifications'
+import AppHeader from '@/components/AppHeader'
 
 type Chapter = { title?: string; content?: string }
 
@@ -188,6 +189,7 @@ export default function WorkDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <AppHeader />
         <div className="max-w-4xl mx-auto p-4">Cargando…</div>
       </div>
     )
@@ -196,6 +198,7 @@ export default function WorkDetailPage() {
   if (!work) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <AppHeader />
         <div className="max-w-4xl mx-auto p-4">No se encontró la obra.</div>
       </div>
     )
@@ -203,21 +206,7 @@ export default function WorkDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.back()}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Atrás
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant={isBookmarked ? 'default' : 'outline'} size="sm" onClick={toggleBookmark} className={isBookmarked ? 'bg-red-600 text-white' : ''}>
-              <Bookmark className="h-4 w-4 mr-1" /> {isBookmarked ? 'Guardado' : 'Guardar'}
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden">

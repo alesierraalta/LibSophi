@@ -1,0 +1,579 @@
+---
+globs: *.test.*,*.spec.*,__tests__/**/*
+description: "Testing strategies and code quality standards for Palabreo"
+---
+
+# Testing & Code Quality
+
+## 🧪 Testing Strategy
+
+### Testing Pyramid
+```
+    E2E Tests (Few)
+   ├─ Integration Tests (Some)
+  └─ Unit Tests (Many)
+```
+
+### Test Types
+- **Unit Tests**: Individual functions and components
+- **Integration Tests**: Component interactions and API endpoints
+- **E2E Tests**: Full user workflows
+- **Visual Regression Tests**: UI consistency
+
+## 🔬 Unit Testing Patterns
+
+### Component Testing
+```typescript
+// __tests__/components/AppHeader.test.tsx
+import { render, screen, fireEvent } from '@testing-library/react'
+import { useRouter } from 'next/navigation'
+import AppHeader from '@/components/AppHeader'
+
+// Mock Next.js router
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
+}))
+
+const mockPush = jest.fn()
+;(useRouter as jest.Mock).mockReturnValue({
+  push: mockPush,
+})
+
+describe('AppHeader', () => {
+  beforeEach(() => {
+    mockPush.mockClear()
+  })
+
+  it('renders logo and brand name', () => {
+    render(<AppHeader />)
+    
+    expect(screen.getByAltText('Palabreo logo')).toBeInTheDocument()
+    expect(screen.getByText('Palabreo')).toBeInTheDocument()
+  })
+
+  it('handles search input changes', () => {
+    const onSearchChange = jest.fn()
+    render(<AppHeader onSearchChange={onSearchChange} />)
+    
+    const searchInput = screen.getByPlaceholderText('Buscar obras, autores...')
+    fireEvent.change(searchInput, { target: { value: 'test search' } })
+    
+    expect(onSearchChange).toHaveBeenCalledWith('test search')
+  })
+
+  it('navigates to writer page on publish button click', () => {
+    render(<AppHeader />)
+    
+    const publishButton = screen.getByRole('button', { name: /publicar/i })
+    fireEvent.click(publishButton)
+    
+    expect(mockPush).toHaveBeenCalledWith('/writer')
+  })
+})
+```
+
+### Hook Testing
+```typescript
+// __tests__/hooks/useAuth.test.ts
+import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/hooks/useAuth'
+import { useSession, signIn, signOut } from 'next-auth/react'
+
+jest.mock('next-auth/react')
+
+const mockUseSession = useSession as jest.Mock
+const mockSignIn = signIn as jest.Mock
+const mockSignOut = signOut as jest.Mock
+
+describe('useAuth', () => {
+  it('returns authenticated state when session exists', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: '1', email: 'test@example.com' } },
+      status: 'authenticated'
+    })
+
+    const { result } = renderHook(() => useAuth())
+
+    expect(result.current.isAuthenticated).toBe(true)
+    expect(result.current.user).toEqual({
+      id: '1',
+      email: 'test@example.com'
+    })
+  })
+
+  it('handles login correctly', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(async () => {
+      await result.current.login('google')
+    })
+
+    expect(mockSignIn).toHaveBeenCalledWith('google')
+  })
+})
+```
+
+### Store Testing
+```typescript
+// __tests__/stores/works-store.test.ts
+import { useWorksStore } from '@/lib/stores/works-store'
+
+describe('Works Store', () => {
+  beforeEach(() => {
+    // Reset store state
+    useWorksStore.setState({
+      works: [],
+      currentWork: null,
+      isLoading: false,
+    })
+  })
+
+  it('adds a new work', () => {
+    const newWork = {
+      id: '1',
+      title: 'Test Work',
+      content: 'Test content',
+      author_id: 'user1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      published: false,
+    }
+
+    useWorksStore.getState().addWork(newWork)
+
+    expect(useWorksStore.getState().works).toContain(newWork)
+  })
+
+  it('updates existing work', () => {
+    const initialWork = {
+      id: '1',
+      title: 'Original Title',
+      content: 'Original content',
+      author_id: 'user1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      published: false,
+    }
+
+    useWorksStore.setState({ works: [initialWork] })
+
+    useWorksStore.getState().updateWork('1', { title: 'Updated Title' })
+
+    const updatedWork = useWorksStore.getState().works.find(w => w.id === '1')
+    expect(updatedWork?.title).toBe('Updated Title')
+  })
+})
+```
+
+## 🔗 Integration Testing
+
+### API Route Testing
+```typescript
+// __tests__/api/works.test.ts
+import { createMocks } from 'node-mocks-http'
+import handler from '@/app/api/works/route'
+import { createClient } from '@/lib/supabase/server'
+
+jest.mock('@/lib/supabase/server')
+
+const mockSupabase = {
+  from: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
+  insert: jest.fn().mockReturnThis(),
+  single: jest.fn(),
+}
+
+;(createClient as jest.Mock).mockReturnValue(mockSupabase)
+
+describe('/api/works', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('creates a new work', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        title: 'Test Work',
+        content: 'Test content',
+      },
+    })
+
+    mockSupabase.single.mockResolvedValue({
+      data: { id: '1', title: 'Test Work' },
+      error: null,
+    })
+
+    await handler(req, res)
+
+    expect(res._getStatusCode()).toBe(201)
+    expect(JSON.parse(res._getData())).toEqual({
+      id: '1',
+      title: 'Test Work',
+    })
+  })
+})
+```
+
+### Database Testing with Cleanup
+```typescript
+// __tests__/integration/works-crud.test.ts
+import { createClient } from '@/lib/supabase/server'
+import { cleanupTestData, createTestUser } from '@/lib/test-utils'
+
+describe('Works CRUD Operations', () => {
+  let supabase: ReturnType<typeof createClient>
+  let testUser: any
+
+  beforeAll(async () => {
+    supabase = createClient()
+    testUser = await createTestUser()
+  })
+
+  afterAll(async () => {
+    // CRITICAL: Always cleanup test data
+    await cleanupTestData()
+  })
+
+  beforeEach(async () => {
+    // Clean up before each test
+    await supabase
+      .from('works')
+      .delete()
+      .like('title', '%test%')
+  })
+
+  it('creates, reads, updates, and deletes works', async () => {
+    // Create
+    const { data: created, error: createError } = await supabase
+      .from('works')
+      .insert([{
+        title: 'Test Work',
+        content: 'Test content',
+        author_id: testUser.id,
+      }])
+      .select()
+      .single()
+
+    expect(createError).toBeNull()
+    expect(created.title).toBe('Test Work')
+
+    // Read
+    const { data: read, error: readError } = await supabase
+      .from('works')
+      .select('*')
+      .eq('id', created.id)
+      .single()
+
+    expect(readError).toBeNull()
+    expect(read.title).toBe('Test Work')
+
+    // Update
+    const { data: updated, error: updateError } = await supabase
+      .from('works')
+      .update({ title: 'Updated Test Work' })
+      .eq('id', created.id)
+      .select()
+      .single()
+
+    expect(updateError).toBeNull()
+    expect(updated.title).toBe('Updated Test Work')
+
+    // Delete
+    const { error: deleteError } = await supabase
+      .from('works')
+      .delete()
+      .eq('id', created.id)
+
+    expect(deleteError).toBeNull()
+
+    // Verify deletion
+    const { data: deleted, error: verifyError } = await supabase
+      .from('works')
+      .select('*')
+      .eq('id', created.id)
+      .single()
+
+    expect(verifyError).not.toBeNull()
+    expect(deleted).toBeNull()
+  })
+})
+```
+
+## 🎭 E2E Testing with Playwright
+
+### Page Object Model
+```typescript
+// __tests__/e2e/pages/WriterPage.ts
+import { Page, expect } from '@playwright/test'
+
+export class WriterPage {
+  constructor(private page: Page) {}
+
+  async goto() {
+    await this.page.goto('/writer')
+  }
+
+  async fillTitle(title: string) {
+    await this.page.fill('[data-testid="title-input"]', title)
+  }
+
+  async fillContent(content: string) {
+    await this.page.fill('[data-testid="content-editor"]', content)
+  }
+
+  async publish() {
+    await this.page.click('[data-testid="publish-button"]')
+  }
+
+  async expectTitleValue(title: string) {
+    await expect(this.page.locator('[data-testid="title-input"]')).toHaveValue(title)
+  }
+}
+```
+
+### E2E Test Example
+```typescript
+// __tests__/e2e/writer-flow.spec.ts
+import { test, expect } from '@playwright/test'
+import { WriterPage } from './pages/WriterPage'
+
+test.describe('Writer Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login or setup authenticated state
+    await page.goto('/login')
+    // ... authentication steps
+  })
+
+  test('creates and publishes a work', async ({ page }) => {
+    const writerPage = new WriterPage(page)
+    
+    await writerPage.goto()
+    await writerPage.fillTitle('My Test Story')
+    await writerPage.fillContent('This is a test story content.')
+    
+    await writerPage.publish()
+    
+    // Verify navigation to published work
+    await expect(page).toHaveURL(/\/work\/\w+/)
+    await expect(page.locator('h1')).toContainText('My Test Story')
+  })
+})
+```
+
+## 🧹 Code Quality Standards
+
+### ESLint Configuration
+```json
+// .eslintrc.json
+{
+  "extends": [
+    "next/core-web-vitals",
+    "@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "prefer-const": "error",
+    "no-console": "warn",
+    "react-hooks/exhaustive-deps": "error"
+  }
+}
+```
+
+### TypeScript Strict Configuration
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true
+  }
+}
+```
+
+### Prettier Configuration
+```json
+// .prettierrc
+{
+  "semi": false,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false
+}
+```
+
+## 🔍 Testing Utilities
+
+### Test Helpers
+```typescript
+// __tests__/utils/test-helpers.ts
+import { render, RenderOptions } from '@testing-library/react'
+import { ReactElement } from 'react'
+
+// Custom render with providers
+const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div>
+      {/* Add your providers here */}
+      {children}
+    </div>
+  )
+}
+
+const customRender = (
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'>
+) => render(ui, { wrapper: AllTheProviders, ...options })
+
+export * from '@testing-library/react'
+export { customRender as render }
+
+// Mock data generators
+export const createMockWork = (overrides = {}) => ({
+  id: '1',
+  title: 'Mock Work',
+  content: 'Mock content',
+  author_id: 'user1',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  published: false,
+  ...overrides,
+})
+
+export const createMockUser = (overrides = {}) => ({
+  id: '1',
+  email: 'test@example.com',
+  name: 'Test User',
+  ...overrides,
+})
+```
+
+### Database Test Utilities
+```typescript
+// lib/test-utils/database.ts
+import { createClient } from '@/lib/supabase/server'
+
+export async function setupTestDatabase() {
+  const supabase = createClient()
+  
+  // Create test schema or use test database
+  // This depends on your database setup
+}
+
+export async function teardownTestDatabase() {
+  const supabase = createClient()
+  
+  // Clean up all test data
+  await cleanupTestData()
+  
+  // Reset auto-increment sequences if needed
+  await resetSequences()
+}
+
+export async function cleanupTestData() {
+  const supabase = createClient()
+  
+  // Delete test data in correct order (respecting foreign keys)
+  await supabase.from('comments').delete().like('content', '%test%')
+  await supabase.from('works').delete().like('title', '%test%')
+  await supabase.from('users').delete().like('email', '%test%')
+}
+
+export async function resetSequences() {
+  const supabase = createClient()
+  
+  // Reset auto-increment values
+  // This is database-specific (PostgreSQL example)
+  await supabase.rpc('reset_sequence', { table_name: 'works' })
+  await supabase.rpc('reset_sequence', { table_name: 'users' })
+}
+```
+
+## 🚀 Performance Testing
+
+### Web Vitals Testing
+```typescript
+// __tests__/performance/web-vitals.test.ts
+import { test, expect } from '@playwright/test'
+
+test.describe('Web Vitals', () => {
+  test('meets Core Web Vitals thresholds', async ({ page }) => {
+    await page.goto('/')
+    
+    // Measure LCP (Largest Contentful Paint)
+    const lcp = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        new PerformanceObserver((list) => {
+          const entries = list.getEntries()
+          const lastEntry = entries[entries.length - 1]
+          resolve(lastEntry.startTime)
+        }).observe({ entryTypes: ['largest-contentful-paint'] })
+      })
+    })
+    
+    expect(lcp).toBeLessThan(2500) // Good LCP threshold
+  })
+})
+```
+
+## 📊 Test Coverage
+
+### Coverage Configuration
+```json
+// jest.config.js
+module.exports = {
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  collectCoverageFrom: [
+    'components/**/*.{ts,tsx}',
+    'lib/**/*.{ts,tsx}',
+    'hooks/**/*.{ts,tsx}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+}
+```
+
+## 🎯 Testing Best Practices
+
+### Test Organization
+- **AAA Pattern**: Arrange, Act, Assert
+- **Descriptive Names**: Clear test descriptions
+- **Single Responsibility**: One assertion per test when possible
+- **Test Isolation**: Independent tests that can run in any order
+
+### Mocking Strategy
+- **Mock External Dependencies**: APIs, databases, third-party services
+- **Avoid Over-Mocking**: Don't mock what you're testing
+- **Reset Mocks**: Clear mocks between tests
+
+### Data Management
+- **Test Data Cleanup**: Always clean up test data
+- **Database Transactions**: Use transactions for test isolation
+- **Rollback Procedures**: Implement proper rollback mechanisms
+- **No Test Data Pollution**: Ensure tests don't affect production data
+
+### PowerShell Testing Command
+```powershell
+# Use this command for testing HTTP endpoints
+powershell -Command Invoke-WebRequest -Uri "http://localhost:3000/api/test" -Method GET
+```
+
+This comprehensive testing strategy ensures code quality, prevents regressions, and maintains data integrity throughout the development lifecycle of the Palabreo platform.

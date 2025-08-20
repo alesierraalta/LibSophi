@@ -1,0 +1,324 @@
+---
+alwaysApply: true
+description: "User input workflow and interactive task management for Palabreo development"
+---
+
+# User Input Workflow & Interactive Task Management
+
+## 🔄 Interactive Task Loop Pattern
+
+### Core Workflow Requirements
+1. **Never stop using user input** until the user explicitly says "stop"
+2. **Execute tasks immediately** upon user input - no waiting for confirmation
+3. **Always implement `userinput.py`** for interactive task loops
+4. **Propose next steps** after completing each task
+5. **Use MCP tools** in every message for enhanced functionality
+
+### User Input Script Template
+```python
+# userinput.py - MUST exist in project root
+user_input = input("prompt: ")
+```
+
+## 🎯 Task Execution Pattern
+
+### Immediate Task Execution
+```
+1. Receive user request
+2. Analyze requirements
+3. Create TODO list (if complex task)
+4. Execute task immediately
+5. Run userinput.py
+6. Read user input from terminal
+7. Execute next task based on input
+8. Repeat until user says "stop"
+```
+
+### Task Loop Implementation
+```typescript
+// Example: Implementing continuous development workflow
+async function continuousWorkflow() {
+  while (true) {
+    // Execute current tasks
+    await executeCurrentTasks()
+    
+    // Get user input
+    const userInput = await getUserInput()
+    
+    // Exit condition
+    if (userInput.toLowerCase() === 'stop') {
+      break
+    }
+    
+    // Process next task based on input
+    await processUserInput(userInput)
+  }
+}
+```
+
+## 🛠️ MCP Framework Integration
+
+### Required MCP Usage
+- **Every message MUST use MCP tools** for enhanced context and functionality
+- **Search for relevant MCP servers** before starting complex tasks
+- **Use available MCP tools** for database operations, external integrations, and enhanced capabilities
+
+### MCP Tool Discovery Pattern
+```typescript
+// Always search for relevant MCP tools first
+const mcpServers = await searchMCPServers(taskContext)
+const relevantTools = mcpServers.filter(server => 
+  server.tools.some(tool => isRelevantToTask(tool, currentTask))
+)
+```
+
+## 📋 TODO Management Integration
+
+### Automatic TODO Creation
+```typescript
+// Create TODOs for complex tasks (3+ steps)
+const todos = [
+  { id: "analyze-requirements", content: "Analyze user requirements", status: "in_progress" },
+  { id: "implement-feature", content: "Implement requested feature", status: "pending" },
+  { id: "test-implementation", content: "Test implementation", status: "pending" },
+  { id: "get-user-feedback", content: "Get user feedback", status: "pending" }
+]
+```
+
+### TODO Status Management
+- **Mark completed immediately** after finishing each task
+- **Update status to in_progress** when starting a task
+- **Add new TODOs** based on user feedback
+- **Cancel TODOs** that are no longer needed
+
+## 🎮 Interactive Command Patterns
+
+### Standard Commands
+```bash
+# Start interactive session
+python userinput.py
+
+# User can input various commands:
+# - "continue" - Continue current task
+# - "next" - Move to next planned task  
+# - "modify [description]" - Modify current approach
+# - "add [task]" - Add new task to queue
+# - "stop" - Exit the workflow
+```
+
+### Command Processing Logic
+```python
+def process_user_command(user_input):
+    command = user_input.lower().strip()
+    
+    if command == "stop":
+        return "EXIT"
+    elif command == "continue":
+        return "CONTINUE_CURRENT"
+    elif command == "next":
+        return "MOVE_TO_NEXT"
+    elif command.startswith("modify "):
+        return ("MODIFY", command[7:])
+    elif command.startswith("add "):
+        return ("ADD_TASK", command[4:])
+    else:
+        return ("CUSTOM_TASK", command)
+```
+
+## 🔄 Continuous Integration Workflow
+
+### Development Loop
+```
+┌─────────────────────────────────────┐
+│ 1. Analyze Current State            │
+├─────────────────────────────────────┤
+│ 2. Execute Planned Tasks            │
+├─────────────────────────────────────┤
+│ 3. Update TODO Status               │
+├─────────────────────────────────────┤
+│ 4. Run userinput.py                 │
+├─────────────────────────────────────┤
+│ 5. Process User Feedback            │
+├─────────────────────────────────────┤
+│ 6. Adapt Plan Based on Input        │
+└─────────────────────────────────────┘
+          ↓
+    Loop until "stop"
+```
+
+### Terminal Integration
+```bash
+# Terminal should be opened in chat window
+# User sees real-time command execution
+# Interactive prompt appears in chat interface
+
+PS C:\project> python userinput.py
+prompt: continue with database setup
+```
+
+## 🎯 Next Steps Proposal Pattern
+
+### Always Propose Next Steps
+After completing any task, always include:
+
+```markdown
+## ✅ Task Completed: [Task Description]
+
+## 🎯 What's Next?
+
+Based on the current progress, here are the suggested next steps:
+
+1. **Option A**: [Description of next logical step]
+2. **Option B**: [Alternative approach or parallel task]  
+3. **Option C**: [Additional enhancement or refinement]
+
+**Recommended**: I suggest starting with Option A as it builds directly on what we just completed.
+
+*The terminal is ready for your input. What would you like to do next?*
+```
+
+## 🧪 Testing Integration with User Input
+
+### Test Data Cleanup Requirement
+```typescript
+// CRITICAL: Always implement proper cleanup
+async function runTestWithCleanup(testFunction: () => Promise<void>) {
+  try {
+    await testFunction()
+  } finally {
+    // MANDATORY: Clean up test data
+    await cleanupTestData()
+    await rollbackDatabaseChanges()
+    await resetAutoIncrementValues()
+    await clearTemporaryTables()
+  }
+}
+```
+
+### PowerShell Testing Commands
+```powershell
+# Use for HTTP endpoint testing
+powershell -Command Invoke-WebRequest -Uri "http://localhost:3000/api/endpoint" -Method POST -Body '{"data": "test"}' -ContentType "application/json"
+
+# Use for file operations testing  
+powershell -Command Get-Content "test-file.txt"
+
+# Use for process testing
+powershell -Command Get-Process -Name "node"
+```
+
+## 🎨 Design Consistency Requirements
+
+### Header Requirements (Memory-Based)
+```tsx
+// ALWAYS include both logo AND name in headers
+<header className="bg-white border-b border-gray-200">
+  <div className="flex items-center space-x-3">
+    <div className="h-12 w-12 overflow-hidden rounded-md">
+      <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" priority />
+    </div>
+    <h1 className="text-xl font-bold text-red-600">Palabreo</h1>
+  </div>
+</header>
+```
+
+### Icon Consistency
+```tsx
+// NO emojis - always use Lucide React icons
+import { Search, Bell, PenTool, User } from 'lucide-react'
+
+// Consistent icon usage
+<Search className="h-4 w-4" />
+<Bell className="h-5 w-5 text-gray-600 hover:text-red-600" />
+```
+
+## 🔄 Error Handling in Interactive Workflow
+
+### Graceful Error Recovery
+```typescript
+async function handleWorkflowError(error: Error, currentTask: string) {
+  console.error(`Error in task: ${currentTask}`, error)
+  
+  // Log error but continue workflow
+  await logError(error, currentTask)
+  
+  // Ask user for guidance
+  const userInput = await getUserInput(`
+    Error occurred in ${currentTask}: ${error.message}
+    
+    Options:
+    1. "retry" - Try the task again
+    2. "skip" - Skip this task and continue
+    3. "modify [approach]" - Try a different approach
+    4. "stop" - Exit workflow
+    
+    What would you like to do?
+  `)
+  
+  return processErrorRecovery(userInput, currentTask)
+}
+```
+
+## 📝 Documentation and Communication
+
+### User Communication Pattern
+```markdown
+## 🔄 Current Status
+- **Active Task**: [Current task description]
+- **Progress**: [X/Y tasks completed]
+- **Next**: [Planned next action]
+
+## 💡 Context
+[Brief explanation of what we're working on and why]
+
+## 🎯 Ready for Input
+The system is ready for your next instruction. You can:
+- Continue with the current plan
+- Modify the approach
+- Add new requirements
+- Or provide specific guidance
+
+*Type your response and I'll execute it immediately.*
+```
+
+### Memory Integration
+- **Remember user preferences** about design choices
+- **Maintain consistency** with established patterns
+- **Update memories** when user provides corrections
+- **Cite memories** when making decisions based on previous preferences
+
+## 🚀 Optimization and Performance
+
+### Efficient Task Execution
+- **Parallel tool calls** whenever possible
+- **Batch related operations** to minimize latency
+- **Cache frequently used data** during workflow
+- **Minimize redundant operations** between iterations
+
+### Resource Management
+```typescript
+// Efficient resource usage during long workflows
+class WorkflowManager {
+  private cache = new Map()
+  private batchOperations: Array<() => Promise<any>> = []
+  
+  async executeBatch() {
+    const results = await Promise.all(
+      this.batchOperations.map(op => op())
+    )
+    this.batchOperations = []
+    return results
+  }
+  
+  addToBatch(operation: () => Promise<any>) {
+    this.batchOperations.push(operation)
+    
+    // Auto-execute when batch reaches optimal size
+    if (this.batchOperations.length >= 5) {
+      return this.executeBatch()
+    }
+  }
+}
+```
+
+This user input workflow ensures continuous, interactive development that responds immediately to user needs while maintaining high code quality and design consistency throughout the Palabreo project.

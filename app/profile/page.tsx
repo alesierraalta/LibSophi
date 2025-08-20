@@ -6,16 +6,21 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon } from 'lucide-react'
+import ProfileImageUpload from '@/components/ProfileImageUpload'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
-import ProfileWorksGrid from '@/components/GridStack/ProfileWorksGridImproved'
+import ProfileWorksGridNew from '@/components/GridStack/ProfileWorksGridNew'
 import { WorkType } from '@/lib/validations'
 import { dateUtils } from '@/lib/date-utils'
+import AppHeader from '@/components/AppHeader'
+import ProfileSkeleton from '@/components/ProfileSkeleton'
 
 export default function ProfilePage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts'>('works')
   const [reposts, setReposts] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [hasLoadedFromDB, setHasLoadedFromDB] = useState(false)
   // Suponemos perfil propio por ahora (sin auth). Oculta Seguir.
   const isOwnProfile = true
 
@@ -36,6 +41,11 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [editProfile, setEditProfile] = useState<Profile>(profile)
   const [showEdit, setShowEdit] = useState(false)
+  const [works, setWorks] = useState<WorkType[]>([])
+  const [isLoadingWorks, setIsLoadingWorks] = useState(true)
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [isLoadingStats, setIsLoadingStats] = useState(true)
   const defaultProfile: Profile = {
     name: 'María González',
     username: 'mariagonzalez',
@@ -56,27 +66,33 @@ export default function ProfilePage() {
   ]
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('palabreo-profile')
-      if (raw) {
-        const saved = JSON.parse(raw) as Profile
-        if (saved && typeof saved === 'object') {
-          setProfile({
-            name: saved.name || defaultProfile.name,
-            username: (saved.username || defaultProfile.username).replace(/^@+/, ''),
-            bio: saved.bio ?? defaultProfile.bio,
-            avatar: saved.avatar || defaultProfile.avatar,
-            banner: saved.banner || '',
-          })
+    const loadProfile = async () => {
+      setIsLoadingProfile(true)
+      
+      // First, try to load from localStorage for immediate display (but don't show it yet)
+      let cachedProfile: Profile | null = null
+      try {
+        const raw = localStorage.getItem('palabreo-profile')
+        if (raw) {
+          const saved = JSON.parse(raw) as Profile
+          if (saved && typeof saved === 'object') {
+            cachedProfile = {
+              name: saved.name || defaultProfile.name,
+              username: (saved.username || defaultProfile.username).replace(/^@+/, ''),
+              bio: saved.bio ?? defaultProfile.bio,
+              avatar: saved.avatar || defaultProfile.avatar,
+              banner: saved.banner || '',
+            }
+          }
         }
-      }
-      const rp = localStorage.getItem('palabreo-reposts')
-      if (rp) {
-        const list = JSON.parse(rp)
-        if (Array.isArray(list)) setReposts(list.sort((a: any, b: any) => b.time - a.time))
-      }
-    } catch {}
-    ;(async () => {
+        const rp = localStorage.getItem('palabreo-reposts')
+        if (rp) {
+          const list = JSON.parse(rp)
+          if (Array.isArray(list)) setReposts(list.sort((a: any, b: any) => b.time - a.time))
+        }
+      } catch {}
+      
+      // Now try to load from database
       try {
         const supabase = getSupabaseBrowserClient()
         const { data: userData } = await supabase.auth.getUser()
@@ -87,19 +103,153 @@ export default function ProfilePage() {
             .select('username,name,bio,avatar_url,banner_url')
             .eq('id', userData.user.id)
             .single()
+          
           if (prof) {
-            setProfile({
+            // Database data found - use it
+            const dbProfile = {
               name: prof.name || defaultProfile.name,
               username: (prof.username || defaultProfile.username).replace(/^@+/, ''),
               bio: prof.bio ?? defaultProfile.bio,
               avatar: prof.avatar_url || defaultProfile.avatar,
               banner: prof.banner_url || '',
-            })
+            }
+            setProfile(dbProfile)
+            setHasLoadedFromDB(true)
+            
+            // Update localStorage with fresh data
+            try {
+              localStorage.setItem('palabreo-profile', JSON.stringify(dbProfile))
+            } catch {}
+          } else if (cachedProfile) {
+            // No database data, but we have cached data
+            setProfile(cachedProfile)
+          } else {
+            // No data anywhere, use default
+            setProfile(defaultProfile)
           }
+        } else if (cachedProfile) {
+          // Not authenticated, but we have cached data
+          setProfile(cachedProfile)
+        } else {
+          // Not authenticated, no cached data
+          setProfile(defaultProfile)
         }
-      } catch {}
-    })()
+      } catch {
+        // Database error, fall back to cached or default
+        if (cachedProfile) {
+          setProfile(cachedProfile)
+        } else {
+          setProfile(defaultProfile)
+        }
+      } finally {
+        setIsLoadingProfile(false)
+      }
+    }
+    
+    loadProfile()
   }, [])
+
+  // Load works from Supabase
+  useEffect(() => {
+    const loadWorks = async () => {
+      setIsLoadingWorks(true)
+      
+      try {
+        const supabase = getSupabaseBrowserClient()
+        
+        // Try to get authenticated user first
+        let targetUserId = userId
+        if (!targetUserId) {
+          // If no authenticated user, try to load works for the demo user
+          targetUserId = '9f8ff736-aec0-458f-83ae-309b923c5556' // Demo user ID
+        }
+        
+        // Load user's works from database
+        const { data: userWorks, error } = await supabase
+          .from('works')
+          .select('*')
+          .eq('author_id', targetUserId)
+          .order('created_at', { ascending: false })
+        
+        if (error) {
+          console.error('Error loading works:', error)
+          // Fall back to default works if error
+          setWorks(defaultWorks)
+        } else if (userWorks && userWorks.length > 0) {
+          // Map database works to WorkType format
+          const mappedWorks: WorkType[] = userWorks.map(work => ({
+            id: work.id,
+            title: work.title || 'Sin título',
+            description: work.description || '',
+            content: work.content || '',
+            author_id: work.author_id,
+            genre: work.genre || 'Sin género',
+            tags: work.tags || [],
+            published: work.published || false,
+            reading_time: work.reading_time || 5,
+            views: work.views || 0,
+            likes: work.likes || 0,
+            created_at: work.created_at ? new Date(work.created_at) : new Date(),
+            updated_at: work.updated_at ? new Date(work.updated_at) : new Date(),
+            coverUrl: work.cover_url || undefined,
+          }))
+          setWorks(mappedWorks)
+        } else {
+          // No works in database, use default works for demo
+          setWorks(defaultWorks)
+        }
+      } catch (error) {
+        console.error('Error loading works:', error)
+        // Fall back to default works on error
+        setWorks(defaultWorks)
+      } finally {
+        setIsLoadingWorks(false)
+      }
+    }
+    
+    loadWorks()
+  }, [userId]) // Re-load when userId changes
+
+  // Load user statistics
+  useEffect(() => {
+    const loadStats = async () => {
+      setIsLoadingStats(true)
+      
+      try {
+        const supabase = getSupabaseBrowserClient()
+        
+        // Try to get authenticated user first
+        let targetUserId = userId
+        if (!targetUserId) {
+          // If no authenticated user, try to load stats for the demo user
+          targetUserId = '9f8ff736-aec0-458f-83ae-309b923c5556' // Demo user ID
+        }
+        
+        // Get followers count
+        const { count: followersCount } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('followee_id', targetUserId)
+        
+        // Get following count
+        const { count: followingCount } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('follower_id', targetUserId)
+        
+        setFollowersCount(followersCount || 0)
+        setFollowingCount(followingCount || 0)
+        
+      } catch (error) {
+        console.error('Error loading stats:', error)
+        // Keep default values on error
+      } finally {
+        setIsLoadingStats(false)
+      }
+    }
+    
+    loadStats()
+  }, [userId])
 
   const openEdit = () => {
     setEditProfile(profile)
@@ -152,9 +302,14 @@ export default function ProfilePage() {
     if (name.length < 2) e.name = 'El nombre debe tener al menos 2 caracteres.'
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) e.username = 'Usuario inválido. Usa 3-20 caracteres: letras, números o _.'
     if (bio.length > maxBioLen) e.bio = `Máximo ${maxBioLen} caracteres.`
-    if (!(avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/'))) e.avatar = 'URL de avatar inválida. Usa http(s) o ruta absoluta.'
+    // Allow uploaded images (from Supabase Storage) and placeholder URLs
+    if (avatar && !(avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/') || avatar.includes('supabase'))) {
+      e.avatar = 'URL de avatar inválida.'
+    }
     const banner = (p.banner || '').trim()
-    if (banner && !(banner.startsWith('http://') || banner.startsWith('https://') || banner.startsWith('/'))) e.banner = 'URL de banner inválida.'
+    if (banner && !(banner.startsWith('http://') || banner.startsWith('https://') || banner.startsWith('/') || banner.includes('supabase'))) {
+      e.banner = 'URL de banner inválida.'
+    }
     return e
   }
 
@@ -164,12 +319,12 @@ export default function ProfilePage() {
   }, [editProfile.name, editProfile.username, editProfile.bio, editProfile.avatar])
 
   const stats = useMemo(() => ({
-    works: 18,
-    followers: '2.4k',
-    following: 312,
-  }), [])
+    works: works.length,
+    followers: followersCount,
+    following: followingCount,
+  }), [works.length, followersCount, followingCount])
 
-  const works = useMemo((): WorkType[] => [
+  const defaultWorks: WorkType[] = [
     { 
       id: '1', 
       title: 'El susurro del viento', 
@@ -215,7 +370,7 @@ export default function ProfilePage() {
       created_at: new Date('2024-02-10'),
       updated_at: new Date('2024-02-12'),
     },
-  ], [])
+  ]
 
   const [savedLayout, setSavedLayout] = useState<any[]>([])
 
@@ -531,78 +686,57 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
-      {/* Header (brand) */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div onClick={() => router.push('/main')} className="h-12 w-12 overflow-hidden rounded-md flex items-center justify-center bg-transparent cursor-pointer" title="Ir al inicio" aria-label="Ir al inicio" role="link">
-                <div className="relative h-[200%] w-[200%] -m-[50%]">
-                  <Image src="/1.png" alt="Palabreo logo" fill sizes="56px" className="object-cover" priority />
-                </div>
-              </div>
-              <h1 className="text-xl md:text-2xl font-bold text-red-600 cursor-pointer" onClick={() => router.push('/main')}>
-                Palabreo
-              </h1>
-            </div>
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push('/landing')}>
-                Landing
-              </Button>
-              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs" onClick={() => router.push('/writer')}>
-                Escribir
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header */}
+      <AppHeader />
 
       {/* Profile cover + header */}
-      <section className="bg-white">
-        <div className="relative overflow-hidden">
-          <div className="relative h-32 sm:h-48 md:h-56 border-b border-gray-100">
-            {profile.banner ? (
-              <img src={profile.banner} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-r from-red-100 via-white to-red-100" />
-            )}
-            <div className="absolute inset-0 bg-black/5" />
-          </div>
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-5">
-            <div className="flex items-start gap-4">
-              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full overflow-hidden ring-2 ring-red-100 bg-white flex-shrink-0 shadow-sm">
-                <Image src={profile.avatar || '/api/placeholder/112/112'} alt="Avatar" width={112} height={112} className="object-cover" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="min-w-0">
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{profile.name}</h2>
-                    <div className="text-xs text-gray-500 truncate">@{profile.username}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="text-xs" onClick={openEdit}>
-                      <Edit3 className="h-4 w-4 mr-1"/> Editar
-                    </Button>
-                    {!isOwnProfile && (
-                      <Button size="sm" className={`${isFollowing ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-white text-red-600 border-red-300 hover:bg-red-50'} text-xs`} onClick={() => setIsFollowing(v => !v)}>
-                        <UserPlus className="h-4 w-4 mr-1"/>{isFollowing ? 'Siguiendo' : 'Seguir'}
-                      </Button>
-                    )}
-                  </div>
+      {isLoadingProfile ? (
+        <ProfileSkeleton />
+      ) : (
+        <section className="bg-white">
+          <div className="relative overflow-hidden">
+            <div className="relative h-32 sm:h-48 md:h-56 border-b border-gray-100">
+              {profile.banner ? (
+                <img src={profile.banner} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-r from-red-100 via-white to-red-100" />
+              )}
+              <div className="absolute inset-0 bg-black/5" />
+            </div>
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-5">
+              <div className="flex items-start gap-4">
+                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full overflow-hidden ring-2 ring-red-100 bg-white flex-shrink-0 shadow-sm">
+                  <Image src={profile.avatar || '/api/placeholder/112/112'} alt="Avatar" width={112} height={112} className="object-cover" />
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{profile.bio}</p>
-                <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-                  <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.works}</strong> obras</span>
-                  <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.followers}</strong> seguidores</span>
-                  <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.following}</strong> siguiendo</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{profile.name}</h2>
+                      <div className="text-xs text-gray-500 truncate">@{profile.username}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="text-xs" onClick={openEdit}>
+                        <Edit3 className="h-4 w-4 mr-1"/> Editar
+                      </Button>
+                      {!isOwnProfile && (
+                        <Button size="sm" className={`${isFollowing ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-white text-red-600 border-red-300 hover:bg-red-50'} text-xs`} onClick={() => setIsFollowing(v => !v)}>
+                          <UserPlus className="h-4 w-4 mr-1"/>{isFollowing ? 'Siguiendo' : 'Seguir'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">{profile.bio}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+                    <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.works}</strong> obras</span>
+                    <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.followers}</strong> seguidores</span>
+                    <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.following}</strong> siguiendo</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Tabs header */}
       <div className="max-w-full mx-auto px-0 sm:px-6 lg:px-8 bg-white border-b border-gray-200 sticky top-14 z-40">
@@ -622,24 +756,41 @@ export default function ProfilePage() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24">
         {activeTab === 'works' && (
-          <ProfileWorksGrid
-            works={works}
-            onWorkClick={(work) => {
-              console.log('Clicked work:', work.title)
-              // You can navigate to work detail page here
-              // router.push(`/work/${work.id}`)
-            }}
-            onLayoutChange={(layout) => {
-              try {
-                localStorage.setItem('palabreo-profile-layout', JSON.stringify(layout))
-                setSavedLayout(layout)
-              } catch (error) {
-                console.error('Error saving layout:', error)
-              }
-            }}
-            editable={isOwnProfile}
-            savedLayout={savedLayout}
-          />
+          <>
+            {isLoadingWorks ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-pulse">
+                    <div className="h-48 bg-gray-200" />
+                    <div className="p-4">
+                      <div className="h-4 bg-gray-200 rounded mb-2" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-200 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ProfileWorksGridNew
+                  works={works}
+                  onWorkClick={(work) => {
+                    console.log('Clicked work:', work.title)
+                    // You can navigate to work detail page here
+                    // router.push(`/work/${work.id}`)
+                  }}
+                  onLayoutChange={(layout) => {
+                    try {
+                      localStorage.setItem('palabreo-profile-layout', JSON.stringify(layout))
+                      setSavedLayout(layout)
+                    } catch (error) {
+                      console.error('Error saving layout:', error)
+                    }
+                  }}
+                  editable={isOwnProfile}
+                  savedLayout={savedLayout}
+                />
+            )}
+          </>
         )}
 
         {activeTab === 'works' && false && ( // Hide old grid implementation
@@ -898,83 +1049,236 @@ export default function ProfilePage() {
           </div>
         )}
       </main>
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Modal - Improved UI/UX */}
       {showEdit && (
-        <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900">Editar perfil</h3>
-              <button onClick={() => setShowEdit(false)} className="text-gray-500 hover:text-gray-700 text-sm">Cerrar</button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Nombre</label>
-                <input
-                  value={editProfile.name}
-                  onChange={(e) => setEditProfile(p => ({ ...p, name: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-                {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Usuario</label>
-                <div className="flex items-center">
-                  <span className="px-3 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-sm text-gray-600">@</span>
-                  <input
-                    value={editProfile.username}
-                    onChange={(e) => setEditProfile(p => ({ ...p, username: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-r-md px-3 py-2 text-sm"
-                  />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in-0 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            {/* Modal Header */}
+            <div className="relative bg-gradient-to-r from-red-50 to-red-100 px-6 py-5 border-b border-red-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Editar perfil</h3>
+                  <p className="text-sm text-gray-600 mt-1">Personaliza tu información pública</p>
                 </div>
-                {errors.username && <p className="mt-1 text-xs text-red-600">{errors.username}</p>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Bio</label>
-                <textarea
-                  value={editProfile.bio}
-                  onChange={(e) => setEditProfile(p => ({ ...p, bio: e.target.value }))}
-                  rows={4}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-                <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className={errors.bio ? 'text-red-600' : 'text-gray-500'}>
-                    {editProfile.bio.length}/{maxBioLen}
-                  </span>
-                  {errors.bio && <span className="text-red-600">{errors.bio}</span>}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Avatar (URL)</label>
-                <input
-                  value={editProfile.avatar}
-                  onChange={(e) => setEditProfile(p => ({ ...p, avatar: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-                {errors.avatar && <p className="mt-1 text-xs text-red-600">{errors.avatar}</p>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Banner (URL)</label>
-                <input
-                  value={editProfile.banner}
-                  onChange={(e) => setEditProfile(p => ({ ...p, banner: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-500">O elige uno por defecto:</p>
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-auto pr-1">
-                  {defaultBanners.map((b) => (
-                    <button key={b.url} type="button" onClick={() => setEditProfile(p => ({ ...p, banner: b.url }))} className="relative h-16 rounded-md overflow-hidden border border-gray-200 hover:ring-2 hover:ring-red-400">
-                      <img src={b.url} alt={b.title} className="absolute inset-0 w-full h-full object-cover" />
-                      <span className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] px-1 py-0.5 truncate">{b.title}</span>
-                    </button>
-                  ))}
-                </div>
-                {errors.banner && <p className="mt-1 text-xs text-red-600">{errors.banner}</p>}
+                <button
+                  onClick={() => setShowEdit(false)}
+                  className="p-2 hover:bg-red-200 rounded-full transition-colors"
+                >
+                  <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="p-4 border-t border-gray-100 flex items-center justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={resetDefaults}>Restablecer</Button>
-              <Button variant="outline" size="sm" onClick={() => setShowEdit(false)}>Cancelar</Button>
-              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50" onClick={saveEdit} disabled={Object.keys(errors).length > 0}>Guardar</Button>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(95vh-180px)]">
+              <div className="p-6 space-y-8">
+                {/* Profile Images Section */}
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <ImageIcon className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900">Imágenes de perfil</h4>
+                      <p className="text-sm text-gray-500">Sube tus fotos de avatar y banner</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <ProfileImageUpload
+                        currentImageUrl={editProfile.avatar}
+                        userId={userId || ''}
+                        type="avatar"
+                        onImageUploaded={(imageUrl) => setEditProfile(p => ({ ...p, avatar: imageUrl }))}
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <ProfileImageUpload
+                        currentImageUrl={editProfile.banner}
+                        userId={userId || ''}
+                        type="banner"
+                        onImageUploaded={(imageUrl) => setEditProfile(p => ({ ...p, banner: imageUrl }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Banner Templates */}
+                  <div className="space-y-4">
+                    <h5 className="text-sm font-medium text-gray-700 flex items-center">
+                      <svg className="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Banners prediseñados
+                    </h5>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {defaultBanners.map((b) => (
+                        <button 
+                          key={b.url} 
+                          type="button" 
+                          onClick={() => setEditProfile(p => ({ ...p, banner: b.url }))} 
+                          className={`group relative aspect-video rounded-lg overflow-hidden border-2 transition-all duration-200 hover:shadow-lg ${
+                            editProfile.banner === b.url ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200 hover:border-red-400'
+                          }`}
+                        >
+                          <img src={b.url} alt={b.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                          <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-2 py-1 truncate">
+                            {b.title}
+                          </span>
+                          {editProfile.banner === b.url && (
+                            <div className="absolute top-2 right-2 bg-red-500 rounded-full p-1">
+                              <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profile Information Section */}
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Edit3 className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900">Información personal</h4>
+                      <p className="text-sm text-gray-500">Actualiza tu nombre, usuario y biografía</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Nombre completo</label>
+                      <input
+                        value={editProfile.name}
+                        onChange={(e) => setEditProfile(p => ({ ...p, name: e.target.value }))}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                        placeholder="Tu nombre completo"
+                      />
+                      {errors.name && (
+                        <div className="flex items-center space-x-2 text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+                          <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-xs">{errors.name}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Nombre de usuario</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-3 text-sm text-gray-500 font-medium">@</span>
+                        <input
+                          value={editProfile.username}
+                          onChange={(e) => setEditProfile(p => ({ ...p, username: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                          placeholder="usuario"
+                        />
+                      </div>
+                      {errors.username && (
+                        <div className="flex items-center space-x-2 text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+                          <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-xs">{errors.username}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Biografía</label>
+                    <textarea
+                      value={editProfile.bio}
+                      onChange={(e) => setEditProfile(p => ({ ...p, bio: e.target.value }))}
+                      rows={4}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all resize-none"
+                      placeholder="Cuéntanos sobre ti, tu estilo de escritura, intereses..."
+                    />
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center space-x-2">
+                        <span className={`${errors.bio ? 'text-red-600' : 'text-gray-500'} font-medium`}>
+                          {editProfile.bio.length}/{maxBioLen} caracteres
+                        </span>
+                        {editProfile.bio.length > maxBioLen * 0.8 && (
+                          <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded text-xs">
+                            Cerca del límite
+                          </span>
+                        )}
+                      </div>
+                      {errors.bio && (
+                        <div className="flex items-center space-x-1 text-red-600">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>{errors.bio}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={resetDefaults}
+                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Restablecer
+              </Button>
+              
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowEdit(false)}
+                  className="px-6"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  size="sm" 
+                  className={`px-8 py-2.5 font-medium shadow-lg transition-all ${
+                    Object.keys(errors).length > 0
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-red-600 hover:bg-red-700 hover:shadow-xl'
+                  } text-white`}
+                  onClick={saveEdit} 
+                  disabled={Object.keys(errors).length > 0}
+                >
+                  {Object.keys(errors).length > 0 ? (
+                    <span className="flex items-center">
+                      <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      Corrige errores
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Guardar cambios
+                    </span>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
