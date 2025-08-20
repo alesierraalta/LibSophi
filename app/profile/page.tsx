@@ -799,7 +799,7 @@ export default function ProfilePage() {
               <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden relative">
                 <div
                   className="relative h-48 sm:h-56 lg:h-64 w-full touch-manipulation select-none"
-                  onPointerDown={onPointerDownWork(w.id)}
+                  onPointerDown={onPointerDownWork(parseInt(w.id))}
                   onPointerMove={onPointerMoveWork}
                   onPointerUp={onPointerUpWork}
                   onPointerCancel={onPointerCancelWork}
