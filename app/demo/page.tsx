@@ -95,7 +95,7 @@ export default function DemoPage() {
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
   const [selectedWork, setSelectedWork] = useState<WorkType | null>(null);
   const [tasks, setTasks] = useState(mockTasks);
-  const [dragItems, setDragItems] = useState([
+  const [dragItems, setDragItems] = useState<{ id: string; content: React.ReactNode }[]>([
     { id: '1', content: <div className="p-2">Elemento arrastrable 1</div> },
     { id: '2', content: <div className="p-2">Elemento arrastrable 2</div> },
     { id: '3', content: <div className="p-2">Elemento arrastrable 3</div> },
