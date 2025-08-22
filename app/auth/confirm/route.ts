@@ -22,6 +22,42 @@ export async function GET(request: Request) {
       
       if (data.user) {
         console.log('User confirmed successfully:', data.user.email)
+        
+        // Ensure user has a profile (safety check)
+        try {
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', data.user.id)
+            .single()
+          
+          if (!existingProfile) {
+            // Create profile if it doesn't exist
+            const username = data.user.user_metadata?.username || 
+                           `@${data.user.email?.split('@')[0] || 'usuario'}`
+            const name = data.user.user_metadata?.name || 
+                        data.user.email?.split('@')[0] || 'Usuario'
+            
+            await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                name: name,
+                username: username,
+                bio: 'Nuevo en Palabreo ✨',
+                avatar_url: '/api/placeholder/112/112',
+                banner_url: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+            
+            console.log('Created missing profile for confirmed user:', data.user.email)
+          }
+        } catch (profileError) {
+          console.error('Error ensuring profile exists:', profileError)
+          // Don't fail confirmation because of profile error
+        }
+        
         // Redirect to main page with success message
         return NextResponse.redirect(new URL('/main?message=account_confirmed', url.origin))
       }
