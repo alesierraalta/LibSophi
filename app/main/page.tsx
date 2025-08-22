@@ -487,16 +487,18 @@ function MainPageInner() {
   const PostCard = memo(({ post }: { post: any }) => {
     const [showCommentBox, setShowCommentBox] = useState(false)
     const [commentText, setCommentText] = useState('')
-    const [localLikes, setLocalLikes] = useState<number>(post.likes ?? 0)
+    const [localLikes, setLocalLikes] = useState<number>(post.likes >= 0 ? post.likes : 0)
     const [localIsLiked, setLocalIsLiked] = useState<boolean>(!!post.isLiked)
-    const [localComments, setLocalComments] = useState<number>(post.comments ?? 0)
-    const [localReposts, setLocalReposts] = useState<number>((post as any).reposts ?? 0)
+    const [localComments, setLocalComments] = useState<number>(post.comments >= 0 ? post.comments : 0)
+    const [localReposts, setLocalReposts] = useState<number | null>(null) // null until loaded
     const [localReposted, setLocalReposted] = useState<boolean>(false)
+    const [isLoadingRepostData, setIsLoadingRepostData] = useState(true)
 
     // Load real repost data
     React.useEffect(() => {
       const loadRepostData = async () => {
         try {
+          setIsLoadingRepostData(true)
           const { checkIfReposted, getRepostCount } = await import('@/lib/supabase/reposts')
           const [repostedStatus, count] = await Promise.all([
             checkIfReposted(post.id),
@@ -506,6 +508,9 @@ function MainPageInner() {
           setLocalReposts(Math.max(0, count))
         } catch (error) {
           console.warn('Failed to load repost data:', error)
+          setLocalReposts(0) // Fallback to 0 on error
+        } finally {
+          setIsLoadingRepostData(false)
         }
       }
       
@@ -862,7 +867,11 @@ function MainPageInner() {
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="text-sm font-medium">{localReposts}</span>
+                <span className="text-sm font-medium">
+                  {localReposts !== null ? localReposts : (
+                    <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  )}
+                </span>
               </button>
             </div>
 
