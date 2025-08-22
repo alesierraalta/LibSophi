@@ -1002,8 +1002,17 @@ function MainPageInner() {
 
   // Memoized suggested author component
   const SuggestedAuthor = memo(({ author }: { author: any }) => {
+    const handleAuthorClick = () => {
+      if (author.username) {
+        router.push(`/profile/${author.username}`)
+      }
+    }
+
     return (
-      <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
+      <div 
+        className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200"
+        onClick={handleAuthorClick}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
@@ -1032,16 +1041,18 @@ function MainPageInner() {
               </div>
             </div>
           </div>
-          <FollowButton
-            currentUserId={currentUserId}
-            targetUserId={author.id}
-            size="sm"
-            className="text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-3"
-            onFollowChange={(isFollowing) => {
-              console.log('Follow status changed:', isFollowing, 'for user:', author.id)
-              // Optionally refresh the authors list or update local state
-            }}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <FollowButton
+              currentUserId={currentUserId}
+              targetUserId={author.id}
+              size="sm"
+              className="text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-3"
+              onFollowChange={(isFollowing) => {
+                console.log('Follow status changed:', isFollowing, 'for user:', author.id)
+                // Optionally refresh the authors list or update local state
+              }}
+            />
+          </div>
         </div>
       </div>
     )
