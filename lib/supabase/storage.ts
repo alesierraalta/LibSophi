@@ -135,9 +135,17 @@ export function getPublicUrl(bucket: string, path: string): string {
  * Validate image file
  */
 export function validateImageFile(file: File): { isValid: boolean; error?: string } {
+  // Check if file exists
+  if (!file) {
+    return {
+      isValid: false,
+      error: 'No se seleccionó ningún archivo.'
+    }
+  }
+
   // Check file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type.toLowerCase())) {
     return {
       isValid: false,
       error: 'Tipo de archivo no permitido. Usa JPG, PNG, GIF o WebP.'
@@ -153,22 +161,25 @@ export function validateImageFile(file: File): { isValid: boolean; error?: strin
     }
   }
 
-  // Check image dimensions (optional)
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      // For avatars, recommend square images
-      // For banners, recommend landscape images
-      resolve({ isValid: true })
+  // Check minimum file size (avoid empty or corrupt files)
+  if (file.size < 100) {
+    return {
+      isValid: false,
+      error: 'El archivo es demasiado pequeño o está corrupto.'
     }
-    img.onerror = () => {
-      resolve({
-        isValid: false,
-        error: 'Archivo de imagen inválido.'
-      })
+  }
+
+  // Basic file name validation
+  const fileName = file.name.toLowerCase()
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+  const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
+  
+  if (!hasValidExtension) {
+    return {
+      isValid: false,
+      error: 'Extensión de archivo no válida. Usa .jpg, .png, .gif o .webp.'
     }
-    img.src = URL.createObjectURL(file)
-  }) as any
+  }
 
   return { isValid: true }
 }

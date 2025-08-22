@@ -1,0 +1,116 @@
+# Page snapshot
+
+```yaml
+- link "Saltar al contenido principal":
+  - /url: "#main-content"
+- banner:
+  - button "Ir a página principal":
+    - img "Palabreo logo"
+    - heading "Palabreo" [level=1]
+  - button "Abrir búsqueda"
+  - button
+  - button "Publicar"
+  - button "Menú de usuario":
+    - img
+    - text: TU
+- button "Negrita"
+- button "Cursiva"
+- button "Subrayado"
+- button "Tachado"
+- button "Título H1"
+- button "Título H2"
+- button "Lista con viñetas"
+- button "Lista numerada"
+- button "Cita"
+- button "Enlace"
+- button "Imagen"
+- button "Código en línea"
+- button "Bloque de código"
+- button "Separador"
+- button "Limpiar formato"
+- button "Aumentar sangría"
+- button "Reducir sangría"
+- button "Deshacer"
+- button "Rehacer"
+- button "Vista previa": Previsualizar
+- button "Modo enfoque": Salir enfoque
+- button "Publicar" [disabled]
+- text: Fuente
+- combobox "Elegir fuente del editor (móvil)":
+  - option "Times New Roman" [selected]
+  - option "Serif clásica"
+  - option "Poppins"
+  - option "Rubik"
+  - option "Merriweather"
+  - option "Lora"
+  - option "Roboto Slab"
+  - option "Playfair Display"
+  - option "JetBrains Mono"
+- main:
+  - paragraph: Agrega una imagen a tu obra
+  - button "Subir imagen"
+  - button "Choose File"
+  - textbox "Título de tu obra": Obra con Auto-guardado
+  - button "Negrita (Ctrl+B)"
+  - button "Cursiva (Ctrl+I)"
+  - button "Subrayado (Ctrl+Shift+U)"
+  - button "Tachado (Ctrl+Shift+S)"
+  - button "Encabezado 1"
+  - button "Encabezado 2"
+  - button "Cita"
+  - button "Lista"
+  - button "Lista ordenada"
+  - button "Enlace"
+  - button "Imagen"
+  - button "Código en línea (Ctrl+Alt+C)"
+  - button "Bloque de código (Ctrl+Alt+B)"
+  - button "Regla horizontal (Ctrl+Alt+H)"
+  - button "Limpiar formato"
+  - button "Aumentar sangría (Tab)"
+  - button "Reducir sangría (Shift+Tab)"
+  - button "Deshacer"
+  - button "Rehacer"
+  - text: Fuente
+  - combobox "Elegir fuente del editor":
+    - option "Times New Roman" [selected]
+    - option "Serif clásica"
+    - option "Poppins"
+    - option "Rubik"
+    - option "Merriweather"
+    - option "Lora"
+    - option "Roboto Slab"
+    - option "Playfair Display"
+    - option "JetBrains Mono"
+  - button "Vista previa"
+  - button "Modo enfoque": Salir enfoque
+  - button "Abrir tutorial": Tutorial
+  - textbox "Escribe aquí... Usa párrafos cortos, ritmo y voz propia.": Contenido que se guarda automáticamente
+  - text: "Palabras:"
+  - strong: "0"
+  - text: "Tiempo de lectura:"
+  - strong: 1 min
+  - text: "Total obra:"
+  - strong: "0"
+  - complementary:
+    - heading "Detalles" [level=3]
+    - text: Usar capítulos
+    - checkbox
+    - text: Género
+    - combobox:
+      - option "📝 Cuento" [selected]
+      - option "📖 Novela"
+      - option "🎭 Teatro"
+      - option "🎵 Poesía"
+      - option "📰 Newsletter"
+      - option "✒️ Artículo"
+    - text: Etiquetas
+    - textbox "Presiona Enter para agregar"
+    - text: Consejos
+    - list:
+      - listitem: Título claro y evocador
+      - listitem: Primer párrafo que atrape
+      - listitem: Revisa ortografía y ritmo
+- heading "¿Qué vas a escribir hoy?" [level=3]
+- button "Nueva obra Empieza desde cero con capítulos"
+- button "Continuación Sigue escribiendo una obra existente"
+```

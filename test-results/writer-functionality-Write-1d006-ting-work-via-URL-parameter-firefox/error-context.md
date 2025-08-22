@@ -1,0 +1,45 @@
+# Page snapshot
+
+```yaml
+- link "Saltar al contenido principal":
+  - /url: "#main-content"
+- img "Palabreo logo"
+- heading "¡Bienvenido de vuelta!" [level=1]
+- paragraph: Inicia sesión en tu cuenta de Palabreo
+- text: Correo electrónico
+- textbox "Correo electrónico"
+- img
+- text: Contraseña
+- textbox "Contraseña"
+- button:
+  - img
+- checkbox "Recordarme"
+- text: Recordarme
+- link "¿Olvidaste tu contraseña?":
+  - /url: /forgot-password
+- button "Iniciar sesión":
+  - img
+  - text: Iniciar sesión
+- text: o continúa con
+- button "Continuar con Google":
+  - img
+  - text: Continuar con Google
+- paragraph:
+  - text: ¿No tienes cuenta?
+  - link "Regístrate gratis":
+    - /url: /register
+- img
+- heading "Descubre historias únicas" [level=3]
+- paragraph: Miles de obras esperándote
+- img
+- heading "Conecta con escritores" [level=3]
+- paragraph: Forma parte de nuestra comunidad
+- paragraph:
+  - text: Al continuar, aceptas nuestros
+  - link "Términos de Servicio":
+    - /url: /terms
+  - text: "y"
+  - link "Política de Privacidad":
+    - /url: /privacy
+- alert
+```

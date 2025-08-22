@@ -1,0 +1,82 @@
+# Page snapshot
+
+```yaml
+- link "Saltar al contenido principal":
+  - /url: "#main-content"
+- banner:
+  - button "Ir a página principal":
+    - img "Palabreo logo"
+    - heading "Palabreo" [level=1]
+  - button
+  - button "Publicar"
+  - button "Menú de usuario":
+    - img
+    - text: TU
+- main:
+  - paragraph: Agrega una imagen a tu obra
+  - button "Subir imagen"
+  - textbox "Título de tu obra"
+  - button "Negrita (Ctrl+B)"
+  - button "Cursiva (Ctrl+I)"
+  - button "Subrayado (Ctrl+Shift+U)"
+  - button "Tachado (Ctrl+Shift+S)"
+  - button "Encabezado 1"
+  - button "Encabezado 2"
+  - button "Cita"
+  - button "Lista"
+  - button "Lista ordenada"
+  - button "Enlace"
+  - button "Imagen"
+  - button "Código en línea (Ctrl+Alt+C)"
+  - button "Bloque de código (Ctrl+Alt+B)"
+  - button "Regla horizontal (Ctrl+Alt+H)"
+  - button "Limpiar formato"
+  - button "Aumentar sangría (Tab)"
+  - button "Reducir sangría (Shift+Tab)"
+  - button "Deshacer"
+  - button "Rehacer"
+  - text: Fuente
+  - combobox "Elegir fuente del editor":
+    - option "Times New Roman" [selected]
+    - option "Serif clásica"
+    - option "Poppins"
+    - option "Rubik"
+    - option "Merriweather"
+    - option "Lora"
+    - option "Roboto Slab"
+    - option "Playfair Display"
+    - option "JetBrains Mono"
+  - button "Vista previa"
+  - button "Modo enfoque": Salir enfoque
+  - button "Abrir tutorial": Tutorial
+  - textbox "Escribe aquí... Usa párrafos cortos, ritmo y voz propia."
+  - text: "Palabras:"
+  - strong: "0"
+  - text: "Tiempo de lectura:"
+  - strong: 1 min
+  - text: "Total obra:"
+  - strong: "0"
+  - complementary:
+    - heading "Detalles" [level=3]
+    - text: Usar capítulos
+    - checkbox
+    - text: Género
+    - combobox:
+      - option "📝 Cuento" [selected]
+      - option "📖 Novela"
+      - option "🎭 Teatro"
+      - option "🎵 Poesía"
+      - option "📰 Newsletter"
+      - option "✒️ Artículo"
+    - text: Etiquetas
+    - textbox "Presiona Enter para agregar"
+    - text: Consejos
+    - list:
+      - listitem: Título claro y evocador
+      - listitem: Primer párrafo que atrape
+      - listitem: Revisa ortografía y ritmo
+- heading "¿Qué vas a escribir hoy?" [level=3]
+- button "Nueva obra Empieza desde cero con capítulos"
+- button "Continuación Sigue escribiendo una obra existente"
+- alert
+```
