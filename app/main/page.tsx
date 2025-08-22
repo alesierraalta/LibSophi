@@ -36,8 +36,22 @@ function MainPageInner() {
   const [spotlightNewsletters, setSpotlightNewsletters] = useState<any[]>([])
   const [popularStories, setPopularStories] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [successMessage, setSuccessMessage] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Handle success messages from URL params
+  React.useEffect(() => {
+    const message = searchParams.get('message')
+    if (message === 'account_confirmed') {
+      setSuccessMessage('¡Cuenta confirmada exitosamente! Ya puedes disfrutar de todas las funciones de Palabreo.')
+      // Clear the URL parameter after showing the message
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+      // Auto-hide message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000)
+    }
+  }, [searchParams])
 
   React.useEffect(() => {
     ;(async () => {
@@ -1077,6 +1091,27 @@ function MainPageInner() {
       {/* Header */}
       <AppHeader />
 
+      {/* Success Message */}
+      {successMessage && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-medium">{successMessage}</p>
+              <button 
+                onClick={() => setSuccessMessage('')}
+                className="ml-auto pl-3 text-green-500 hover:text-green-700"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Navigation Carousel - moved to top */}
       <div className="lg:hidden max-w-full mx-auto px-0 sm:px-14 lg:px-24 xl:px-32">

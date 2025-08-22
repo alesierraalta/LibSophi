@@ -1,18 +1,37 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Button from '../../components/Button'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<'error' | 'success' | ''>('')
+
+  useEffect(() => {
+    const error = searchParams.get('error')
+    const errorMessage = searchParams.get('message')
+    
+    if (error === 'confirmation_failed') {
+      setMessage(`Error de confirmación: ${errorMessage || 'No se pudo confirmar tu cuenta.'}`)
+      setMessageType('error')
+    } else if (error === 'confirmation_exception') {
+      setMessage('Error inesperado durante la confirmación. Intenta de nuevo.')
+      setMessageType('error')
+    } else if (error === 'invalid_confirmation_link') {
+      setMessage('El enlace de confirmación no es válido o ha expirado.')
+      setMessageType('error')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,6 +73,31 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">¡Bienvenido de vuelta!</h1>
           <p className="text-gray-600 [font-family:var(--font-rubik)]">Inicia sesión en tu cuenta de Palabreo</p>
         </div>
+
+        {/* Message Display */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            messageType === 'error' 
+              ? 'bg-red-50 border-red-200 text-red-700' 
+              : messageType === 'success'
+              ? 'bg-green-50 border-green-200 text-green-700'
+              : 'bg-blue-50 border-blue-200 text-blue-700'
+          }`}>
+            <div className="flex items-center">
+              {messageType === 'error' && (
+                <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              )}
+              {messageType === 'success' && (
+                <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+              <p className="text-sm font-medium">{message}</p>
+            </div>
+          </div>
+        )}
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
@@ -240,5 +284,15 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+    </div>}>
+      <LoginPageInner />
+    </Suspense>
   )
 }
