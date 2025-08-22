@@ -92,13 +92,13 @@ const WorkCard = React.memo(React.forwardRef<HTMLDivElement, {
           <img
             src={getCoverImage(work)}
             alt={work.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className={`w-full h-full object-cover transition-transform duration-300 ${!isEditMode ? 'group-hover:scale-105' : ''}`}
             loading="lazy"
           />
           
           {/* Overlay con iconos de acciones - Nuevo UX optimizado */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 backdrop-blur-sm transition-all duration-300">
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+          <div className={`absolute inset-0 bg-black/0 ${!isEditMode ? 'group-hover:bg-black/40' : ''} backdrop-blur-sm transition-all duration-300`}>
+            <div className={`absolute inset-0 opacity-0 ${!isEditMode ? 'group-hover:opacity-100' : ''} transition-opacity duration-300 flex items-center justify-center gap-3`}>
               
               <button onClick={(e) => { e.stopPropagation(); onWorkEdit?.(work) }} title="Editar" className="w-10 h-10 bg-white/90 hover:bg-blue-500 hover:text-white text-gray-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110">
                 <Edit3 className="w-4 h-4" />

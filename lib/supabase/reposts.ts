@@ -201,6 +201,8 @@ export async function getUserReposts(userId: string, limit = 20): Promise<Repost
         works:work_id (
           id,
           title,
+          content,
+          chapters,
           genre,
           cover_url,
           created_at,
@@ -296,6 +298,7 @@ export async function getTimelineWithReposts(userId?: string, limit = 20) {
           id,
           title,
           content,
+          chapters,
           genre,
           cover_url,
           created_at,

@@ -179,19 +179,40 @@ export default function ProfilePage() {
           const userReposts = await getUserReposts(userId)
           
           // Format reposts for display
-          const formattedReposts = userReposts.map(repost => ({
-            id: repost.id,
-            title: repost.works?.title || 'Obra sin título',
-            author: {
-              name: repost.works?.profiles?.name || 'Autor desconocido',
-              username: repost.works?.profiles?.username || '@autor'
-            },
-            excerpt: 'Obra republicada',
-            image: repost.works?.cover_url || null,
-            time: new Date(repost.created_at).getTime(),
-            caption: repost.caption,
-            originalWorkId: repost.work_id
-          }))
+          const formattedReposts = userReposts.map(repost => {
+            // Extract text content from the work
+            let workContent = ''
+            if (repost.works) {
+              // Try to get content from chapters or direct content
+              if (repost.works.chapters && Array.isArray(repost.works.chapters) && repost.works.chapters.length > 0) {
+                workContent = repost.works.chapters[0]?.content || ''
+              } else if (repost.works.content) {
+                workContent = repost.works.content
+              }
+            }
+            
+            // Create a clean excerpt (remove HTML tags and limit length)
+            const cleanContent = workContent.replace(/<[^>]*>/g, '').trim()
+            const excerpt = cleanContent.length > 150 
+              ? cleanContent.substring(0, 150) + '...' 
+              : cleanContent || 'Sin contenido disponible'
+
+            return {
+              id: repost.id,
+              title: repost.works?.title || 'Obra sin título',
+              author: {
+                name: repost.works?.profiles?.name || 'Autor desconocido',
+                username: repost.works?.profiles?.username || '@autor'
+              },
+              excerpt,
+              content: workContent,
+              image: repost.works?.cover_url || null,
+              time: new Date(repost.created_at).getTime(),
+              caption: repost.caption,
+              originalWorkId: repost.work_id,
+              genre: repost.works?.genre || 'General'
+            }
+          })
           
           setReposts(formattedReposts)
         } catch (error) {
@@ -752,14 +773,30 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Cover Image */}
-                    {r.image && (
-                      <div className="relative h-32 w-full overflow-hidden">
+                    {r.image ? (
+                      <div className="relative h-40 w-full overflow-hidden">
                         <img 
                           src={r.image} 
                           alt={r.title} 
                           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                         />
                         <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
+                        {/* Genre badge */}
+                        <div className="absolute top-3 left-3">
+                          <span className="bg-black/70 text-white text-xs px-2 py-1 rounded-full font-medium">
+                            {r.genre}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      // Fallback design when no image
+                      <div className="h-24 bg-gradient-to-br from-red-50 via-pink-50 to-orange-50 flex items-center justify-center">
+                        <div className="text-center">
+                          <svg className="h-8 w-8 mx-auto text-red-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          <div className="text-xs font-medium text-red-600">{r.genre}</div>
+                        </div>
                       </div>
                     )}
 
@@ -774,13 +811,20 @@ export default function ProfilePage() {
                       )}
 
                       {/* Work Title */}
-                      <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 text-base">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 text-base leading-tight">
                         {r.title}
                       </h3>
 
+                      {/* Work Excerpt */}
+                      <div className="bg-gray-50 rounded-lg p-3 border-l-2 border-red-200">
+                        <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed">
+                          {r.excerpt}
+                        </p>
+                      </div>
+
                       {/* Author Info */}
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                        <div className="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-red-700">
                             {(r.author?.name || 'A')[0].toUpperCase()}
                           </span>
