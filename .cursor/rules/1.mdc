@@ -1,7 +1,5 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
 Utilice el MCP con pensamiento secuencial de manera exhaustiva para analizar y resolver problemas paso a paso, asegurando que cada etapa sea considerada meticulosamente antes de avanzar a la siguiente.
 

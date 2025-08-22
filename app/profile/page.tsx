@@ -19,17 +19,7 @@ import { measurePerformance, debounce, loadingStates } from '@/lib/performance-o
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = getSupabaseBrowserClient()
-  const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts' | 'archived'>('works')
-  const [showArchived, setShowArchived] = useState(false)
-
-  // Sync showArchived with activeTab
-  useEffect(() => {
-    if (activeTab === 'archived') {
-      setShowArchived(true)
-    } else if (activeTab === 'works') {
-      setShowArchived(false)
-    }
-  }, [activeTab])
+  const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts'>('works')
   const [reposts, setReposts] = useState<any[]>([])
   const [isLoadingReposts, setIsLoadingReposts] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -254,7 +244,7 @@ export default function ProfilePage() {
             .from('works')
             .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order, archived')
             .eq('author_id', userId)
-            .eq('archived', showArchived)
+            .eq('archived', false)
             .order('display_order', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: false })
             .limit(20)
@@ -312,7 +302,7 @@ export default function ProfilePage() {
     }
     
     loadWorks()
-  }, [userId, showArchived])
+  }, [userId])
 
   const openEdit = () => {
     setEditProfile(profile)
@@ -386,7 +376,7 @@ export default function ProfilePage() {
           work.id === workId 
             ? { ...work, archived } 
             : work
-        ).filter(work => (work as any).archived === showArchived)
+        ).filter(work => !(work as any).archived)
       )
     } catch (error) {
       console.error('Error toggling archive status:', error)
@@ -592,22 +582,7 @@ export default function ProfilePage() {
           <button onClick={() => setActiveTab('reposts')} className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${activeTab === 'reposts' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-600 hover:text-red-600'}`}>
             <Repeat2 className="h-4 w-4"/> Reposts
           </button>
-          <button 
-            onClick={() => {
-              const newArchivedState = !showArchived
-              setShowArchived(newArchivedState)
-              // Switch to archived tab when showing archived works
-              if (newArchivedState) {
-                setActiveTab('archived')
-              } else {
-                setActiveTab('works')
-              }
-            }} 
-            className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${showArchived || activeTab === 'archived' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-600 hover:text-red-600'}`}
-          >
-            {showArchived || activeTab === 'archived' ? <ArchiveRestore className="h-4 w-4"/> : <Archive className="h-4 w-4"/>}
-            {showArchived || activeTab === 'archived' ? 'Obras Normales' : 'Ver Archivadas'}
-          </button>
+
         </div>
       </div>
 

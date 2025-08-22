@@ -29,7 +29,7 @@ export default function MisObrasPage() {
   const [works, setWorks] = useState<Work[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('my-stories')
-  const [showArchived, setShowArchived] = useState(false)
+
   const [showMenu, setShowMenu] = useState<string | null>(null)
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function MisObrasPage() {
               content
             `)
             .eq('author_id', userData.user.id)
-            .eq('archived', showArchived)
+            .eq('archived', false)
             .order('updated_at', { ascending: false })
             .abortSignal(abortController.signal)
           
@@ -174,7 +174,7 @@ export default function MisObrasPage() {
     return () => {
       abortController.abort()
     }
-  }, [showArchived])
+  }, [])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -255,7 +255,7 @@ export default function MisObrasPage() {
           work.id === workId 
             ? { ...work, archived } 
             : work
-        ).filter(work => work.archived === showArchived)
+        ).filter(work => !work.archived)
       )
     } catch (error) {
       console.error('Error toggling archive status:', error)
@@ -292,32 +292,11 @@ export default function MisObrasPage() {
             <div>
               <div className="flex items-center gap-4">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                  {showArchived ? 'Obras Archivadas' : 'Mis Obras'}
+                  Mis Obras
                 </h1>
-                <Button
-                  size="sm"
-                  variant={showArchived ? "default" : "outline"}
-                  onClick={() => setShowArchived(!showArchived)}
-                  className="text-xs"
-                >
-                  {showArchived ? (
-                    <>
-                      <ArchiveRestore className="h-4 w-4 mr-1" />
-                      Ver Activas
-                    </>
-                  ) : (
-                    <>
-                      <Archive className="h-4 w-4 mr-1" />
-                      Ver Archivadas
-                    </>
-                  )}
-                </Button>
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                {showArchived 
-                  ? 'Gestiona tus obras archivadas.' 
-                  : 'Administra y edita tus obras publicadas y borradores.'
-                }
+                Administra y edita tus obras publicadas y borradores.
               </p>
               <div className="flex flex-wrap gap-2 mt-3 text-xs">
                 <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700">
@@ -344,6 +323,9 @@ export default function MisObrasPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => router.push('/archivados')}>
+                <Archive className="h-4 w-4 mr-2" /> Ver Archivadas
+              </Button>
               <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => router.push('/writer')}>
                 <Plus className="h-4 w-4 mr-2" /> Nueva obra
               </Button>
@@ -484,17 +466,10 @@ export default function MisObrasPage() {
                           }}
                           className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
                         >
-                          {w.archived ? (
-                            <>
-                              <ArchiveRestore className="h-3 w-3" />
-                              Desarchivar
-                            </>
-                          ) : (
-                            <>
-                              <Archive className="h-3 w-3" />
-                              Archivar
-                            </>
-                          )}
+                          <>
+                            <Archive className="h-3 w-3" />
+                            Archivar
+                          </>
                         </button>
                         <div className="border-t border-gray-100 my-1"></div>
                         <button
