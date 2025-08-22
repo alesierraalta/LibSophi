@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { UserPlus, MessageCircle, Share2 } from 'lucide-react'
+import { BookOpen, UserPlus, MessageCircle, Share2, Repeat2, Heart, Eye } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import AppHeader from '@/components/AppHeader'
 import ProfileSkeleton from '@/components/ProfileSkeleton'
@@ -12,6 +13,7 @@ import OptimizedProfileWorksGrid from '@/components/GridStack/OptimizedProfileWo
 import { WorkType } from '@/lib/validations'
 import { dateUtils } from '@/lib/date-utils'
 import { toggleFollow, getFollowStats, FollowStats } from '@/lib/supabase/follows'
+import { measurePerformance, debounce, loadingStates } from '@/lib/performance-optimization'
 
 interface Profile {
   id: string
@@ -41,6 +43,22 @@ export default function UserProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts'>('works')
+  const [reposts, setReposts] = useState<any[]>([])
+  const [isLoadingReposts, setIsLoadingReposts] = useState(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isLoadingWorks, setIsLoadingWorks] = useState(true)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
+
+  // Default banners from original profile page
+  const defaultBanners: { title: string; url: string }[] = [
+    { title: 'La noche estrellada (Van Gogh)', url: 'https://upload.wikimedia.org/wikipedia/commons/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg' },
+    { title: 'El nacimiento de Venus (Botticelli)', url: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg' },
+    { title: 'La escuela de Atenas (Rafael)', url: 'https://upload.wikimedia.org/wikipedia/commons/9/94/School_of_Athens_Raphael.jpg' },
+    { title: 'La ronda de noche (Rembrandt)', url: 'https://upload.wikimedia.org/wikipedia/commons/2/2d/Rembrandt_van_Rijn-De_Nachtwacht-1642.jpg' },
+    { title: 'La gran ola de Kanagawa (Hokusai)', url: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Great_Wave_off_Kanagawa2.jpg' },
+    { title: 'El beso (Klimt)', url: 'https://upload.wikimedia.org/wikipedia/commons/7/70/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg' },
+  ]
 
   useEffect(() => {
     if (!username) {
@@ -53,8 +71,11 @@ export default function UserProfilePage() {
   }, [username])
 
   const loadUserProfile = async () => {
+    await measurePerformance('User Profile Load', async () => {
     try {
       setLoading(true)
+      setIsLoadingProfile(true)
+      setIsLoadingWorks(true)
       setError(null)
       
       const supabase = getSupabaseBrowserClient()
@@ -192,7 +213,10 @@ export default function UserProfilePage() {
       setError(`Error al cargar el perfil: ${username}`)
     } finally {
       setLoading(false)
+      setIsLoadingProfile(false)
+      setIsLoadingWorks(false)
     }
+    })
   }
 
   const handleFollow = async () => {
@@ -245,9 +269,18 @@ export default function UserProfilePage() {
     }
   }
 
+  // Optimized stats calculation - moved before early returns
+  const optimizedStats = useMemo(() => {
+    return {
+      works: stats.works || 0,
+      followers: stats.followers || 0,
+      following: stats.following || 0
+    }
+  }, [stats])
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
         <AppHeader />
         <div className="container mx-auto px-4 py-8">
           <ProfileSkeleton />
@@ -258,7 +291,7 @@ export default function UserProfilePage() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
         <AppHeader />
         <div className="container mx-auto px-4 py-8">
           <Card className="max-w-md mx-auto">
@@ -281,123 +314,178 @@ export default function UserProfilePage() {
     month: 'long'
   })
 
+  // Fallback profile for loading states
+  const fallbackProfile: Profile = {
+    id: '',
+    name: 'Cargando...',
+    username: '@cargando',
+    bio: 'Cargando perfil...',
+    avatar: '/api/placeholder/112/112',
+    banner: '',
+    created_at: new Date().toISOString()
+  }
+
+  const displayProfile = profile || fallbackProfile
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
       <AppHeader />
       
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Profile Header */}
-        <Card className="mb-8 overflow-hidden">
-          {/* Banner */}
-          {profile.banner && (
-            <div className="h-48 bg-gradient-to-r from-red-400 to-red-600 relative">
-              <img 
-                src={profile.banner} 
-                alt="Banner" 
-                className="w-full h-full object-cover"
+      {/* Profile Header Section */}
+      <section className="bg-white">
+        <div className="relative overflow-hidden">
+          <div className="relative h-32 sm:h-48 md:h-56 border-b border-gray-100">
+            {displayProfile.banner ? (
+              <Image
+                src={displayProfile.banner}
+                alt="Banner de perfil"
+                fill
+                className="absolute inset-0 w-full h-full object-cover"
+                priority
               />
-            </div>
-          )}
-          {!profile.banner && (
-            <div className="h-48 bg-gradient-to-r from-red-400 to-red-600"></div>
-          )}
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-red-100 via-white to-red-100" />
+            )}
+            <div className="absolute inset-0 bg-black/5" />
+          </div>
           
-          <CardContent className="relative px-6 pb-6">
-            {/* Avatar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-16 relative z-10">
-              <div className="relative">
-                <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-5">
+            <div className="flex items-start gap-4">
+              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full overflow-hidden ring-2 ring-red-100 bg-white flex-shrink-0 shadow-sm">
+                <Image
+                  src={displayProfile.avatar}
+                  alt={displayProfile.name}
+                  width={112}
+                  height={112}
+                  className="object-cover"
+                  priority
                 />
               </div>
-              
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-bold text-gray-900 truncate">{profile.name}</h1>
-                <p className="text-gray-600 mb-2">{profile.username}</p>
-                <p className="text-gray-700 mb-4">{profile.bio}</p>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                    {displayProfile.name}
+                  </h1>
+                  
+                  {/* Action Buttons - Only show for other users */}
+                  {!isOwnProfile && profile && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={handleFollow}
+                        variant={isFollowing ? "outline" : "default"}
+                        size="sm"
+                        className={`flex items-center gap-2 text-sm ${!isFollowing ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        {isFollowing ? 'Siguiendo' : 'Seguir'}
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2 text-sm">
+                        <MessageCircle className="h-4 w-4" />
+                        Mensaje
+                      </Button>
+                      <Button
+                        onClick={handleShare}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        Compartir
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-600 mb-2">{displayProfile.username}</p>
+                {displayProfile.bio && (
+                  <p className="text-gray-700 mb-3 text-sm">{displayProfile.bio}</p>
+                )}
                 
                 {/* Stats */}
-                <div className="flex gap-6 text-sm text-gray-600 mb-4">
-                  <span><strong className="text-gray-900">{stats.works}</strong> obras</span>
-                  <span><strong className="text-gray-900">{stats.followers}</strong> seguidores</span>
-                  <span><strong className="text-gray-900">{stats.following}</strong> siguiendo</span>
+                <div className="flex gap-6 text-sm text-gray-600 mb-3">
+                  <span><strong className="text-gray-900">{optimizedStats.works}</strong> obras</span>
+                  <button
+                    onClick={() => router.push(`/profile/${displayProfile.username}/followers`)}
+                    className="hover:underline"
+                  >
+                    <strong className="text-gray-900">{optimizedStats.followers}</strong> seguidores
+                  </button>
+                  <button
+                    onClick={() => router.push(`/profile/${displayProfile.username}/following`)}
+                    className="hover:underline"
+                  >
+                    <strong className="text-gray-900">{optimizedStats.following}</strong> siguiendo
+                  </button>
                 </div>
                 
                 <p className="text-sm text-gray-500">Se unió en {joinDate}</p>
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-2 mt-4 sm:mt-0">
-                {!isOwnProfile && currentUserId && (
-                  <Button
-                    onClick={handleFollow}
-                    variant={isFollowing ? "outline" : "default"}
-                    className={isFollowing ? "" : "bg-red-600 hover:bg-red-700"}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {isFollowing ? 'Siguiendo' : 'Seguir'}
-                  </Button>
-                )}
-                
-                {!isOwnProfile && (
-                  <Button variant="outline">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Mensaje
-                  </Button>
-                )}
-                
-                <Button variant="outline" onClick={handleShare}>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Compartir
-                </Button>
-                
-                {isOwnProfile && (
-                  <Button variant="outline" onClick={() => router.push('/profile')}>
-                    Editar perfil
-                  </Button>
-                )}
-              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </section>
 
-        {/* Works Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span>Obras publicadas</span>
-              <span className="text-sm font-normal text-gray-500">({stats.works})</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {works.length > 0 ? (
-              <OptimizedProfileWorksGrid
-                works={works}
-                isLoading={false}
-                onWorkClick={(work) => router.push(`/work/${work.id}`)}
-                editable={false} // Other users' works are not editable
-              />
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-4">
-                  <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay obras publicadas</h3>
-                <p className="text-gray-600">
-                  {isOwnProfile 
-                    ? 'Aún no has publicado ninguna obra. ¡Empieza a escribir!'
-                    : `${profile.name} aún no ha publicado ninguna obra.`
-                  }
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Tabs header */}
+      <div className="max-w-full mx-auto px-0 sm:px-6 lg:px-8 bg-white border-b border-gray-200 sticky top-14 z-40">
+        <div className="flex items-stretch">
+          <button 
+            onClick={() => setActiveTab('works')} 
+            className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${
+              activeTab === 'works' 
+                ? 'text-red-600 border-b-2 border-red-600' 
+                : 'text-gray-600 hover:text-red-600'
+            }`}
+          >
+            <BookOpen className="h-4 w-4"/> Obras ({optimizedStats.works})
+          </button>
+        </div>
       </div>
+
+      {/* Content Section */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Content Area */}
+        <div className="space-y-6">
+          {activeTab === 'works' && (
+            <div>
+              {isLoadingWorks ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-pulse">
+                      <div className="relative h-48 w-full bg-gray-200" />
+                      <CardHeader className="p-4 pb-2">
+                        <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="h-4 bg-gray-200 rounded w-16" />
+                          <div className="h-4 bg-gray-200 rounded w-16" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : works.length > 0 ? (
+                <OptimizedProfileWorksGrid 
+                  works={works} 
+                  editable={false}
+                  onWorkClick={(work) => router.push(`/work/${work.id}`)}
+                />
+              ) : (
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="text-center py-12">
+                    <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Sin obras publicadas</h3>
+                    <p className="text-gray-600 max-w-md mx-auto">
+                      {displayProfile.name} aún no ha publicado ninguna obra. ¡Mantente atento para ver su contenido!
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   )
 }
