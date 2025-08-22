@@ -1484,19 +1484,7 @@ function WriterContent() {
                   <option value="articulo">✒️ Artículo</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm text-gray-700">Portada (URL)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={coverUrl}
-                    onChange={(e) => setCoverUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1 border border-gray-300 rounded-md p-2 text-sm"
-                  />
-                  <Button variant="outline" size="sm" onClick={() => setCoverUrl('')}>Limpiar</Button>
-                </div>
-              </div>
+
               <div className="space-y-2">
                 <label className="text-sm text-gray-700">Etiquetas</label>
                 <div className="flex gap-2">
