@@ -192,11 +192,12 @@ export default function ProfilePage() {
             // Extract text content from the work
             let workContent = ''
             if (repost.works) {
+              const work = repost.works as any // Type assertion para evitar errores de TypeScript
               // Try to get content from chapters or direct content
-              if (repost.works.chapters && Array.isArray(repost.works.chapters) && repost.works.chapters.length > 0) {
-                workContent = repost.works.chapters[0]?.content || ''
-              } else if (repost.works.content) {
-                workContent = repost.works.content
+              if (work.chapters && Array.isArray(work.chapters) && work.chapters.length > 0) {
+                workContent = work.chapters[0]?.content || ''
+              } else if (work.content) {
+                workContent = work.content
               }
             }
             
