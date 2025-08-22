@@ -5,8 +5,9 @@ import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle, Upload } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { uploadPostImage, validateImageFile } from '@/lib/supabase/storage'
 import AppHeader from '@/components/AppHeader'
 
 function WriterContent() {
@@ -23,6 +24,9 @@ function WriterContent() {
   const [coverUrl, setCoverUrl] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [imageUploadError, setImageUploadError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isPreview, setIsPreview] = useState(false)
   const [previewWholeWork, setPreviewWholeWork] = useState(false)
   const [useChapters, setUseChapters] = useState<boolean>(genre === 'novela')
@@ -751,6 +755,64 @@ function WriterContent() {
     setChapters((prev) => prev.map((ch, i) => (i === index ? { ...ch, title: value } : ch)))
   }
 
+  // Handle image upload
+  const handleImageUpload = async (file: File) => {
+    setIsUploadingImage(true)
+    setImageUploadError('')
+
+    try {
+      // Validate the image file
+      const validation = validateImageFile(file)
+      if (!validation.isValid) {
+        setImageUploadError(validation.error || 'Archivo inválido')
+        return
+      }
+
+      // Get current user
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      
+      if (!userData?.user) {
+        setImageUploadError('Debes iniciar sesión para subir imágenes')
+        return
+      }
+
+      // Upload the image
+      const { data, error } = await uploadPostImage(file, userData.user.id, editWorkId || undefined)
+      
+      if (error) {
+        setImageUploadError('Error al subir la imagen. Inténtalo de nuevo.')
+        console.error('Upload error:', error)
+        return
+      }
+
+      if (data) {
+        setCoverUrl(data)
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      }
+
+    } catch (error) {
+      console.error('Image upload error:', error)
+      setImageUploadError('Error inesperado al subir la imagen')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  const handleImageInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+  }
+
+  const triggerImageUpload = () => {
+    fileInputRef.current?.click()
+  }
+
   // Load work for editing
   const loadWorkForEditing = async (workId: string) => {
     setIsLoading(true)
@@ -1168,6 +1230,47 @@ function WriterContent() {
                   </div>
                 </div>
               )}
+
+              {/* Image upload section */}
+              {!coverUrl && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <div className="flex flex-col items-center gap-2">
+                    <ImageIcon className="h-8 w-8 text-gray-400" />
+                    <p className="text-sm text-gray-600">Agrega una imagen a tu obra</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={triggerImageUpload}
+                      disabled={isUploadingImage}
+                      className="flex items-center gap-2"
+                    >
+                      {isUploadingImage ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          Subiendo...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          Subir imagen
+                        </>
+                      )}
+                    </Button>
+                    {imageUploadError && (
+                      <p className="text-xs text-red-600 mt-1">{imageUploadError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageInputChange}
+                className="hidden"
+              />
               <input
                 type="text"
                 value={title}

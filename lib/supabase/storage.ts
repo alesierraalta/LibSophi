@@ -73,6 +73,31 @@ export async function uploadProfileImage(
 }
 
 /**
+ * Upload a post/work image
+ */
+export async function uploadPostImage(
+  file: File,
+  userId: string,
+  workId?: string
+): Promise<{ data: string | null; error: any }> {
+  // Generate unique filename
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${userId}-${workId || 'new'}-${Date.now()}.${fileExt}`
+  const filePath = `posts/${fileName}`
+
+  const { data, error } = await uploadFile(file, 'images', filePath, {
+    upsert: true,
+    contentType: file.type
+  })
+
+  if (error) {
+    return { data: null, error }
+  }
+
+  return { data: data?.fullPath || null, error: null }
+}
+
+/**
  * Delete a file from Supabase Storage
  */
 export async function deleteFile(
