@@ -11,7 +11,6 @@ import { Search, Flame, Compass, Calendar, PenTool, Home, Library, Bookmark, Bel
 import OptimizedImage from '@/components/OptimizedImage'
 import TrendingWorks from '@/components/TrendingWorks'
 import TrendingAuthors from '@/components/TrendingAuthors'
-import SearchBar from '@/components/SearchBar'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { getOptimizedSupabaseClient } from '@/lib/supabase/optimized-client'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
@@ -452,18 +451,22 @@ export default function ExplorePage() {
 
             {/* Search Bar */}
             <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <SearchBar
-                placeholder="Buscar obras, autores..."
-                value={tag}
-                onChange={setTag}
-                onSearch={(query) => {
-                  setTag(query)
-                  router.push(`/search?q=${encodeURIComponent(query)}`)
-                }}
-                className="w-full"
-                showHistory={true}
-                maxHistoryItems={6}
-              />
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Buscar obras, autores..."
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tag.trim()) {
+                      e.preventDefault()
+                      router.push(`/search?q=${encodeURIComponent(tag.trim())}`)
+                    }
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-slate-400 focus:border-slate-400 bg-white text-sm"
+                />
+              </div>
             </div>
 
             {/* Header Actions */}
@@ -753,7 +756,7 @@ export default function ExplorePage() {
               <TrendingWorks 
                 timeframe="all"
                 limit={8}
-                showTimeframeTabs={false}
+                showTimeframeTabs={true}
                 title="🔥 En Tendencia"
               />
             </div>

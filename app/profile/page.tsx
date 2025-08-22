@@ -82,11 +82,11 @@ export default function ProfilePage() {
             
             // Load profile
             const { data: profileData } = await supabase
-              .from('profiles')
+            .from('profiles')
               .select('name, username, bio, avatar_url, banner_url')
               .eq('id', user.id)
-              .single()
-            
+            .single()
+          
             if (profileData) {
               const profile = {
                 name: profileData.name || user.email?.split('@')[0] || 'Usuario',
@@ -96,9 +96,9 @@ export default function ProfilePage() {
                 banner: profileData.banner_url || '',
               }
               setProfile(profile)
-              setHasLoadedFromDB(true)
-              setHasNoProfileData(false)
-            } else {
+            setHasLoadedFromDB(true)
+            setHasNoProfileData(false)
+          } else {
               // Create basic profile from user data
               const basicProfile = {
                 name: user.email?.split('@')[0] || 'Usuario',
@@ -188,12 +188,29 @@ export default function ProfilePage() {
             setWorks([])
             setHasNoWorksData(true)
             setStats(prev => ({ ...prev, works: 0 }))
+          }
+          
+          // Load follow stats
+          try {
+            if (userId) {
+              const followStats = await getFollowStats(userId)
+              if (followStats) {
+                setStats(prev => ({
+                  ...prev,
+                  followers: followStats.followers_count,
+                  following: followStats.following_count
+                }))
+              }
+            }
+          } catch (followError) {
+            console.warn('Error loading follow stats:', followError)
+            // Don't fail the entire load for follow stats
         }
       } catch (error) {
           console.error('Works load error:', error)
           setDatabaseError('Error al cargar obras')
-        setWorks([])
-        setHasNoWorksData(true)
+          setWorks([])
+          setHasNoWorksData(true)
       } finally {
         setIsLoadingWorks(false)
       }
@@ -306,13 +323,13 @@ export default function ProfilePage() {
         onConfirm: async () => {
         // Delete work directly with Supabase
         const { error } = await supabase
-          .from('works')
-          .delete()
-          .eq('id', workId)
-          .eq('author_id', userId)
+            .from('works')
+            .delete()
+            .eq('id', workId)
+            .eq('author_id', userId)
         
         const success = !error
-        if (error) {
+          if (error) {
           console.error('Work delete error:', error)
         }
         

@@ -562,7 +562,7 @@ function WorkResultCard({ work, onSave, isSaved }: { work: WorkResult; onSave: (
                   por{' '}
                   <span 
                     className="text-red-600 hover:text-red-700 cursor-pointer font-medium hover:underline transition-all"
-                    onClick={() => router.push(`/profile/${work.author_id}`)}
+                    onClick={() => router.push(`/profile/${work.author_username}`)}
                   >
                     {work.author_name}
                   </span>
@@ -645,7 +645,7 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
           <div className="relative">
             <Avatar 
               className="h-14 w-14 cursor-pointer ring-2 ring-gray-200 hover:ring-blue-400 transition-all duration-200" 
-              onClick={() => router.push(`/profile/${author.id}`)}
+              onClick={() => router.push(`/profile/${author.username}`)}
             >
               <AvatarImage src={author.avatar_url} className="hover:scale-110 transition-transform duration-200" />
               <AvatarFallback className="bg-red-100 text-red-700 font-bold text-lg">
@@ -665,7 +665,7 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
             <div className="flex items-center gap-2 flex-wrap">
               <h3 
                 className="font-bold text-lg text-gray-900 hover:text-red-600 cursor-pointer transition-colors duration-200"
-                onClick={() => router.push(`/profile/${author.id}`)}
+                onClick={() => router.push(`/profile/${author.username}`)}
               >
                 {author.name}
               </h3>
@@ -675,7 +675,7 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-600 font-medium">@{author.username}</p>
+            <p className="text-sm text-gray-600 font-medium">{author.username.startsWith('@') ? author.username : `@${author.username}`}</p>
             {author.bio && (
               <p className="text-sm text-gray-700 mt-2 line-clamp-2 leading-relaxed">{author.bio}</p>
             )}
@@ -695,7 +695,7 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(`/profile/${author.id}`)}
+                onClick={() => router.push(`/profile/${author.username}`)}
                 className="text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all"
               >
                 <User className="h-3 w-3 mr-1" />

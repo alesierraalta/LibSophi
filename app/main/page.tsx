@@ -727,34 +727,13 @@ function MainPageInner() {
           )}
         </div>
         
-        {/* Post Stats and Actions */}
+        {/* Post Actions - Simplified */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              {post.views || 0}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Heart className={`h-4 w-4 ${localIsLiked ? 'fill-red-500 text-red-500' : ''}`} />
-              {localLikes}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <MessageCircle className="h-4 w-4" />
-              {localComments}
-            </span>
+          <div className="flex items-center space-x-6">
+            {/* Actions removed - keeping only basic structure */}
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={() => router.push(`/work/${post.id}`)}
-            >
-              Leer más →
-            </Button>
+          <div className="flex items-center space-x-3">
+            {/* Social actions removed */}
           </div>
         </div>
 

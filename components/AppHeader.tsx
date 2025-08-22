@@ -9,6 +9,7 @@ import { Search, Bell, PenTool, MessageCircle, UserPlus, AtSign, Heart, User, Se
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { useAuth } from '@/hooks/useAuth'
+import SearchBar from '@/components/SearchBar'
 
 interface AppHeaderProps {
   searchValue?: string
@@ -270,22 +271,17 @@ export default function AppHeader({
           {/* Search Bar */}
           {showSearch && (
             <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar obras, autores..."
-                  value={searchValue}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchValue.trim()) {
-                      e.preventDefault()
-                      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`)
-                    }
-                  }}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-slate-400 focus:border-slate-400 bg-white text-sm"
-                />
-              </div>
+              <SearchBar
+                placeholder="Buscar obras, autores..."
+                value={searchValue}
+                onChange={handleSearchChange}
+                onSearch={(query) => {
+                  router.push(`/search?q=${encodeURIComponent(query)}`)
+                }}
+                className="w-full"
+                showHistory={true}
+                maxHistoryItems={8}
+              />
             </div>
           )}
 
