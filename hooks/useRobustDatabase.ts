@@ -73,7 +73,7 @@ export function useRobustDatabase() {
   // Safe profile query
   const getProfile = useCallback(async (userId: string) => {
     return executeQuery(
-      () => supabase
+      async () => await supabase
         .from('profiles')
         .select('id, username, name, bio, avatar_url, banner_url')
         .eq('id', userId)
@@ -86,7 +86,7 @@ export function useRobustDatabase() {
   // Safe works query
   const getUserWorks = useCallback(async (userId: string, includeArchived = false) => {
     return executeQuery(
-      () => supabase
+      async () => await supabase
         .from('works')
         .select('id, title, description, genre, views, likes, created_at, cover_url, published, archived')
         .eq('author_id', userId)
@@ -100,7 +100,7 @@ export function useRobustDatabase() {
   // Safe likes check
   const checkIfLiked = useCallback(async (workId: string, userId: string): Promise<boolean> => {
     const result = await executeQuery(
-      () => supabase
+      async () => await supabase
         .from('likes')
         .select('work_id')
         .eq('work_id', workId)
@@ -115,7 +115,7 @@ export function useRobustDatabase() {
   // Safe bookmarks check
   const checkIfBookmarked = useCallback(async (workId: string, userId: string): Promise<boolean> => {
     const result = await executeQuery(
-      () => supabase
+      async () => await supabase
         .from('bookmarks')
         .select('work_id')
         .eq('work_id', workId)

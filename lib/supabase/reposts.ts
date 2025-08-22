@@ -228,7 +228,7 @@ export async function getUserReposts(userId: string, limit = 20): Promise<Repost
       return []
     }
 
-    return data || []
+    return (data as any) || []
   } catch (error) {
     console.error('Get user reposts error:', error)
     return []
@@ -265,7 +265,7 @@ export async function getWorkReposts(workId: string, limit = 20): Promise<Repost
       return []
     }
 
-    return data || []
+    return (data as any) || []
   } catch (error) {
     console.error('Get work reposts error:', error)
     return []

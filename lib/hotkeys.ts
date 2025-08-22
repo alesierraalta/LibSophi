@@ -132,6 +132,8 @@ class HotkeyManager {
 
   // Set hotkey description for help system
   private setDescription(keys: string, description: string, scope: HotkeyScope) {
+    if (typeof window === 'undefined') return;
+    
     if (!window.hotkeyDescriptions) {
       window.hotkeyDescriptions = {
         global: {},
@@ -148,7 +150,7 @@ class HotkeyManager {
 
   // Get all registered hotkeys with descriptions
   getHotkeys(scope?: HotkeyScope) {
-    if (!window.hotkeyDescriptions) return {};
+    if (typeof window === 'undefined' || !window.hotkeyDescriptions) return {};
     
     if (scope) {
       return window.hotkeyDescriptions[scope] || {};

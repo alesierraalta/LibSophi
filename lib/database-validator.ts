@@ -15,23 +15,27 @@ const SCHEMA_MAPPINGS = {
     },
     relations: {
       'profiles:author_id': ['profiles:user_id', 'users:author_id', 'users:user_id']
-    }
+    },
+    optional: false
   },
   follows: {
     expectedColumns: ['follower_id', 'followee_id', 'created_at'],
     alternativeColumns: {
       'followee_id': ['followed_id', 'target_id', 'following_id']
-    }
+    },
+    optional: false
   },
   works: {
     expectedColumns: ['id', 'title', 'author_id', 'created_at'],
     alternativeColumns: {
       'author_id': ['user_id', 'creator_id', 'owner_id']
-    }
+    },
+    optional: false
   },
   likes: {
     expectedColumns: ['user_id', 'work_id', 'created_at'],
-    alternativeColumns: {}
+    alternativeColumns: {},
+    optional: false
   },
   work_views: {
     expectedColumns: ['id', 'work_id', 'user_id', 'created_at'],
@@ -40,7 +44,8 @@ const SCHEMA_MAPPINGS = {
   },
   profiles: {
     expectedColumns: ['id', 'username', 'name', 'avatar_url'],
-    alternativeColumns: {}
+    alternativeColumns: {},
+    optional: false
   }
 }
 
@@ -81,70 +86,7 @@ class DatabaseValidator {
     }
   }
 
-  // Robust query builder that handles schema mismatches
-  buildRobustQuery(tableName: string, columns: string[], filters: Record<string, any> = {}) {
-    const supabase = getSupabaseBrowserClient()
-    const mapping = SCHEMA_MAPPINGS[tableName as keyof typeof SCHEMA_MAPPINGS]
-    
-    // If table is optional and might not exist, wrap in try-catch
-    if (mapping?.optional) {
-      return this.buildOptionalTableQuery(tableName, columns, filters)
-    }
-    
-    // Build the basic query
-    let query = supabase.from(tableName)
-    
-    // Handle column selection with fallbacks
-    const safeColumns = this.getSafeColumns(tableName, columns)
-    query = query.select(safeColumns.join(', '))
-    
-    // Apply filters with column name mapping
-    Object.entries(filters).forEach(([key, value]) => {
-      const safeKey = this.mapColumnName(tableName, key)
-      query = query.eq(safeKey, value)
-    })
-    
-    return query
-  }
 
-  private buildOptionalTableQuery(tableName: string, columns: string[], filters: Record<string, any>) {
-    const supabase = getSupabaseBrowserClient()
-    
-    return {
-      async execute() {
-        try {
-          const query = supabase.from(tableName).select(columns.join(', '))
-          Object.entries(filters).forEach(([key, value]) => {
-            query.eq(key, value)
-          })
-          const result = await query
-          return { success: true, data: result.data || [], error: null }
-        } catch (error) {
-          console.warn(`Optional table ${tableName} not available:`, error)
-          return { success: false, data: [], error: null, fallback: true }
-        }
-      }
-    }
-  }
-
-  private getSafeColumns(tableName: string, requestedColumns: string[]): string[] {
-    const mapping = SCHEMA_MAPPINGS[tableName as keyof typeof SCHEMA_MAPPINGS]
-    if (!mapping) return requestedColumns
-    
-    return requestedColumns.map(col => this.mapColumnName(tableName, col))
-  }
-
-  private mapColumnName(tableName: string, columnName: string): string {
-    const mapping = SCHEMA_MAPPINGS[tableName as keyof typeof SCHEMA_MAPPINGS]
-    if (!mapping?.alternativeColumns) return columnName
-    
-    const alternatives = mapping.alternativeColumns[columnName]
-    if (!alternatives) return columnName
-    
-    // For now, return the first alternative
-    // In a real implementation, you'd check which one actually exists
-    return alternatives[0] || columnName
-  }
 
   // Safe query execution with automatic fallbacks
   async executeRobustQuery(queryPromise: Promise<any>, fallbackData: any = []) {

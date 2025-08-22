@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import AppHeader from '@/components/AppHeader'
 
-export default function WriterPage() {
+function WriterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editWorkId = searchParams.get('edit')
@@ -1593,4 +1593,22 @@ export default function WriterPage() {
   )
 }
 
-
+export default function WriterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <AppHeader />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <div className="text-sm text-gray-600">Cargando editor...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <WriterContent />
+    </Suspense>
+  )
+}

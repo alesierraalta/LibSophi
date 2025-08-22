@@ -6,10 +6,16 @@ import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 
 // Create Supabase client for auth operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.warn('Missing Supabase environment variables for auth config')
+}
+
+const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null
 
 export const authOptions: NextAuthOptions = {
   // Using Supabase for database, no adapter needed for basic setup
@@ -36,7 +42,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.email || !credentials?.password || !supabase) {
           return null;
         }
 
@@ -97,7 +103,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Handle OAuth account linking
-      if (account && user) {
+      if (account && user && supabase) {
         try {
           // Update user with OAuth info
           await supabase
@@ -126,7 +132,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ user, account, profile }) {
-      if (account?.provider === 'google' || account?.provider === 'github') {
+      if ((account?.provider === 'google' || account?.provider === 'github') && supabase) {
         try {
           // Check if user exists
           const { data: existingUser } = await supabase

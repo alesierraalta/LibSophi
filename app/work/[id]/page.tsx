@@ -178,7 +178,10 @@ export default function WorkDetailPage() {
           const [likesResult, commentsResult] = await Promise.all([
             robustLikesCount(workId),
             robustQuery(
-              () => supabase.from('comments').select('id', { count: 'exact', head: true }).eq('work_id', workId),
+              async () => {
+                const result = await supabase.from('comments').select('id', { count: 'exact', head: true }).eq('work_id', workId)
+                return { data: { count: result.count || 0 }, error: result.error }
+              },
               { count: 0 },
               'comments count'
             )
