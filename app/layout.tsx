@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import StructuredData from '../components/StructuredData'
-import { ConfirmDialog } from '../components/ConfirmDialog'
+import StructuredData from '@/components/StructuredData'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import dynamic from 'next/dynamic'
 import './globals.css'
 // Import Fontsource fonts
@@ -105,7 +105,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const MobileFooter = dynamic(() => import('../components/MobileFooter'), { ssr: false })
+  const MobileFooter = dynamic(() => import('@/components/MobileFooter'), { ssr: false })
   return (
     <html lang="es" className="scroll-smooth" suppressHydrationWarning>
       <body className="font-inter antialiased bg-white text-gray-900">

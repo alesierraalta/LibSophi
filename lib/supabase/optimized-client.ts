@@ -34,7 +34,6 @@ export class OptimizedSupabaseClient {
         .select('username, name, bio, avatar_url, banner_url, followers_count, following_count, is_private')
         .eq('id', userId)
         .single()
-        .abortSignal(this.abortController?.signal)
 
       if (error) {
         console.warn('Profile load error:', error)
@@ -375,31 +374,36 @@ export class OptimizedSupabaseClient {
         return []
       }
 
-      return (data || []).map(item => ({
-        id: item.works.id,
-        title: item.works.title,
-        description: item.works.description,
-        genre: item.works.genre,
-        views: item.works.views || 0,
-        likes: item.works.likes || 0,
-        comments_count: 0,
-        reposts_count: 0,
-        created_at: new Date(item.works.created_at),
-        updated_at: new Date(item.works.created_at),
-        coverUrl: item.works.cover_url,
-        published: true,
-        author_id: item.works.profiles.id,
-        content: '',
-        tags: item.works.tags || [],
-        reading_time: item.works.reading_time || 5,
-        trending_score: parseFloat(item.trending_score),
-        author: {
-          id: item.works.profiles.id,
-          username: item.works.profiles.username,
-          name: item.works.profiles.name,
-          avatar_url: item.works.profiles.avatar_url
-        }
-      }))
+      return (data || []).map(item => {
+        const work = item.works[0];
+        const profile = work?.profiles[0];
+        return {
+          id: work.id,
+          title: work.title,
+          description: work.description,
+          genre: work.genre,
+          views: work.views || 0,
+          likes: work.likes || 0,
+          comments_count: 0,
+          reposts_count: 0,
+          created_at: new Date(work.created_at),
+          updated_at: new Date(work.created_at),
+          cover_image_url: work.cover_url,
+          published: true,
+          archived: false,
+          author_id: profile?.id,
+          content: '',
+          tags: work.tags || [],
+          reading_time: work.reading_time || 5,
+          trending_score: parseFloat(item.trending_score),
+          author: {
+            id: profile?.id,
+            username: profile?.username,
+            name: profile?.name,
+            avatar_url: profile?.avatar_url
+          }
+        };
+      })
     } catch (error) {
       return handleError(error, [])
     }
@@ -464,30 +468,34 @@ export class OptimizedSupabaseClient {
         return []
       }
 
-      return (data || []).map(work => ({
-        id: work.id,
-        title: work.title,
-        description: work.description,
-        genre: work.genre,
-        views: work.views || 0,
-        likes: work.likes || 0,
-        comments_count: 0,
-        reposts_count: 0,
-        created_at: new Date(work.created_at),
-        updated_at: new Date(work.created_at),
-        coverUrl: work.cover_url,
-        published: true,
-        author_id: work.profiles.id,
-        content: '',
-        tags: work.tags || [],
-        reading_time: work.reading_time || 5,
-        author: {
-          id: work.profiles.id,
-          username: work.profiles.username,
-          name: work.profiles.name,
-          avatar_url: work.profiles.avatar_url
-        }
-      }))
+      return (data || []).map(work => {
+        const profile = work.profiles[0];
+        return {
+          id: work.id,
+          title: work.title,
+          description: work.description,
+          genre: work.genre,
+          views: work.views || 0,
+          likes: work.likes || 0,
+          comments_count: 0,
+          reposts_count: 0,
+          created_at: new Date(work.created_at),
+          updated_at: new Date(work.created_at),
+          cover_image_url: work.cover_url,
+          published: true,
+          archived: false,
+          author_id: profile?.id,
+          content: '',
+          tags: work.tags || [],
+          reading_time: work.reading_time || 5,
+          author: {
+            id: profile?.id,
+            username: profile?.username,
+            name: profile?.name,
+            avatar_url: profile?.avatar_url
+          }
+        };
+      })
     } catch (error) {
       return handleError(error, [])
     }
@@ -525,30 +533,34 @@ export class OptimizedSupabaseClient {
         return []
       }
 
-      return (data || []).map(work => ({
-        id: work.id,
-        title: work.title,
-        description: work.description,
-        genre: work.genre,
-        views: work.views || 0,
-        likes: work.likes || 0,
-        comments_count: 0,
-        reposts_count: 0,
-        created_at: new Date(work.created_at),
-        updated_at: new Date(work.created_at),
-        coverUrl: work.cover_url,
-        published: true,
-        author_id: work.profiles.id,
-        content: '',
-        tags: work.tags || [],
-        reading_time: work.reading_time || 5,
-        author: {
-          id: work.profiles.id,
-          username: work.profiles.username,
-          name: work.profiles.name,
-          avatar_url: work.profiles.avatar_url
-        }
-      }))
+      return (data || []).map(work => {
+        const profile = work.profiles[0];
+        return {
+          id: work.id,
+          title: work.title,
+          description: work.description,
+          genre: work.genre,
+          views: work.views || 0,
+          likes: work.likes || 0,
+          comments_count: 0,
+          reposts_count: 0,
+          created_at: new Date(work.created_at),
+          updated_at: new Date(work.created_at),
+          cover_image_url: work.cover_url,
+          published: true,
+          archived: false,
+          author_id: profile?.id,
+          content: '',
+          tags: work.tags || [],
+          reading_time: work.reading_time || 5,
+          author: {
+            id: profile?.id,
+            username: profile?.username,
+            name: profile?.name,
+            avatar_url: profile?.avatar_url
+          }
+        };
+      })
     } catch (error) {
       return handleError(error, [])
     }

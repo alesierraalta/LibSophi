@@ -39,18 +39,25 @@ export default function ProfileHoverCard({ author, position = 'right', className
         const supabase = getSupabaseBrowserClient()
         
         // Get user ID by username
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('username', author.username.replace('@', ''))
-          .single()
+        let userProfile = null
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
+            .single()
+          userProfile = data
+        } catch (error) {
+          console.warn('Profiles table not available:', error)
+          return
+        }
         
         if (userProfile) {
           // Get followers count
           const { count: followersCount } = await supabase
             .from('follows')
             .select('*', { count: 'exact', head: true })
-            .eq('followed_id', userProfile.id)
+            .eq('followee_id', userProfile.id)
           
           // Get following count
           const { count: followingCount } = await supabase
@@ -62,7 +69,7 @@ export default function ProfileHoverCard({ author, position = 'right', className
           const { count: worksCount } = await supabase
             .from('works')
             .select('*', { count: 'exact', head: true })
-            .eq('user_id', userProfile.id)
+            .eq('author_id', userProfile.id)
           
           setStats({
             works: worksCount || 0,
@@ -101,17 +108,23 @@ export default function ProfileHoverCard({ author, position = 'right', className
       
       if (userData?.user && !isFollowing) {
         // Get the followed user's ID by username
-        const { data: followedUser } = await supabase
-          .from('profiles')
-          .select('id, name')
-          .eq('username', author.username.replace('@', ''))
-          .single()
+        let followedUser = null
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
+            .single()
+          followedUser = data
+        } catch (error) {
+          console.warn('Profiles table not available for follow action:', error)
+        }
         
         if (followedUser) {
           // Insert follow record
           await supabase
             .from('follows')
-            .insert({ follower_id: userData.user.id, followed_id: followedUser.id })
+            .insert({ follower_id: userData.user.id, followee_id: followedUser.id })
           
           // Create notification
           const currentUserName = userData.user.user_metadata?.name || userData.user.email || 'Alguien'
@@ -119,18 +132,24 @@ export default function ProfileHoverCard({ author, position = 'right', className
         }
       } else if (userData?.user && isFollowing) {
         // Get the followed user's ID and unfollow
-        const { data: followedUser } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('username', author.username.replace('@', ''))
-          .single()
+        let followedUser = null
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
+            .single()
+          followedUser = data
+        } catch (error) {
+          console.warn('Profiles table not available for unfollow action:', error)
+        }
         
         if (followedUser) {
           await supabase
             .from('follows')
             .delete()
             .eq('follower_id', userData.user.id)
-            .eq('followed_id', followedUser.id)
+            .eq('followee_id', followedUser.id)
         }
       }
     } catch (error) {

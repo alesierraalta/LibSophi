@@ -23,23 +23,11 @@ interface OptimizedProfileWorksGridProps {
 
 // Optimized cover image function
 const getCoverImage = (work: WorkType): string => {
-  return work.coverUrl || work.cover_image_url || '/api/placeholder/400/300'
+  return work.cover_image_url || '/api/placeholder/400/300'
 }
 
 // Simplified work card component
-const WorkCard = React.memo(({ 
-  work, 
-  onWorkClick, 
-  onWorkEdit, 
-  onWorkDelete, 
-  onWorkShare, 
-  onWorkDuplicate,
-  onWorkArchive,
-  index,
-  isEditMode,
-  isDragged,
-  onCardClick
-}: { 
+const WorkCard = React.memo(React.forwardRef<HTMLDivElement, { 
   work: WorkType
   onWorkClick?: (work: WorkType) => void
   onWorkEdit?: (work: WorkType) => void
@@ -51,11 +39,25 @@ const WorkCard = React.memo(({
   isEditMode?: boolean
   isDragged?: boolean
   onCardClick?: (work: WorkType, index: number) => void
-}) => {
-  const [showMenu, setShowMenu] = useState(false)
+}>(({ 
+  work, 
+  onWorkClick, 
+  onWorkEdit, 
+  onWorkDelete, 
+  onWorkShare, 
+  onWorkDuplicate,
+  onWorkArchive,
+  index,
+  isEditMode,
+  isDragged,
+  onCardClick
+}, ref) => {
+
+
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ 
@@ -72,7 +74,7 @@ const WorkCard = React.memo(({
       className="group"
     >
       <Card 
-        className={`bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 ${
+        className={`bg-white border border-gray-200 rounded-lg transition-all duration-200 ${
           isEditMode ? 'cursor-pointer hover:border-red-300' : 'hover:shadow-lg hover:border-red-200'
         } ${
           isDragged ? 'ring-2 ring-red-500 shadow-xl border-red-300' : ''
@@ -86,7 +88,7 @@ const WorkCard = React.memo(({
         }}
       >
         {/* Cover Image */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg bg-gradient-to-br from-gray-100 to-gray-200">
           <img
             src={getCoverImage(work)}
             alt={work.title}
@@ -94,95 +96,32 @@ const WorkCard = React.memo(({
             loading="lazy"
           />
           
-          {/* Overlay with actions */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300">
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="relative">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 bg-white/90 hover:bg-white text-gray-700 hover:text-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowMenu(!showMenu)
-                  }}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-
-                {/* Quick actions menu */}
-                {showMenu && (
-                  <div className="absolute right-0 top-9 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onWorkEdit?.(work)
-                        setShowMenu(false)
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                      Editar
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onWorkDuplicate?.(work)
-                        setShowMenu(false)
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Copy className="h-3 w-3" />
-                      Duplicar
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onWorkShare?.(work)
-                        setShowMenu(false)
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Share2 className="h-3 w-3" />
-                      Compartir
-                    </button>
-                    {onWorkArchive && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onWorkArchive(work.id, !(work as any).archived)
-                          setShowMenu(false)
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        {(work as any).archived ? (
-                          <>
-                            <ArchiveRestore className="h-3 w-3" />
-                            Desarchivar
-                          </>
-                        ) : (
-                          <>
-                            <Archive className="h-3 w-3" />
-                            Archivar
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <div className="border-t border-gray-100 my-1"></div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onWorkDelete?.(work.id)
-                        setShowMenu(false)
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Eliminar
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Overlay con iconos de acciones - Nuevo UX optimizado */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 backdrop-blur-sm transition-all duration-300">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+              
+              <button onClick={(e) => { e.stopPropagation(); onWorkEdit?.(work) }} title="Editar" className="w-10 h-10 bg-white/90 hover:bg-blue-500 hover:text-white text-gray-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110">
+                <Edit3 className="w-4 h-4" />
+              </button>
+              
+              <button onClick={(e) => { e.stopPropagation(); onWorkDuplicate?.(work) }} title="Duplicar" className="w-10 h-10 bg-white/90 hover:bg-green-500 hover:text-white text-gray-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110">
+                <Copy className="w-4 h-4" />
+              </button>
+              
+              <button onClick={(e) => { e.stopPropagation(); onWorkShare?.(work) }} title="Compartir" className="w-10 h-10 bg-white/90 hover:bg-purple-500 hover:text-white text-gray-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110">
+                <Share2 className="w-4 h-4" />
+              </button>
+              
+              {onWorkArchive && (
+                <button onClick={(e) => { e.stopPropagation(); onWorkArchive(work.id, !(work as any).archived) }} title={(work as any).archived ? 'Desarchivar' : 'Archivar'} className="w-10 h-10 bg-white/90 hover:bg-orange-500 hover:text-white text-gray-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110">
+                  {(work as any).archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                </button>
+              )}
+              
+              <button onClick={(e) => { e.stopPropagation(); onWorkDelete?.(work.id) }} title="Eliminar" className="w-10 h-10 bg-white/90 hover:bg-red-500 hover:text-white text-gray-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110">
+                <Trash2 className="w-4 h-4" />
+              </button>
+              
             </div>
           </div>
 
@@ -236,16 +175,9 @@ const WorkCard = React.memo(({
         </CardContent>
       </Card>
 
-      {/* Click outside to close menu */}
-      {showMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowMenu(false)}
-        />
-      )}
     </motion.div>
   )
-})
+}))
 
 WorkCard.displayName = 'WorkCard'
 

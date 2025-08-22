@@ -15,7 +15,7 @@ export interface WorksQueryOptions {
  */
 export function buildWorksQuery(options: WorksQueryOptions = {}) {
   const supabase = getSupabaseBrowserClient()
-  let query = supabase.from('works')
+  let query = supabase.from('works').select('*')
 
   // Apply archive filter (exclude archived by default)
   if (!options.includeArchived) {
@@ -103,11 +103,11 @@ export async function toggleWorkArchiveStatus(workId: string, archived: boolean)
  * Get archived works for a user
  */
 export async function getUserArchivedWorks(userId: string) {
-  const { data, error } = await buildWorksQuery({ 
-    authorId: userId, 
-    includeArchived: true 
-  })
+  const supabase = getSupabaseBrowserClient()
+  const { data, error } = await supabase
+    .from('works')
     .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order, archived')
+    .eq('author_id', userId)
     .eq('archived', true)
     .order('updated_at', { ascending: false })
 
@@ -123,21 +123,26 @@ export async function getUserArchivedWorks(userId: string) {
  * Search works (excluding archived by default)
  */
 export async function searchWorks(query: string, includeArchived = false) {
-  const worksQuery = buildWorksQuery({ 
-    includeArchived,
-    published: true 
-  })
-  
-  const { data, error } = await worksQuery
+  const supabase = getSupabaseBrowserClient()
+  let dbQuery = supabase
+    .from('works')
     .select(`
       id, title, description, genre, views, likes, created_at, cover_url, reading_time, tags,
       profiles:author_id (
         id, username, name, avatar_url
       )
     `)
+    .eq('published', true)
     .or(`title.ilike.%${query}%, description.ilike.%${query}%, tags.cs.{${query}}`)
     .order('created_at', { ascending: false })
     .limit(50)
+
+  // Apply archive filter if needed
+  if (!includeArchived) {
+    dbQuery = dbQuery.eq('archived', false)
+  }
+
+  const { data, error } = await dbQuery
 
   if (error) {
     console.error('Error searching works:', error)

@@ -264,7 +264,7 @@ export default function ExplorePage() {
               const { count: followersCount } = await supabase
                 .from('follows')
                 .select('*', { count: 'exact', head: true })
-                .eq('followed_id', author.id)
+                .eq('followee_id', author.id)
               
               // Get most common genre for this author
               const { data: genreData } = await supabase

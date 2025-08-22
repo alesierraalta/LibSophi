@@ -71,9 +71,9 @@ export default function UserProfilePage() {
       
       // Try exact match first
       const searchAttempts = [
+        username.startsWith('@') ? username : `@${username}`, // Ensure @ prefix first
         username, // As provided
-        `@${username}`, // With @ prefix
-        username.replace('@', '') // Without @ prefix
+        `@${username.replace('@', '')}` // Clean and add @ prefix
       ]
       
       for (const searchTerm of searchAttempts) {
@@ -148,6 +148,7 @@ export default function UserProfilePage() {
           coverUrl: work.cover_url,
           cover_image_url: work.cover_url,
           published: work.published || false,
+          archived: false, // Default value since archived column may not exist in DB
           author_id: profileData.id,
           content: work.content || '',
           tags: work.tags || [],
@@ -188,7 +189,6 @@ export default function UserProfilePage() {
     } catch (error) {
       console.error('Error loading profile:', error)
       console.error('Searched username:', username)
-      console.error('Search attempts:', searchAttempts)
       setError(`Error al cargar el perfil: ${username}`)
     } finally {
       setLoading(false)

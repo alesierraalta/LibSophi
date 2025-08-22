@@ -152,23 +152,43 @@ function MainPageInner() {
           // aggregate counts
           const workIds = mapped.map((m: any) => m.id)
           if (workIds.length > 0) {
-            const [{ data: likesRows }, { data: commentsRows }, { data: bmRows }] = await Promise.all([
-              supabase.from('likes').select('work_id').in('work_id', workIds),
-              supabase.from('comments').select('work_id').in('work_id', workIds),
-              supabase.from('bookmarks').select('work_id').in('work_id', workIds),
-            ])
-            const likesCount: Record<string, number> = {}
-            const commentsCount: Record<string, number> = {}
-            const bookmarksCount: Record<string, number> = {}
-            ;(likesRows || []).forEach((r: any) => { likesCount[r.work_id] = (likesCount[r.work_id] || 0) + 1 })
-            ;(commentsRows || []).forEach((r: any) => { commentsCount[r.work_id] = (commentsCount[r.work_id] || 0) + 1 })
-            ;(bmRows || []).forEach((r: any) => { bookmarksCount[r.work_id] = (bookmarksCount[r.work_id] || 0) + 1 })
-            mapped = mapped.map((m: any) => ({
-              ...m,
-              likes: likesCount[m.id] || 0,
-              comments: commentsCount[m.id] || 0,
-              shares: 0,
-            }))
+            try {
+              const [likesResult, commentsResult, bmResult] = await Promise.allSettled([
+                supabase.from('likes').select('work_id').in('work_id', workIds),
+                supabase.from('comments').select('work_id').in('work_id', workIds),
+                supabase.from('bookmarks').select('work_id').in('work_id', workIds),
+              ])
+              
+              const likesRows = likesResult.status === 'fulfilled' ? likesResult.value.data : []
+              const commentsRows = commentsResult.status === 'fulfilled' ? commentsResult.value.data : []
+              const bmRows = bmResult.status === 'fulfilled' ? bmResult.value.data : []
+              
+              if (commentsResult.status === 'rejected') {
+                console.warn('Comments table not available:', commentsResult.reason)
+              }
+              
+              const likesCount: Record<string, number> = {}
+              const commentsCount: Record<string, number> = {}
+              const bookmarksCount: Record<string, number> = {}
+              ;(likesRows || []).forEach((r: any) => { likesCount[r.work_id] = (likesCount[r.work_id] || 0) + 1 })
+              ;(commentsRows || []).forEach((r: any) => { commentsCount[r.work_id] = (commentsCount[r.work_id] || 0) + 1 })
+              ;(bmRows || []).forEach((r: any) => { bookmarksCount[r.work_id] = (bookmarksCount[r.work_id] || 0) + 1 })
+              mapped = mapped.map((m: any) => ({
+                ...m,
+                likes: likesCount[m.id] || 0,
+                comments: commentsCount[m.id] || 0,
+                shares: 0,
+              }))
+            } catch (error) {
+              console.warn('Error loading counts:', error)
+              // Use default values if counts fail
+              mapped = mapped.map((m: any) => ({
+                ...m,
+                likes: 0,
+                comments: 0,
+                shares: 0,
+              }))
+            }
           }
           // Mark liked/bookmarked for current user
           if (userData?.user && mapped.length > 0) {
@@ -278,8 +298,13 @@ function MainPageInner() {
         const nlAuthorIds = Array.from(new Set(newsletters.map((n: any) => n.author_id).filter(Boolean)))
         let nlProfiles: any[] = []
         if (nlAuthorIds.length > 0) {
-          const { data: p2 } = await supabase.from('profiles').select('id,name').in('id', nlAuthorIds)
-          nlProfiles = p2 || []
+          try {
+            const { data: p2 } = await supabase.from('profiles').select('id,name').in('id', nlAuthorIds)
+            nlProfiles = p2 || []
+          } catch (error) {
+            console.warn('Profiles table not available for newsletters:', error)
+            nlProfiles = []
+          }
         }
         const idToName: Record<string, string> = {}
         nlProfiles.forEach((p: any) => { idToName[p.id] = p.name || 'Autor' })
@@ -306,8 +331,13 @@ function MainPageInner() {
         const topAuthorIds2 = Array.from(new Set(topWorks.map((w: any) => w.author_id)))
         let pTop: any[] = []
         if (topAuthorIds2.length > 0) {
-          const { data: p } = await supabase.from('profiles').select('id,name').in('id', topAuthorIds2)
-          pTop = p || []
+          try {
+            const { data: p } = await supabase.from('profiles').select('id,name').in('id', topAuthorIds2)
+            pTop = p || []
+          } catch (error) {
+            console.warn('Profiles table not available for popular stories:', error)
+            pTop = []
+          }
         }
         const idToNameTop: Record<string, string> = {}
         pTop.forEach((p: any) => { idToNameTop[p.id] = p.name || 'Autor' })
@@ -473,14 +503,14 @@ function MainPageInner() {
           const supabase = getSupabaseBrowserClient()
           
           // Get comments with author information
-          const { data: commentsData } = await supabase
+          const { data: commentsData, error: commentsError } = await supabase
             .from('comments')
             .select(`
               id,
-              content,
+              text,
               created_at,
-              user_id,
-              profiles:user_id (
+              author_id,
+              profiles:author_id (
                 name,
                 username,
                 avatar_url
@@ -488,6 +518,12 @@ function MainPageInner() {
             `)
             .eq('work_id', post.id)
             .order('created_at', { ascending: true })
+          
+          if (commentsError) {
+            console.warn('Comments table not available:', commentsError)
+            setComments([])
+            return
+          }
           
           if (commentsData) {
             const formattedComments = commentsData.map((comment: any) => ({
@@ -497,7 +533,7 @@ function MainPageInner() {
                 username: comment.profiles?.username ? (comment.profiles.username.startsWith('@') ? comment.profiles.username : `@${comment.profiles.username}`) : '@usuario',
                 avatar: comment.profiles?.avatar_url
               },
-              text: comment.content,
+              text: comment.text,
               time: new Date(comment.created_at).getTime()
             }))
             
@@ -547,11 +583,17 @@ function MainPageInner() {
         
         // Get current user profile for immediate UI update
         const { data: userData } = await supabase.auth.getUser()
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('name, username, avatar_url')
-          .eq('id', currentUserId)
-          .single()
+        let userProfile = null
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('name, username, avatar_url')
+            .eq('id', currentUserId)
+            .single()
+          userProfile = data
+        } catch (error) {
+          console.warn('Profiles table not available:', error)
+        }
         
         // Insert comment into database
         const { data: newComment, error } = await supabase
@@ -569,7 +611,11 @@ function MainPageInner() {
           `)
           .single()
         
-        if (error) throw error
+        if (error) {
+          console.warn('Comments table not available:', error)
+          alert('La función de comentarios no está disponible en este momento.')
+          return
+        }
         
         // Immediately update UI with the new comment
         const newCommentItem = {
@@ -732,8 +778,102 @@ function MainPageInner() {
           <div className="flex items-center space-x-6">
             {/* Actions removed - keeping only basic structure */}
           </div>
-          <div className="flex items-center space-x-3">
-            {/* Social actions removed */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              {/* Like Button */}
+              <button 
+                onClick={onLike}
+                className={`flex items-center space-x-2 transition-all duration-200 ${
+                  localIsLiked 
+                    ? 'text-red-600 hover:text-red-700' 
+                    : 'text-gray-500 hover:text-red-600'
+                }`}
+              >
+                <svg className="h-5 w-5" fill={localIsLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span className="text-sm font-medium">{localLikes}</span>
+              </button>
+
+              {/* Comments Button */}
+              <button 
+                onClick={() => setShowCommentBox(!showCommentBox)}
+                className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-all duration-200"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span className="text-sm font-medium">{localComments}</span>
+              </button>
+
+              {/* Repost Button */}
+              <button 
+                onClick={() => {
+                  setLocalReposted(!localReposted)
+                  setLocalReposts(prev => localReposted ? prev - 1 : prev + 1)
+                }}
+                className={`flex items-center space-x-2 transition-all duration-200 ${
+                  localReposted 
+                    ? 'text-green-600 hover:text-green-700' 
+                    : 'text-gray-500 hover:text-green-600'
+                }`}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="text-sm font-medium">{localReposts}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {/* Bookmark Button */}
+              <button 
+                onClick={() => {
+                  setBookmarked(!bookmarked)
+                  // Handle bookmark logic
+                  try {
+                    const raw = localStorage.getItem('palabreo-bookmarks')
+                    let ids: any[] = raw ? JSON.parse(raw) : []
+                    if (!bookmarked) {
+                      if (!ids.includes(post.id)) ids.push(post.id)
+                    } else {
+                      ids = ids.filter((id: any) => id !== post.id)
+                    }
+                    localStorage.setItem('palabreo-bookmarks', JSON.stringify(ids))
+                  } catch {}
+                }}
+                className={`p-2 transition-all duration-200 ${
+                  bookmarked 
+                    ? 'text-yellow-600 hover:text-yellow-700' 
+                    : 'text-gray-500 hover:text-yellow-600'
+                }`}
+              >
+                <svg className="h-5 w-5" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              </button>
+
+              {/* Share Button */}
+              <button 
+                className="p-2 text-gray-500 hover:text-blue-600 transition-all duration-200"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: post.title,
+                      text: `${post.content.substring(0, 100)}...`,
+                      url: `${window.location.origin}/work/${post.id}`
+                    })
+                  } else {
+                    navigator.clipboard.writeText(`${window.location.origin}/work/${post.id}`)
+                    alert('¡Enlace copiado al portapapeles!')
+                  }
+                }}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -854,14 +994,14 @@ function MainPageInner() {
           const { data: followedUser } = await supabase
             .from('profiles')
             .select('id, name')
-            .eq('username', author.username.replace('@', ''))
+            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
             .single()
           
           if (followedUser) {
             // Insert follow record
             await supabase
               .from('follows')
-              .insert({ follower_id: userData.user.id, followed_id: followedUser.id })
+              .insert({ follower_id: userData.user.id, followee_id: followedUser.id })
             
             // Create notification
             const currentUserName = userData.user.user_metadata?.name || userData.user.email || 'Alguien'
@@ -872,7 +1012,7 @@ function MainPageInner() {
           const { data: followedUser } = await supabase
             .from('profiles')
             .select('id')
-            .eq('username', author.username.replace('@', ''))
+            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
             .single()
           
           if (followedUser) {
@@ -880,7 +1020,7 @@ function MainPageInner() {
               .from('follows')
               .delete()
               .eq('follower_id', userData.user.id)
-              .eq('followed_id', followedUser.id)
+              .eq('followee_id', followedUser.id)
           }
         }
       } catch (error) {

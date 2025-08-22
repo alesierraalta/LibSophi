@@ -36,17 +36,30 @@ export async function trackView(workId: string, userId?: string): Promise<boolea
       }
     }
     
-    // Optionally track individual view records for analytics
+    // Optionally track individual view records for analytics (completely optional)
     if (userId) {
-      await supabase
-        .from('work_views')
-        .insert({
-          work_id: workId,
-          user_id: userId,
-          viewed_at: new Date().toISOString()
-        })
-        .onConflict('work_id, user_id')
-        // Ignore conflicts - we don't want to count multiple views from same user
+      // Use a completely safe approach - check if exists first, then insert only if not
+      try {
+        const { data: existingView } = await supabase
+          .from('work_views')
+          .select('id')
+          .eq('work_id', workId)
+          .eq('user_id', userId)
+          .maybeSingle()
+        
+        if (!existingView) {
+          // Only insert if no existing record
+          await supabase
+            .from('work_views')
+            .insert({
+              work_id: workId,
+              user_id: userId
+            })
+        }
+      } catch (viewError) {
+        // Completely ignore view tracking errors - this is optional analytics
+        console.log('📊 View analytics unavailable (non-critical)')
+      }
     }
     
     return true

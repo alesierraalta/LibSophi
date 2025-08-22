@@ -159,20 +159,41 @@ export default function WorkDetailPage() {
         setWork(w)
         setViewsCount(w.views || 0)
 
-        const { data: p } = await supabase
-          .from('profiles')
-          .select('id,username,name,avatar_url')
-          .eq('id', w.author_id)
-          .single()
-        setAuthor(p || null)
+        try {
+          const { data: p } = await supabase
+            .from('profiles')
+            .select('id,username,name,avatar_url')
+            .eq('id', w.author_id)
+            .single()
+          setAuthor(p || null)
+        } catch (error) {
+          console.warn('Profiles table not available:', error)
+          setAuthor(null)
+        }
 
-        // counts
-        const [{ count: likesC }, { count: commentsC }] = await Promise.all([
-          supabase.from('likes').select('id', { count: 'exact', head: true }).eq('work_id', workId),
-          supabase.from('comments').select('id', { count: 'exact', head: true }).eq('work_id', workId),
-        ])
-        setLikesCount(likesC || 0)
-        setCommentsCount(commentsC || 0)
+        // counts - using robust queries
+        try {
+          const { robustLikesCount, robustQuery } = await import('@/lib/database-validator')
+          
+          const [likesResult, commentsResult] = await Promise.all([
+            robustLikesCount(workId),
+            robustQuery(
+              () => supabase.from('comments').select('id', { count: 'exact', head: true }).eq('work_id', workId),
+              { count: 0 },
+              'comments count'
+            )
+          ])
+          
+          setLikesCount(likesResult.count)
+          setCommentsCount(commentsResult.data?.count || 0)
+          
+          if (likesResult.fallback) console.log('📊 Using fallback for likes count')
+          if (commentsResult.fallback) console.log('📊 Using fallback for comments count')
+        } catch (error) {
+          console.warn('Error loading counts:', error)
+          setLikesCount(0)
+          setCommentsCount(0)
+        }
 
         // current user states
         if (userData?.user) {
@@ -190,23 +211,20 @@ export default function WorkDetailPage() {
           } catch {}
         }
 
-        // comments list (latest 50) with author info
-        const { data: comms } = await supabase
-          .from('comments')
-          .select(`
-            id, 
-            text, 
-            author_id, 
-            created_at,
-            profiles:author_id (
-              username,
-              name
-            )
-          `)
-          .eq('work_id', workId)
-          .order('created_at', { ascending: true })
-          .limit(50)
-        setComments(comms || [])
+        // comments list (latest 50) with author info - using robust query
+        try {
+          const { robustCommentsQuery } = await import('@/lib/database-validator')
+          const result = await robustCommentsQuery(workId)
+          
+          setComments(result.data || [])
+          
+          if (result.fallback) {
+            console.log('📝 Using fallback for comments - some features may be limited')
+          }
+        } catch (error) {
+          console.warn('Comments loading failed:', error)
+          setComments([])
+        }
 
         // record a read event (no await)
         void supabase.from('reads').insert({ user_id: userData?.user?.id || null, work_id: workId })
@@ -316,8 +334,15 @@ export default function WorkDetailPage() {
           const currentUserName = userData?.user?.user_metadata?.name || userData?.user?.email || 'Alguien'
           createCommentNotification(workId, work.title, work.author_id, currentUserId, currentUserName)
         }
+      } else {
+        console.warn('Error adding comment:', error)
+        // Alert user that comment couldn't be posted
+        alert('No se pudo agregar el comentario. La función de comentarios no está disponible.')
       }
-    } catch {}
+    } catch (error) {
+      console.warn('Comments table not available:', error)
+      alert('La función de comentarios no está disponible en este momento.')
+    }
   }
 
   if (loading) {

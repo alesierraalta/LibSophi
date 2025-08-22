@@ -11,7 +11,7 @@ interface FollowButtonProps {
   initialIsFollowing?: boolean
   onFollowChange?: (isFollowing: boolean) => void
   className?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'default' | 'sm' | 'lg' | 'icon'
   variant?: 'default' | 'outline' | 'ghost'
 }
 
