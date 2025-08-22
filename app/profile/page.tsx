@@ -21,6 +21,15 @@ export default function ProfilePage() {
   const supabase = getSupabaseBrowserClient()
   const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts' | 'archived'>('works')
   const [showArchived, setShowArchived] = useState(false)
+
+  // Sync showArchived with activeTab
+  useEffect(() => {
+    if (activeTab === 'archived') {
+      setShowArchived(true)
+    } else if (activeTab === 'works') {
+      setShowArchived(false)
+    }
+  }, [activeTab])
   const [reposts, setReposts] = useState<any[]>([])
   const [isLoadingReposts, setIsLoadingReposts] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -351,10 +360,17 @@ export default function ProfilePage() {
 
   const toggleWorkArchive = async (workId: string, archived: boolean) => {
     try {
+      // Get the session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('No authentication token available')
+      }
+
       const response = await fetch(`/api/works/${workId}/archive`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ archived })
       })
@@ -577,13 +593,19 @@ export default function ProfilePage() {
           </button>
           <button 
             onClick={() => {
-              setShowArchived(!showArchived)
-              setActiveTab('works')
+              const newArchivedState = !showArchived
+              setShowArchived(newArchivedState)
+              // Switch to archived tab when showing archived works
+              if (newArchivedState) {
+                setActiveTab('archived')
+              } else {
+                setActiveTab('works')
+              }
             }} 
-            className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${showArchived ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-600 hover:text-red-600'}`}
+            className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${showArchived || activeTab === 'archived' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-600 hover:text-red-600'}`}
           >
-            {showArchived ? <ArchiveRestore className="h-4 w-4"/> : <Archive className="h-4 w-4"/>}
-            {showArchived ? 'Archivadas' : 'Ver Archivadas'}
+            {showArchived || activeTab === 'archived' ? <ArchiveRestore className="h-4 w-4"/> : <Archive className="h-4 w-4"/>}
+            {showArchived || activeTab === 'archived' ? 'Obras Normales' : 'Ver Archivadas'}
           </button>
         </div>
       </div>

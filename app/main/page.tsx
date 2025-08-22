@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Search, Bell, Home, Compass, PenTool, Library, Settings, Edit3, UserPlus, AtSign, BookOpen, Eye, Mail, Copy, Repeat2 } from 'lucide-react'
 import ProfileHoverCard from '@/components/ProfileHoverCard'
 import AppHeader from '@/components/AppHeader'
+import FollowButton from '@/components/FollowButton'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { createLikeNotification, createCommentNotification, createFollowNotification } from '@/lib/notifications'
 
@@ -274,6 +275,7 @@ function MainPageInner() {
             authorToGenre[id] = top
           })
           authors = (profs || []).map((p: any) => ({
+            id: p.id, // ¡CRÍTICO! Agregar el ID para que funcione el FollowButton
             name: p?.name || 'Autor',
             username: p?.username ? (p.username.startsWith('@') ? p.username : `@${p.username}`) : '@autor',
             followers: String(followCounts[p.id] || 0),
@@ -1000,72 +1002,6 @@ function MainPageInner() {
 
   // Memoized suggested author component
   const SuggestedAuthor = memo(({ author }: { author: any }) => {
-    const [isFollowing, setIsFollowing] = useState<boolean>(() => {
-      try {
-        const raw = localStorage.getItem('palabreo-following')
-        const ids: string[] = raw ? JSON.parse(raw) : []
-        return ids.includes(author.username)
-      } catch { return false }
-    })
-    const toggleFollow = async () => {
-      setIsFollowing(prev => {
-        const next = !prev
-        try {
-          const raw = localStorage.getItem('palabreo-following')
-          let ids: string[] = raw ? JSON.parse(raw) : []
-          if (next) {
-            if (!ids.includes(author.username)) ids.push(author.username)
-          } else {
-            ids = ids.filter(id => id !== author.username)
-          }
-          localStorage.setItem('palabreo-following', JSON.stringify(ids))
-        } catch {}
-        return next
-      })
-
-      // Handle Supabase follow/unfollow and notifications
-      try {
-        const supabase = getSupabaseBrowserClient()
-        const { data: userData } = await supabase.auth.getUser()
-        
-        if (userData?.user && !isFollowing) {
-          // Get the followed user's ID by username
-          const { data: followedUser } = await supabase
-            .from('profiles')
-            .select('id, name')
-            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
-            .single()
-          
-          if (followedUser) {
-            // Insert follow record
-            await supabase
-              .from('follows')
-              .insert({ follower_id: userData.user.id, followee_id: followedUser.id })
-            
-            // Create notification
-            const currentUserName = userData.user.user_metadata?.name || userData.user.email || 'Alguien'
-            createFollowNotification(followedUser.id, userData.user.id, currentUserName)
-          }
-        } else if (userData?.user && isFollowing) {
-          // Get the followed user's ID and unfollow
-          const { data: followedUser } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('username', author.username.startsWith('@') ? author.username : `@${author.username}`)
-            .single()
-          
-          if (followedUser) {
-            await supabase
-              .from('follows')
-              .delete()
-              .eq('follower_id', userData.user.id)
-              .eq('followee_id', followedUser.id)
-          }
-        }
-      } catch (error) {
-        console.error('Error handling follow:', error)
-      }
-    }
     return (
       <div className="group p-3 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-red-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1096,9 +1032,16 @@ function MainPageInner() {
               </div>
             </div>
           </div>
-          <MemoizedButton onClick={toggleFollow} size="sm" variant={isFollowing ? 'default' : 'outline'} className={`text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-3 ${isFollowing ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'border-red-300 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-400'}`}>
-            {isFollowing ? 'Siguiendo' : 'Seguir'}
-          </MemoizedButton>
+          <FollowButton
+            currentUserId={currentUserId}
+            targetUserId={author.id}
+            size="sm"
+            className="text-xs px-3 py-1.5 rounded-full font-medium flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 ml-0 sm:ml-3"
+            onFollowChange={(isFollowing) => {
+              console.log('Follow status changed:', isFollowing, 'for user:', author.id)
+              // Optionally refresh the authors list or update local state
+            }}
+          />
         </div>
       </div>
     )

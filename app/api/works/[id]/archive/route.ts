@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
-import { getServerSession } from 'next-auth'
+import { createClient } from '@supabase/supabase-js'
+
+// Server-side Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { archived } = await request.json()
     const workId = params.id
 
@@ -19,12 +18,26 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid archived value' }, { status: 400 })
     }
 
-    const supabase = getSupabaseBrowserClient()
+    // Get authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authorization header required' }, { status: 401 })
+    }
+
+    const token = authHeader.split(' ')[1]
+    
+    // Verify the JWT token with Supabase
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token)
+    if (userError || !userData?.user) {
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 })
+    }
+
+    const userId = userData.user.id
 
     // First, verify the user owns this work
-    const { data: work, error: fetchError } = await supabase
+    const { data: work, error: fetchError } = await supabaseAdmin
       .from('works')
-      .select('author_id, profiles:author_id(id)')
+      .select('author_id')
       .eq('id', workId)
       .single()
 
@@ -33,18 +46,12 @@ export async function PATCH(
     }
 
     // Check if user owns this work
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', work.author_id)
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (work.author_id !== userId) {
+      return NextResponse.json({ error: 'Forbidden - You can only archive your own works' }, { status: 403 })
     }
 
     // Update the work's archived status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('works')
       .update({ 
         archived,

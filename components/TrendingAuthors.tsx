@@ -40,6 +40,7 @@ export default function TrendingAuthors({
   const [authors, setAuthors] = useState<TrendingAuthor[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     loadTrendingAuthors()
@@ -52,12 +53,46 @@ export default function TrendingAuthors({
     try {
       const trendingAuthors = await client.getTrendingAuthors(limit)
       setAuthors(trendingAuthors)
+      
+      // Load following status for all authors if user is authenticated
+      if (currentUserId && showFollowButton) {
+        await loadFollowingStatus(trendingAuthors)
+      }
     } catch (error) {
       console.error('Error loading trending authors:', error)
       setError('Error al cargar autores destacados')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const loadFollowingStatus = async (authorsToCheck: TrendingAuthor[]) => {
+    if (!currentUserId) return
+    
+    try {
+      const statusPromises = authorsToCheck.map(async (author) => {
+        const isFollowing = await client.isFollowing(currentUserId, author.id)
+        return { authorId: author.id, isFollowing }
+      })
+      
+      const statuses = await Promise.all(statusPromises)
+      const statusMap: Record<string, boolean> = {}
+      
+      statuses.forEach(({ authorId, isFollowing }) => {
+        statusMap[authorId] = isFollowing
+      })
+      
+      setFollowingStatus(statusMap)
+    } catch (error) {
+      console.error('Error loading following status:', error)
+    }
+  }
+
+  const handleFollowChange = (authorId: string, isFollowing: boolean) => {
+    setFollowingStatus(prev => ({
+      ...prev,
+      [authorId]: isFollowing
+    }))
   }
 
   const formatNumber = (num: number) => {
@@ -184,6 +219,8 @@ export default function TrendingAuthors({
                     <FollowButton
                       currentUserId={currentUserId}
                       targetUserId={author.id}
+                      initialIsFollowing={followingStatus[author.id] || false}
+                      onFollowChange={(isFollowing) => handleFollowChange(author.id, isFollowing)}
                       size="sm"
                       className="w-full"
                     />

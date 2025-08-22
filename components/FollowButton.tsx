@@ -29,12 +29,18 @@ export default function FollowButton({
   const [hasCheckedStatus, setHasCheckedStatus] = useState(false)
   const client = getOptimizedSupabaseClient()
 
-  // Check follow status on mount
+  // Update initial state when prop changes
   useEffect(() => {
-    if (currentUserId && targetUserId && currentUserId !== targetUserId && !hasCheckedStatus) {
+    setIsFollowing(initialIsFollowing)
+    setHasCheckedStatus(initialIsFollowing !== false) // If we have an initial value, consider it checked
+  }, [initialIsFollowing])
+
+  // Check follow status on mount only if we don't have initial status
+  useEffect(() => {
+    if (currentUserId && targetUserId && currentUserId !== targetUserId && !hasCheckedStatus && initialIsFollowing === false) {
       checkFollowStatus()
     }
-  }, [currentUserId, targetUserId])
+  }, [currentUserId, targetUserId, hasCheckedStatus, initialIsFollowing])
 
   const checkFollowStatus = async () => {
     if (!currentUserId || !targetUserId) return
@@ -49,8 +55,12 @@ export default function FollowButton({
   }
 
   const handleFollow = async () => {
-    if (!currentUserId || !targetUserId || isLoading) return
+    if (!currentUserId || !targetUserId || isLoading) {
+      console.warn('FollowButton: Missing required data', { currentUserId, targetUserId, isLoading })
+      return
+    }
     
+    console.log('FollowButton: Attempting to', isFollowing ? 'unfollow' : 'follow', 'user', targetUserId)
     setIsLoading(true)
     
     try {
@@ -58,19 +68,24 @@ export default function FollowButton({
       
       if (isFollowing) {
         success = await client.unfollowUser(currentUserId, targetUserId)
+        console.log('FollowButton: Unfollow result:', success)
       } else {
         success = await client.followUser(currentUserId, targetUserId)
+        console.log('FollowButton: Follow result:', success)
       }
       
       if (success) {
         const newFollowingState = !isFollowing
         setIsFollowing(newFollowingState)
         onFollowChange?.(newFollowingState)
+        console.log('FollowButton: State updated to', newFollowingState)
       } else {
-        console.error('Failed to update follow status')
+        console.error('FollowButton: Failed to update follow status')
+        alert('Error al actualizar el estado de seguimiento')
       }
     } catch (error) {
-      console.error('Error updating follow status:', error)
+      console.error('FollowButton: Error updating follow status:', error)
+      alert('Error al procesar la acción de seguir/dejar de seguir')
     } finally {
       setIsLoading(false)
     }
