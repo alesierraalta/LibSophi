@@ -490,6 +490,25 @@ function MainPageInner() {
     const [localComments, setLocalComments] = useState<number>(post.comments ?? 0)
     const [localReposts, setLocalReposts] = useState<number>((post as any).reposts ?? 0)
     const [localReposted, setLocalReposted] = useState<boolean>(false)
+
+    // Load real repost data
+    React.useEffect(() => {
+      const loadRepostData = async () => {
+        try {
+          const { checkIfReposted, getRepostCount } = await import('@/lib/supabase/reposts')
+          const [repostedStatus, count] = await Promise.all([
+            checkIfReposted(post.id),
+            getRepostCount(post.id)
+          ])
+          setLocalReposted(repostedStatus)
+          setLocalReposts(Math.max(0, count))
+        } catch (error) {
+          console.warn('Failed to load repost data:', error)
+        }
+      }
+      
+      loadRepostData()
+    }, [post.id])
     const [bookmarked, setBookmarked] = useState<boolean>(false)
     const [comments, setComments] = useState<{ id: string; author: any; text: string; time: number }[]>([])
     const [isLoadingComments, setIsLoadingComments] = useState(true)
@@ -808,9 +827,29 @@ function MainPageInner() {
 
               {/* Repost Button */}
               <button 
-                onClick={() => {
-                  setLocalReposted(!localReposted)
-                  setLocalReposts(prev => localReposted ? prev - 1 : prev + 1)
+                onClick={async () => {
+                  try {
+                    const { toggleRepost } = await import('@/lib/supabase/reposts')
+                    const result = await toggleRepost(post.id)
+                    
+                    if (result.success) {
+                      setLocalReposted(result.reposted || false)
+                      setLocalReposts(prev => result.action === 'reposted' ? Math.max(0, prev + 1) : Math.max(0, prev - 1))
+                      
+                      if (result.action === 'reposted') {
+                        // Show success message
+                        console.log('✅ Republicado exitosamente')
+                      } else {
+                        console.log('✅ Republicación eliminada')
+                      }
+                    } else {
+                      console.error('Error en repost:', result.error)
+                      alert(result.error || 'Error al republicar')
+                    }
+                  } catch (error) {
+                    console.error('Repost error:', error)
+                    alert('Error al republicar la obra')
+                  }
                 }}
                 className={`flex items-center space-x-2 transition-all duration-200 ${
                   localReposted 

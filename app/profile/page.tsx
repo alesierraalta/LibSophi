@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts' | 'archived'>('works')
   const [showArchived, setShowArchived] = useState(false)
   const [reposts, setReposts] = useState<any[]>([])
+  const [isLoadingReposts, setIsLoadingReposts] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [hasLoadedFromDB, setHasLoadedFromDB] = useState(false)
@@ -167,6 +168,43 @@ export default function ProfilePage() {
       
       loadFollowStats()
     }, [userId])
+
+  // Load reposts when reposts tab is active
+  useEffect(() => {
+    if (activeTab === 'reposts' && userId) {
+      const loadReposts = async () => {
+        setIsLoadingReposts(true)
+        try {
+          const { getUserReposts } = await import('@/lib/supabase/reposts')
+          const userReposts = await getUserReposts(userId)
+          
+          // Format reposts for display
+          const formattedReposts = userReposts.map(repost => ({
+            id: repost.id,
+            title: repost.works?.title || 'Obra sin título',
+            author: {
+              name: repost.works?.profiles?.name || 'Autor desconocido',
+              username: repost.works?.profiles?.username || '@autor'
+            },
+            excerpt: 'Obra republicada',
+            image: repost.works?.cover_url || null,
+            time: new Date(repost.created_at).getTime(),
+            caption: repost.caption,
+            originalWorkId: repost.work_id
+          }))
+          
+          setReposts(formattedReposts)
+        } catch (error) {
+          console.error('Error loading reposts:', error)
+          setReposts([])
+        } finally {
+          setIsLoadingReposts(false)
+        }
+      }
+      
+      loadReposts()
+    }
+  }, [activeTab, userId])
 
   // Optimized works loading
   useEffect(() => {
@@ -661,24 +699,113 @@ export default function ProfilePage() {
 
         {activeTab === 'reposts' && (
           <div className="space-y-3">
-            {reposts.length === 0 ? (
-              <div className="text-sm text-gray-600">Aún no tienes reposts.</div>
+            {isLoadingReposts ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-pulse">
+                    <CardContent className="p-3">
+                      <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3 mb-1"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-full"></div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : reposts.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-gray-500 mb-2">
+                  <svg className="h-12 w-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </div>
+                <div className="text-sm text-gray-600 mb-1">Aún no tienes reposts</div>
+                <div className="text-xs text-gray-500">Republica obras interesantes para que aparezcan aquí</div>
+              </div>
             ) : (
-              reposts.map((r) => (
-                <Card key={r.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  {r.image && (
-                    <div className="relative h-36 w-full">
-                      <img src={r.image} alt={r.title} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {reposts.map((r) => (
+                  <Card 
+                    key={r.id} 
+                    className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-red-200 transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+                    onClick={() => router.push(`/work/${r.originalWorkId}`)}
+                  >
+                    {/* Repost Header */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 border-b border-green-100">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-full group-hover:bg-green-200 transition-colors">
+                          <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-green-800">Republicaste esto</div>
+                          <div className="text-xs text-green-600">{new Date(r.time).toLocaleDateString('es-ES', { 
+                            day: 'numeric', 
+                            month: 'short', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <CardContent className="p-3">
-                    <div className="text-xs text-gray-500 mb-1">Reposteado {new Date(r.time).toLocaleString()}</div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1 truncate">{r.title}</h3>
-                    <div className="text-xs text-gray-600 mb-2 truncate">por {r.author?.name} {r.author?.username}</div>
-                    <p className="text-sm text-gray-700 line-clamp-2">{r.excerpt}</p>
-                  </CardContent>
-                </Card>
-              ))
+
+                    {/* Cover Image */}
+                    {r.image && (
+                      <div className="relative h-32 w-full overflow-hidden">
+                        <img 
+                          src={r.image} 
+                          alt={r.title} 
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <CardContent className="p-4 space-y-3">
+                      {/* Caption if exists */}
+                      {r.caption && (
+                        <div className="bg-gray-50 border-l-4 border-red-400 p-3 rounded-r-lg">
+                          <div className="text-xs text-gray-500 mb-1">Tu comentario:</div>
+                          <div className="text-sm text-gray-700 italic">"{r.caption}"</div>
+                        </div>
+                      )}
+
+                      {/* Work Title */}
+                      <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 text-base">
+                        {r.title}
+                      </h3>
+
+                      {/* Author Info */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-bold text-red-700">
+                            {(r.author?.name || 'A')[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-600 truncate">
+                            por <span className="font-medium text-gray-800">{r.author?.name}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">{r.author?.username}</div>
+                        </div>
+                      </div>
+
+                      {/* Action Hint */}
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>Toca para leer la obra</span>
+                          <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
         )}
