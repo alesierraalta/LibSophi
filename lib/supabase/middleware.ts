@@ -33,7 +33,7 @@ export async function updateSession(request: NextRequest) {
   // Define protected routes that require authentication
   const protectedRoutes = [
     // '/writer', // Temporarily removed for testing - allows testing writer functionality
-    '/profile',
+    // '/profile', // Temporarily removed - allow limited public access like Twitter
     '/favorites',
     '/notifications',
     '/work',
@@ -46,6 +46,8 @@ export async function updateSession(request: NextRequest) {
     '/',
     '/main',
     '/explore',
+    '/writer', // Added - allow access without authentication for testing
+    '/profile', // Added - allow limited public access like Twitter (read-only for non-auth users)
     '/mis-obras', // Added - allow access without authentication, will show demo data
     '/login',
     '/register',

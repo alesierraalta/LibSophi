@@ -1,5 +1,4 @@
 import { NextAuthOptions } from 'next-auth';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -13,7 +12,7 @@ const supabase = createClient(
 );
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma), // You'll need to set up Prisma
+  // Using Supabase for database, no adapter needed for basic setup
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -86,15 +85,15 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
-    signUp: '/register',
     error: '/auth/error',
   },
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
-        token.avatar_url = user.avatar_url;
+        token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
       }
 
       // Handle OAuth account linking
@@ -118,9 +117,11 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string;
-        session.user.avatar_url = token.avatar_url as string;
+        // Extend session user with additional properties
+        (session.user as any).id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.image as string;
       }
       return session;
     },

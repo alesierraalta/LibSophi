@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { BookOpen, Heart, Bookmark, MessageCircle, Share2, ChevronLeft } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { createLikeNotification, createCommentNotification } from '@/lib/notifications'
+import { useViewTracker } from '@/hooks/useViewTracker'
 import AppHeader from '@/components/AppHeader'
 import ReadingToolbar, { useReadingPreferences } from '@/components/ReadingToolbar'
 
@@ -117,12 +118,16 @@ export default function WorkDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [likesCount, setLikesCount] = useState<number>(0)
   const [commentsCount, setCommentsCount] = useState<number>(0)
+  const [viewsCount, setViewsCount] = useState<number>(0)
   const [isLiked, setIsLiked] = useState<boolean>(false)
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false)
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [activeChapterIndex, setActiveChapterIndex] = useState(0)
   const [readingProgress, setReadingProgress] = useState(0)
+
+  // Track view automatically when work loads
+  useViewTracker(workId, currentUserId, !!work && !loading)
 
   // Reading preferences hook
   const { preferences, getReadingStyles } = useReadingPreferences()
@@ -147,11 +152,12 @@ export default function WorkDetailPage() {
 
         const { data: w } = await supabase
           .from('works')
-          .select('id,title,genre,cover_url,chapters,content,author_id,created_at,updated_at')
+          .select('id,title,genre,cover_url,chapters,content,author_id,created_at,updated_at,views')
           .eq('id', workId)
           .single()
         if (!w) { setLoading(false); return }
         setWork(w)
+        setViewsCount(w.views || 0)
 
         const { data: p } = await supabase
           .from('profiles')
@@ -203,7 +209,7 @@ export default function WorkDetailPage() {
         setComments(comms || [])
 
         // record a read event (no await)
-        supabase.from('reads').insert({ user_id: userData?.user?.id || null, work_id: workId }).then(() => {}).catch(() => {})
+        void supabase.from('reads').insert({ user_id: userData?.user?.id || null, work_id: workId })
       } finally {
         setLoading(false)
       }
@@ -412,6 +418,14 @@ export default function WorkDetailPage() {
               <span className="inline-flex items-center gap-1.5">
                 <Heart className="h-4 w-4" />
                 {likesCount}
+              </span>
+              <span className="text-gray-400">•</span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                {viewsCount} {viewsCount === 1 ? 'vista' : 'vistas'}
               </span>
             </div>
           </header>

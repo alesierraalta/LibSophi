@@ -154,7 +154,7 @@ export default function WritingSocialPreview({
                           </div>
                           
                           <div className="text-gray-900 text-sm">
-                            <span className="font-semibold">47 me gusta</span>
+                            <span className="font-semibold">2 me gusta</span>
                           </div>
                           
                           <div className="mt-2 text-gray-600 text-sm">
@@ -201,30 +201,7 @@ export default function WritingSocialPreview({
                             </div>
                           </div>
                           
-                          <div className="flex items-center justify-between py-2">
-                            <div className="flex items-center space-x-6">
-                              <button className="flex items-center space-x-2 text-gray-900">
-                                <span className="text-2xl">🤍</span>
-                              </button>
-                              <button className="flex items-center space-x-2 text-gray-900">
-                                <span className="text-2xl">💬</span>
-                              </button>
-                              <button className="flex items-center space-x-2 text-gray-900">
-                                <span className="text-2xl">📤</span>
-                              </button>
-                            </div>
-                            <button className="text-gray-900">
-                              <span className="text-2xl">🔖</span>
-                            </button>
-                          </div>
-                          
-                          <div className="text-gray-900 text-sm">
-                            <span className="font-semibold">156 me gusta</span>
-                          </div>
-                          
-                          <div className="mt-2 text-gray-600 text-sm">
-                            Ver los 23 comentarios
-                          </div>
+
                         </div>
                       </div>
                     </div>

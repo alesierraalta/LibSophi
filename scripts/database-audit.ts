@@ -226,9 +226,9 @@ class DatabaseAuditor {
         }, {})
 
         Object.entries(groupedIndexes).forEach(([table, tableIndexes]) => {
-          console.log(`\n${table}:`)
-          (tableIndexes as string[]).forEach(indexName => {
-            console.log(`   • ${indexName}`)
+          process.stdout.write(`\n${table}:\n`)
+          ;(tableIndexes as string[]).forEach(indexName => {
+            process.stdout.write(`   • ${indexName}\n`)
           })
         })
       } else {

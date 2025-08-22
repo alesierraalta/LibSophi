@@ -46,6 +46,8 @@ if (event === 'SIGNED_IN') {
 - Added `previousUser` tracking to detect genuine state changes
 - Added `isOnAuthPage` check to allow redirects from login/register pages
 - Only redirect on actual sign-in, not session re-validation
+- **CRITICAL**: Removed `user` from useEffect dependencies to prevent infinite loop
+- Moved `previousUser` to be a local variable inside useEffect to avoid stale closures
 - Preserved existing redirect parameter functionality
 
 ## 🧪 Test Coverage

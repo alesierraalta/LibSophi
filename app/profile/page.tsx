@@ -8,20 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon } from 'lucide-react'
 import ProfileImageUpload from '@/components/ProfileImageUpload'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
-import ProfileWorksGridNew from '@/components/GridStack/ProfileWorksGridNew'
+import OptimizedProfileWorksGrid from '@/components/GridStack/OptimizedProfileWorksGrid'
 import { WorkType } from '@/lib/validations'
 import { dateUtils } from '@/lib/date-utils'
 import AppHeader from '@/components/AppHeader'
 import ProfileSkeleton from '@/components/ProfileSkeleton'
+import { openConfirmDialog } from '@/components/ConfirmDialog'
+import { measurePerformance, debounce, loadingStates } from '@/lib/performance-optimization'
 
 export default function ProfilePage() {
   const router = useRouter()
+  const supabase = getSupabaseBrowserClient()
   const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts'>('works')
   const [reposts, setReposts] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [hasLoadedFromDB, setHasLoadedFromDB] = useState(false)
-  // Suponemos perfil propio por ahora (sin auth). Oculta Seguir.
   const isOwnProfile = true
 
   type Profile = {
@@ -31,25 +33,25 @@ export default function ProfilePage() {
     avatar: string
     banner: string
   }
-  const [profile, setProfile] = useState<Profile>({
-    name: 'María González',
-    username: 'mariagonzalez',
-    bio: 'Escritora de ficción contemporánea. Amante de las historias que transforman. Café, gatos y metáforas.',
-    avatar: '/api/placeholder/112/112',
-    banner: '',
-  })
+
+  // Optimized state management
+  const [profile, setProfile] = useState<Profile>(loadingStates.profile)
   const [userId, setUserId] = useState<string | null>(null)
-  const [editProfile, setEditProfile] = useState<Profile>(profile)
+  const [editProfile, setEditProfile] = useState<Profile>(loadingStates.profile)
   const [showEdit, setShowEdit] = useState(false)
-  const [works, setWorks] = useState<WorkType[]>([])
+  const [works, setWorks] = useState<WorkType[]>(loadingStates.works)
   const [isLoadingWorks, setIsLoadingWorks] = useState(true)
-  const [followersCount, setFollowersCount] = useState(0)
-  const [followingCount, setFollowingCount] = useState(0)
-  const [isLoadingStats, setIsLoadingStats] = useState(true)
-  const defaultProfile: Profile = {
-    name: 'María González',
-    username: 'mariagonzalez',
-    bio: 'Escritora de ficción contemporánea. Amante de las historias que transforman. Café, gatos y metáforas.',
+  const [stats, setStats] = useState(loadingStates.stats)
+  const [isLoadingStats, setIsLoadingStats] = useState(false) // Start as false for performance
+  const [hasNoProfileData, setHasNoProfileData] = useState(false)
+  const [hasNoWorksData, setHasNoWorksData] = useState(false)
+  const [databaseError, setDatabaseError] = useState<string | null>(null)
+
+  // Fallback profile for when no user is found - more generic
+  const fallbackProfile: Profile = {
+    name: 'Usuario Demo',
+    username: 'demo_user',
+    bio: 'Perfil de demostración. Inicia sesión para ver tu perfil personalizado.',
     avatar: '/api/placeholder/112/112',
     banner: '',
   }
@@ -65,190 +67,140 @@ export default function ProfilePage() {
     { title: 'El beso (Klimt)', url: 'https://upload.wikimedia.org/wikipedia/commons/7/70/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg' },
   ]
 
+  // Optimized profile loading
   useEffect(() => {
     const loadProfile = async () => {
+      await measurePerformance('Profile Load', async () => {
       setIsLoadingProfile(true)
-      
-      // First, try to load from localStorage for immediate display (but don't show it yet)
-      let cachedProfile: Profile | null = null
-      try {
-        const raw = localStorage.getItem('palabreo-profile')
-        if (raw) {
-          const saved = JSON.parse(raw) as Profile
-          if (saved && typeof saved === 'object') {
-            cachedProfile = {
-              name: saved.name || defaultProfile.name,
-              username: (saved.username || defaultProfile.username).replace(/^@+/, ''),
-              bio: saved.bio ?? defaultProfile.bio,
-              avatar: saved.avatar || defaultProfile.avatar,
-              banner: saved.banner || '',
-            }
-          }
-        }
-        const rp = localStorage.getItem('palabreo-reposts')
-        if (rp) {
-          const list = JSON.parse(rp)
-          if (Array.isArray(list)) setReposts(list.sort((a: any, b: any) => b.time - a.time))
-        }
-      } catch {}
-      
-      // Now try to load from database
-      try {
-        const supabase = getSupabaseBrowserClient()
-        const { data: userData } = await supabase.auth.getUser()
-        if (userData?.user) {
-          setUserId(userData.user.id)
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('username,name,bio,avatar_url,banner_url')
-            .eq('id', userData.user.id)
-            .single()
+      setDatabaseError(null)
+        
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
           
-          if (prof) {
-            // Database data found - use it
-            const dbProfile = {
-              name: prof.name || defaultProfile.name,
-              username: (prof.username || defaultProfile.username).replace(/^@+/, ''),
-              bio: prof.bio ?? defaultProfile.bio,
-              avatar: prof.avatar_url || defaultProfile.avatar,
-              banner: prof.banner_url || '',
-            }
-            setProfile(dbProfile)
-            setHasLoadedFromDB(true)
+          if (user) {
+            setUserId(user.id)
             
-            // Update localStorage with fresh data
-            try {
-              localStorage.setItem('palabreo-profile', JSON.stringify(dbProfile))
-            } catch {}
-          } else if (cachedProfile) {
-            // No database data, but we have cached data
-            setProfile(cachedProfile)
+            // Load profile
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('name, username, bio, avatar_url, banner_url')
+              .eq('id', user.id)
+              .single()
+            
+            if (profileData) {
+              const profile = {
+                name: profileData.name || user.email?.split('@')[0] || 'Usuario',
+                username: profileData.username || user.email?.split('@')[0] || 'usuario',
+                bio: profileData.bio || 'Nuevo en Palabreo',
+                avatar: profileData.avatar_url || '/api/placeholder/112/112',
+                banner: profileData.banner_url || '',
+              }
+              setProfile(profile)
+              setHasLoadedFromDB(true)
+              setHasNoProfileData(false)
+            } else {
+              // Create basic profile from user data
+              const basicProfile = {
+                name: user.email?.split('@')[0] || 'Usuario',
+                username: user.email?.split('@')[0] || 'usuario',
+                bio: 'Nuevo en Palabreo',
+                avatar: '/api/placeholder/112/112',
+                banner: '',
+              }
+              setProfile(basicProfile)
+              setHasNoProfileData(false)
+            }
           } else {
-            // No data anywhere, use default
-            setProfile(defaultProfile)
-          }
-        } else if (cachedProfile) {
-          // Not authenticated, but we have cached data
-          setProfile(cachedProfile)
-        } else {
-          // Not authenticated, no cached data
-          setProfile(defaultProfile)
+            setProfile(fallbackProfile)
+            setHasNoProfileData(true)
         }
-      } catch {
-        // Database error, fall back to cached or default
-        if (cachedProfile) {
-          setProfile(cachedProfile)
-        } else {
-          setProfile(defaultProfile)
-        }
+      } catch (error) {
+          console.error('Profile load error:', error)
+          setDatabaseError('Error al cargar perfil')
+          setProfile(fallbackProfile)
+          setHasNoProfileData(true)
       } finally {
         setIsLoadingProfile(false)
       }
+      })
     }
     
     loadProfile()
+    
+    // No cleanup needed for standard client
   }, [])
 
-  // Load works from Supabase
+  // Optimized works loading
   useEffect(() => {
+    if (!userId) return
+    
     const loadWorks = async () => {
+      await measurePerformance('Works Load', async () => {
       setIsLoadingWorks(true)
+      setHasNoWorksData(false)
       
       try {
-        const supabase = getSupabaseBrowserClient()
-        
-        // Try to get authenticated user first
-        let targetUserId = userId
-        if (!targetUserId) {
-          // If no authenticated user, try to load works for the demo user
-          targetUserId = '9f8ff736-aec0-458f-83ae-309b923c5556' // Demo user ID
-        }
-        
-        // Load user's works from database
-        const { data: userWorks, error } = await supabase
-          .from('works')
-          .select('*')
-          .eq('author_id', targetUserId)
-          .order('created_at', { ascending: false })
-        
-        if (error) {
-          console.error('Error loading works:', error)
-          // Fall back to default works if error
-          setWorks(defaultWorks)
-        } else if (userWorks && userWorks.length > 0) {
-          // Map database works to WorkType format
-          const mappedWorks: WorkType[] = userWorks.map(work => ({
-            id: work.id,
-            title: work.title || 'Sin título',
-            description: work.description || '',
-            content: work.content || '',
-            author_id: work.author_id,
-            genre: work.genre || 'Sin género',
-            tags: work.tags || [],
+          console.log('Loading works for userId:', userId)
+          
+          // Load works directly from Supabase
+          const { data, error } = await supabase
+            .from('works')
+            .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order')
+            .eq('author_id', userId)
+            .order('display_order', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: false })
+            .limit(20)
+
+          console.log('Database query result:', { data: data?.length, error })
+
+          if (error) {
+            console.error('Supabase query error:', error)
+            throw error
+          }
+
+          const worksData = (data || []).map(work => ({
+                id: work.id,
+                title: work.title || 'Sin título',
+                description: work.description || '',
+            genre: work.genre || 'General',
+            views: Number(work.views) || 0,
+            likes: Number(work.likes) || 0,
+            comments_count: 0,
+            reposts_count: 0,
+            created_at: new Date(work.created_at),
+            updated_at: new Date(work.updated_at || work.created_at),
+            coverUrl: work.cover_url,
+            cover_image_url: work.cover_url,
             published: work.published || false,
-            reading_time: work.reading_time || 5,
-            views: work.views || 0,
-            likes: work.likes || 0,
-            created_at: work.created_at ? new Date(work.created_at) : new Date(),
-            updated_at: work.updated_at ? new Date(work.updated_at) : new Date(),
-            coverUrl: work.cover_url || undefined,
+            author_id: userId,
+                content: work.content || '',
+                tags: work.tags || [],
+                reading_time: work.reading_time || 5,
           }))
-          setWorks(mappedWorks)
-        } else {
-          // No works in database, use default works for demo
-          setWorks(defaultWorks)
+          
+          console.log('Loaded works data:', worksData)
+          
+          if (worksData.length > 0) {
+            setWorks(worksData)
+            setHasNoWorksData(false)
+            setStats(prev => ({ ...prev, works: worksData.length }))
+          } else {
+            setWorks([])
+            setHasNoWorksData(true)
+            setStats(prev => ({ ...prev, works: 0 }))
         }
       } catch (error) {
-        console.error('Error loading works:', error)
-        // Fall back to default works on error
-        setWorks(defaultWorks)
+          console.error('Works load error:', error)
+          setDatabaseError('Error al cargar obras')
+        setWorks([])
+        setHasNoWorksData(true)
       } finally {
         setIsLoadingWorks(false)
       }
+      })
     }
     
     loadWorks()
-  }, [userId]) // Re-load when userId changes
-
-  // Load user statistics
-  useEffect(() => {
-    const loadStats = async () => {
-      setIsLoadingStats(true)
-      
-      try {
-        const supabase = getSupabaseBrowserClient()
-        
-        // Try to get authenticated user first
-        let targetUserId = userId
-        if (!targetUserId) {
-          // If no authenticated user, try to load stats for the demo user
-          targetUserId = '9f8ff736-aec0-458f-83ae-309b923c5556' // Demo user ID
-        }
-        
-        // Get followers count
-        const { count: followersCount } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('followee_id', targetUserId)
-        
-        // Get following count
-        const { count: followingCount } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('follower_id', targetUserId)
-        
-        setFollowersCount(followersCount || 0)
-        setFollowingCount(followingCount || 0)
-        
-      } catch (error) {
-        console.error('Error loading stats:', error)
-        // Keep default values on error
-      } finally {
-        setIsLoadingStats(false)
-      }
-    }
-    
-    loadStats()
   }, [userId])
 
   const openEdit = () => {
@@ -259,8 +211,8 @@ export default function ProfilePage() {
   const saveEdit = async () => {
     const currentErrors = validate(editProfile)
     setErrors(currentErrors)
-    const hasErrors = Object.keys(currentErrors).length > 0
-    if (hasErrors) return
+    if (Object.keys(currentErrors).length > 0) return
+    
     const cleaned: Profile = {
       name: editProfile.name.trim(),
       username: editProfile.username.replace(/^@+/, '').trim(),
@@ -268,28 +220,36 @@ export default function ProfilePage() {
       avatar: editProfile.avatar.trim(),
       banner: editProfile.banner.trim(),
     }
+    
     setProfile(cleaned)
-    try {
-      localStorage.setItem('palabreo-profile', JSON.stringify(cleaned))
-    } catch {}
-    try {
+    
       if (userId) {
-        const supabase = getSupabaseBrowserClient()
-        await supabase.from('profiles').upsert({
-          id: userId,
-          username: cleaned.username,
+      // Update profile directly with Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
           name: cleaned.name,
+          username: cleaned.username,
           bio: cleaned.bio,
-          avatar_url: cleaned.avatar,
-          banner_url: cleaned.banner,
         })
+        .eq('id', userId)
+      
+      const success = !error
+      if (error) {
+        console.error('Profile update error:', error)
       }
-    } catch {}
+      
+      if (!success) {
+        setDatabaseError('Error al actualizar perfil')
+        return
+      }
+    }
+    
     setShowEdit(false)
   }
 
   const resetDefaults = () => {
-    setEditProfile(defaultProfile)
+    setEditProfile(fallbackProfile)
     setErrors({})
   }
 
@@ -318,356 +278,53 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editProfile.name, editProfile.username, editProfile.bio, editProfile.avatar])
 
-  const stats = useMemo(() => ({
-    works: works.length,
-    followers: followersCount,
-    following: followingCount,
-  }), [works.length, followersCount, followingCount])
+  // Remove old stats calculation - now using state directly
 
-  const defaultWorks: WorkType[] = [
-    { 
-      id: '1', 
-      title: 'El susurro del viento', 
-      description: 'Una novela sobre los secretos que el viento lleva entre las montañas y los corazones que encuentra en su camino.',
-      content: 'El viento susurraba secretos entre las montañas...',
-      author_id: 'user-1',
-      genre: 'Novela', 
-      tags: ['romance', 'misterio', 'montañas'],
-      published: true,
-      reading_time: 45,
-      views: 12500, 
-      likes: 892,
-      created_at: new Date('2024-01-15'),
-      updated_at: new Date('2024-01-20'),
-    },
-    { 
-      id: '2', 
-      title: 'Versos de medianoche', 
-      description: 'Una colección de poemas escritos en las horas más silenciosas de la noche, cuando el alma habla más claro.',
-      content: 'En la medianoche, cuando el mundo duerme...',
-      author_id: 'user-1',
-      genre: 'Poesía', 
-      tags: ['noche', 'soledad', 'reflexión'],
-      published: true,
-      reading_time: 15,
-      views: 8100, 
-      likes: 567,
-      created_at: new Date('2024-02-01'),
-      updated_at: new Date('2024-02-05'),
-    },
-    { 
-      id: '3', 
-      title: 'Crónicas del andén', 
-      description: 'Historias breves de personas que se cruzan en estaciones de tren, cada una llevando su propio destino.',
-      content: 'El andén número tres siempre estaba lleno de historias...',
-      author_id: 'user-1',
-      genre: 'Relato', 
-      tags: ['viajes', 'encuentros', 'destino'],
-      published: false,
-      reading_time: 25,
-      views: 5700, 
-      likes: 234,
-      created_at: new Date('2024-02-10'),
-      updated_at: new Date('2024-02-12'),
-    },
-  ]
 
-  const [savedLayout, setSavedLayout] = useState<any[]>([])
 
-  // Load saved layout from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('palabreo-profile-layout')
-      if (saved) {
-        setSavedLayout(JSON.parse(saved))
-      }
-    } catch (error) {
-      console.error('Error loading saved layout:', error)
-    }
-  }, [])
+  // Removed savedLayout state and useEffect for performance optimization
 
-  // Quick actions for works (mobile long-press and desktop menu)
-  const [activeWorkOverlayId, setActiveWorkOverlayId] = useState<number | null>(null)
-  const [activeOverlayPos, setActiveOverlayPos] = useState<{ x: number; y: number } | null>(null)
-  const overlayTimerRef = React.useRef<number | null>(null)
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
-  const activationTriggeredRef = React.useRef<boolean>(false)
-  const lastHoverIndexRef = React.useRef<number | null>(null)
-  const touchStartRef = React.useRef<{ x: number; y: number; time: number } | null>(null)
-  const LONG_PRESS_MS = 500 // Increased for better reliability
-  const MOVE_THRESHOLD_PX = 15 // Increased threshold for better touch handling
-  const scrollLockedRef = React.useRef<boolean>(false)
-  const scrollLockPosRef = React.useRef<number>(0)
-  const rafMoveIdRef = React.useRef<number | null>(null)
-  const pendingMoveRef = React.useRef<{ x: number; y: number } | null>(null)
-  const isLongPressActiveRef = React.useRef<boolean>(false)
-  const touchMoveCountRef = React.useRef<number>(0)
+  // Removed complex long-press overlay code for better performance
 
-  const preventScrollEvent = React.useCallback((e: Event) => { e.preventDefault() }, [])
-  const lockBodyScroll = React.useCallback(() => {
-    if (scrollLockedRef.current) return
-    const y = window.scrollY || window.pageYOffset || 0
-    scrollLockPosRef.current = y
-    const body = document.body
-    body.style.position = 'fixed'
-    body.style.top = `-${y}px`
-    body.style.left = '0'
-    body.style.right = '0'
-    body.style.width = '100%'
-    body.style.overflow = 'hidden'
-    window.addEventListener('touchmove', preventScrollEvent, { passive: false })
-    window.addEventListener('wheel', preventScrollEvent, { passive: false })
-    document.addEventListener('touchmove', preventScrollEvent, { passive: false })
-    document.addEventListener('wheel', preventScrollEvent, { passive: false })
-    scrollLockedRef.current = true
-  }, [preventScrollEvent])
-  const unlockBodyScroll = React.useCallback(() => {
-    if (!scrollLockedRef.current) return
-    const y = scrollLockPosRef.current || 0
-    const body = document.body
-    window.removeEventListener('touchmove', preventScrollEvent as any, { passive: false } as any)
-    window.removeEventListener('wheel', preventScrollEvent as any, { passive: false } as any)
-    document.removeEventListener('touchmove', preventScrollEvent as any, { passive: false } as any)
-    document.removeEventListener('wheel', preventScrollEvent as any, { passive: false } as any)
-    body.style.position = ''
-    body.style.top = ''
-    body.style.left = ''
-    body.style.right = ''
-    body.style.width = ''
-    body.style.overflow = ''
-    window.scrollTo(0, y)
-    scrollLockedRef.current = false
-  }, [preventScrollEvent])
-  const [scrollLockPos, setScrollLockPos] = useState<number | null>(null)
-
-  const clearOverlayTimer = () => {
-    if (overlayTimerRef.current) {
-      clearTimeout(overlayTimerRef.current)
-      overlayTimerRef.current = null
-    }
-  }
-
-  React.useEffect(() => {
-    return () => {
-      clearOverlayTimer()
-      unlockBodyScroll()
-      if (rafMoveIdRef.current) {
-        cancelAnimationFrame(rafMoveIdRef.current)
-        rafMoveIdRef.current = null
-      }
-    }
-  }, [unlockBodyScroll])
-
-  // Lock background scroll while radial overlay is open (robust for iOS/Android)
-  React.useEffect(() => {
-    const isOpen = activeWorkOverlayId != null && !!activeOverlayPos
-    const body = typeof document !== 'undefined' ? document.body : null
-    const prevent = (e: Event) => { e.preventDefault() }
-    if (isOpen && body) {
-      const y = window.scrollY || window.pageYOffset || 0
-      setScrollLockPos(y)
-      // Fix body to prevent scroll and layout shift
-      body.style.position = 'fixed'
-      body.style.top = `-${y}px`
-      body.style.left = '0'
-      body.style.right = '0'
-      body.style.width = '100%'
-      body.style.overflow = 'hidden'
-      ;(body.style as any).WebkitTouchCallout = 'none'
-      ;(body.style as any).WebkitUserSelect = 'none'
-      body.style.userSelect = 'none'
-      // Add non-passive listeners to block touch/scroll at root
-      window.addEventListener('touchmove', prevent, { passive: false })
-      window.addEventListener('wheel', prevent, { passive: false })
-      document.addEventListener('touchmove', prevent, { passive: false })
-      document.addEventListener('wheel', prevent, { passive: false })
-    }
-    return () => {
-      if (!body) return
-      // Remove listeners
-      window.removeEventListener('touchmove', prevent as any, { passive: false } as any)
-      window.removeEventListener('wheel', prevent as any, { passive: false } as any)
-      document.removeEventListener('touchmove', prevent as any, { passive: false } as any)
-      document.removeEventListener('wheel', prevent as any, { passive: false } as any)
-      // Restore body scroll position and styles
-      const y = scrollLockPos ?? 0
-      body.style.position = ''
-      body.style.top = ''
-      body.style.left = ''
-      body.style.right = ''
-      body.style.width = ''
-      body.style.overflow = ''
-      if (scrollLockPos != null) {
-        window.scrollTo(0, y)
-        setScrollLockPos(null)
-      }
-    }
-  }, [activeWorkOverlayId, activeOverlayPos, scrollLockPos])
-
-  const onTouchStartWork = (workId: number) => (e: React.TouchEvent) => {
-    const t = e.touches[0]
-    touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() }
-    clearOverlayTimer()
-    // Save viewport coordinates for a fixed overlay (can extend beyond card)
-    setActiveOverlayPos({ x: t.clientX, y: t.clientY })
-    activationTriggeredRef.current = false
-    lockBodyScroll()
-    try { e.preventDefault(); e.stopPropagation() } catch {}
-    overlayTimerRef.current = window.setTimeout(() => {
-      setActiveWorkOverlayId(workId)
-      try { (navigator as any).vibrate && (navigator as any).vibrate(10) } catch {}
-    }, LONG_PRESS_MS)
-  }
-
-  const onTouchMoveWork = (e: React.TouchEvent) => {
-    if (!touchStartRef.current) return
-    const t = e.touches[0]
-    const dx = Math.abs(t.clientX - touchStartRef.current.x)
-    const dy = Math.abs(t.clientY - touchStartRef.current.y)
-    if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
-      clearOverlayTimer()
-      // If overlay hasn't opened yet, release lock so normal scroll can resume
-      if (!activeWorkOverlayId) {
-        unlockBodyScroll()
-      }
-    }
-    try { e.preventDefault(); e.stopPropagation() } catch {}
-  }
-
-  const onTouchEndWork = () => {
-    clearOverlayTimer()
-    touchStartRef.current = null
-    setHoverIndex(null)
-    if (!activeWorkOverlayId) {
-      unlockBodyScroll()
-    }
-  }
-
-  // Pointer Events version (unified for touch/pen; ignore mouse)
-  const onPointerDownWork = (workId: number) => (e: React.PointerEvent) => {
-    const target = e.target as HTMLElement
-    if (target.closest('button, a, input, textarea, [role="button"]')) return
-    if (e.pointerType === 'mouse') return
-    
-    const px = e.clientX
-    const py = e.clientY
-    const currentTime = Date.now()
-    
-    touchStartRef.current = { x: px, y: py, time: currentTime }
-    touchMoveCountRef.current = 0
-    isLongPressActiveRef.current = false
-    clearOverlayTimer()
-    setActiveOverlayPos({ x: px, y: py })
-    activationTriggeredRef.current = false
-    
-    // Prevent default behavior to avoid conflicts
-    e.preventDefault()
-    e.stopPropagation()
-    
-    try { (e.currentTarget as any).setPointerCapture(e.pointerId) } catch {}
-    
-    overlayTimerRef.current = window.setTimeout(() => {
-      if (touchStartRef.current && touchMoveCountRef.current < 3) {
-        isLongPressActiveRef.current = true
-        setActiveWorkOverlayId(workId)
-        lockBodyScroll()
-        try { 
-          if (navigator.vibrate) navigator.vibrate([50])
-        } catch {}
-      }
-    }, LONG_PRESS_MS)
-  }
-
-  const onPointerMoveWork = (e: React.PointerEvent) => {
-    if (!touchStartRef.current) return
-    
-    const px = e.clientX
-    const py = e.clientY
-    const dx = Math.abs(px - touchStartRef.current.x)
-    const dy = Math.abs(py - touchStartRef.current.y)
-    const totalMove = Math.sqrt(dx * dx + dy * dy)
-    
-    touchMoveCountRef.current++
-    
-    // If we're moving too much before long press activates, cancel it
-    if (totalMove > MOVE_THRESHOLD_PX && !isLongPressActiveRef.current) {
-      clearOverlayTimer()
-      if (!activeWorkOverlayId) {
-        unlockBodyScroll()
-      }
-    }
-    
-    // Prevent default to avoid scroll conflicts
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const onPointerUpWork = (e: React.PointerEvent) => {
-    clearOverlayTimer()
-    touchStartRef.current = null
-    touchMoveCountRef.current = 0
-    isLongPressActiveRef.current = false
-    setHoverIndex(null)
-    
-    if (!activeWorkOverlayId) {
-      unlockBodyScroll()
-    }
-    
-    try { (e.currentTarget as any).releasePointerCapture(e.pointerId) } catch {}
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const onPointerCancelWork = (e: React.PointerEvent) => {
-    clearOverlayTimer()
-    touchStartRef.current = null
-    touchMoveCountRef.current = 0
-    isLongPressActiveRef.current = false
-    setHoverIndex(null)
-    
-    if (!activeWorkOverlayId) {
-      unlockBodyScroll()
-    }
-    
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const shareWork = async (w: any) => {
-    try {
-      const url = typeof window !== 'undefined' ? `${window.location.origin}/work/${w.id}` : `https://palabreo.com/work/${w.id}`
-      if (navigator.share) {
-        await navigator.share({ url, title: w.title, text: 'Mira mi obra en Palabreo' })
-      } else {
-        await navigator.clipboard.writeText(url)
-      }
-    } catch {}
-  }
-
-  const duplicateWork = (w: any) => {
-    // Placeholder: only UI feedback for now
-    alert(`Duplicado: ${w.title}`)
-  }
-
-  const changeCover = (w: any) => {
-    alert(`Cambiar portada de: ${w.title}`)
-  }
-
-  const deleteWork = (w: any) => {
-    if (confirm(`¿Eliminar "${w.title}"? Esta acción no se puede deshacer.`)) {
-      alert('Eliminado (demo)')
-    }
-  }
+  // Removed old touch/pointer event handlers - now handled by OptimizedProfileWorksGrid
 
   const handleWorkEdit = (work: WorkType) => {
     router.push(`/writer?edit=${work.id}`)
   }
 
-  const handleWorkDelete = (workId: string) => {
+  const handleWorkDelete = async (workId: string) => {
     const work = works.find(w => w.id === workId)
-    if (work && confirm(`¿Eliminar "${work.title}"? Esta acción no se puede deshacer.`)) {
-      alert('Eliminado (demo)')
-    }
+    
+    if (!work || !userId) return
+      
+      openConfirmDialog({
+        title: 'Eliminar obra',
+        message: `¿Estás seguro de que quieres eliminar "${work.title}"? Esta acción no se puede deshacer.`,
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        variant: 'danger',
+        onConfirm: async () => {
+        // Delete work directly with Supabase
+        const { error } = await supabase
+          .from('works')
+          .delete()
+          .eq('id', workId)
+          .eq('author_id', userId)
+        
+        const success = !error
+        if (error) {
+          console.error('Work delete error:', error)
+        }
+        
+        if (success) {
+          setWorks(prev => prev.filter(w => w.id !== workId))
+          setStats(prev => ({ ...prev, works: prev.works - 1 }))
+          alert('Obra eliminada exitosamente')
+        } else {
+          alert('Error al eliminar la obra')
+        }
+      }
+    })
   }
 
   const handleWorkShare = async (work: WorkType) => {
@@ -684,6 +341,16 @@ export default function ProfilePage() {
     }
   }
 
+  const handleWorkDuplicate = (work: WorkType) => {
+    // Navigate to writer with duplicate mode
+    router.push(`/writer?duplicate=${work.id}`)
+  }
+
+  const handleWorkCoverChange = (work: WorkType) => {
+    // For now, just show an alert. This could open a modal for cover selection
+    alert(`Cambiar portada de: ${work.title}`)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
       {/* Header */}
@@ -694,6 +361,26 @@ export default function ProfilePage() {
         <ProfileSkeleton />
       ) : (
         <section className="bg-white">
+          {/* Profile data state notification */}
+          {hasNoProfileData && (
+            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+              <div className="max-w-5xl mx-auto">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-700">
+                      Mostrando perfil de demostración. <a href="/login" className="font-medium underline hover:text-blue-800">Inicia sesión</a> para ver tu perfil personalizado.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="relative overflow-hidden">
             <div className="relative h-32 sm:h-48 md:h-56 border-b border-gray-100">
               {profile.banner ? (
@@ -757,6 +444,22 @@ export default function ProfilePage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24">
         {activeTab === 'works' && (
           <>
+            {/* Error message banner */}
+            {databaseError && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{databaseError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {isLoadingWorks ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(3)].map((_, i) => (
@@ -770,256 +473,97 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
+            ) : hasNoWorksData ? (
+              <div className="text-center py-12">
+                <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+                  <BookOpen className="h-full w-full" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {hasNoProfileData ? 'Sin obras disponibles' : 'No tienes obras aún'}
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  {hasNoProfileData 
+                    ? 'Inicia sesión para ver y gestionar tus obras literarias.'
+                    : 'Comienza tu viaje literario creando tu primera obra. ¡El mundo está esperando tu historia!'
+                  }
+                </p>
+                {!hasNoProfileData && (
+                  <Button 
+                    onClick={() => router.push('/writer')}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Crear mi primera obra
+                  </Button>
+                )}
+              </div>
             ) : (
-              <ProfileWorksGridNew
+              <OptimizedProfileWorksGrid
                   works={works}
+                  isLoading={isLoadingWorks}
                   onWorkClick={(work) => {
-                    console.log('Clicked work:', work.title)
-                    // You can navigate to work detail page here
-                    // router.push(`/work/${work.id}`)
+                    router.push(`/work/${work.id}`)
                   }}
-                  onLayoutChange={(layout) => {
+                  onLayoutChange={async (layout) => {
                     try {
+                      // Save to localStorage for immediate feedback
                       localStorage.setItem('palabreo-profile-layout', JSON.stringify(layout))
-                      setSavedLayout(layout)
+                      
+                      // Save to database if user is authenticated
+                      if (userId && layout.length > 0) {
+                        // Save work order directly with Supabase
+                        let success = true
+                        try {
+                          for (const item of layout) {
+                            const { error } = await supabase
+                              .from('works')
+                              .update({ display_order: item.order })
+                              .eq('id', item.id)
+                              .eq('author_id', userId)
+                            
+                            if (error) {
+                              console.error('Work order update error:', error)
+                              success = false
+                              break
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Unexpected error saving work order:', error)
+                          success = false
+                        }
+                        if (success) {
+                          console.log('Order saved to database:', layout)
+                          
+                          // Update local works state to match saved order
+                          const reorderedWorks = layout.map(item => 
+                            works.find(work => work.id === item.id)
+                          ).filter(Boolean) as WorkType[]
+                          
+                          // Add any works not in the layout (shouldn't happen, but safety)
+                          const layoutIds = new Set(layout.map(item => item.id))
+                          const remainingWorks = works.filter(work => !layoutIds.has(work.id))
+                          
+                          setWorks([...reorderedWorks, ...remainingWorks])
+                        } else {
+                          console.error('Failed to save order to database')
+                        }
+                      }
                     } catch (error) {
                       console.error('Error saving layout:', error)
                     }
                   }}
                   editable={isOwnProfile}
-                  savedLayout={savedLayout}
+                  onWorkEdit={handleWorkEdit}
+                  onWorkDelete={handleWorkDelete}
+                  onWorkShare={handleWorkShare}
+                  onWorkDuplicate={handleWorkDuplicate}
+                  onWorkCoverChange={handleWorkCoverChange}
                 />
             )}
           </>
         )}
 
-        {activeTab === 'works' && false && ( // Hide old grid implementation
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {works.map(w => (
-              <Card key={w.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden relative">
-                <div
-                  className="relative h-48 sm:h-56 lg:h-64 w-full touch-manipulation select-none"
-                  onPointerDown={onPointerDownWork(parseInt(w.id))}
-                  onPointerMove={onPointerMoveWork}
-                  onPointerUp={onPointerUpWork}
-                  onPointerCancel={onPointerCancelWork}
-                  onContextMenu={(e) => { e.preventDefault() }}
-                  onTouchStart={(e) => { e.stopPropagation() }}
-                  onTouchMove={(e) => { e.stopPropagation() }}
-                  onTouchEnd={(e) => { e.stopPropagation() }}
-                  style={{ 
-                    touchAction: 'none',
-                    WebkitTouchCallout: 'none',
-                    WebkitUserSelect: 'none',
-                    userSelect: 'none'
-                  }}
-                >
-                  <img src={w.cover} alt={w.title} className="absolute inset-0 w-full h-full object-cover"/>
-                </div>
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-gray-900 truncate">{w.title}</h3>
-                      <div className="text-sm text-gray-600 mt-1">{w.type} · {w.reads} lecturas</div>
-                    </div>
-                    {/* Desktop inline menu */}
-                    <div className="hidden sm:flex items-center gap-2">
-                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => router.push(`/writer?edit=${w.id}`)}>
-                        <Edit3 className="h-4 w-4" />
-                      </button>
-                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => duplicateWork(w)}>
-                        <Copy className="h-4 w-4" />
-                      </button>
-                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => changeCover(w)}>
-                        <ImageIcon className="h-4 w-4" />
-                      </button>
-                      <button className="text-xs px-2 py-1 rounded-full border border-red-300 text-red-600 hover:bg-red-50" onClick={() => deleteWork(w)}>
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                      <button className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100" onClick={() => shareWork(w)}>
-                        <Share2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-
-                {/* Mobile long-press overlay: radial menu at touch point */}
-                {activeWorkOverlayId === w.id && activeOverlayPos && (
-                  <div
-                    className="sm:hidden fixed inset-0 z-30 overscroll-none select-none"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Acciones de obra"
-                    onClick={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); unlockBodyScroll() }}
-                    onTouchMove={(e) => { e.preventDefault(); e.stopPropagation() }}
-                    onTouchStart={(e) => { e.preventDefault(); e.stopPropagation() }}
-                    onWheel={(e) => { e.preventDefault() }}
-                    onTouchEnd={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); activationTriggeredRef.current = false; unlockBodyScroll() }}
-                    onTouchCancel={() => { setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null); activationTriggeredRef.current = false; unlockBodyScroll() }}
-                    onPointerMove={(e) => { e.preventDefault() }}
-                    style={{ 
-                      touchAction: 'none',
-                      WebkitTouchCallout: 'none',
-                      WebkitUserSelect: 'none',
-                      userSelect: 'none',
-                      WebkitTapHighlightColor: 'transparent'
-                    }}
-                  >
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm radial-overlay-fade" />
-                    {(() => {
-                        const centerX = activeOverlayPos.x
-                        const centerY = activeOverlayPos.y
-                        const vw = typeof window !== 'undefined' ? window.innerWidth : 360
-                        const vh = typeof window !== 'undefined' ? window.innerHeight : 640
-                        const baseRadius = 104
-                        const padding = 24
-                        const maxRLeft = Math.max(0, centerX - padding)
-                        const maxRRight = Math.max(0, vw - centerX - padding)
-                        const maxRTop = Math.max(0, centerY - padding)
-                        const maxRBottom = Math.max(0, vh - centerY - padding)
-                        const safeRadius = Math.max(64, Math.min(baseRadius, maxRLeft, maxRRight, maxRTop, maxRBottom))
-                        const startDeg = -90
-                        const stepDeg = 360 / 5
-                        const actions = [
-                          { label: 'Editar', icon: Edit3, onClick: () => router.push(`/writer?edit=${w.id}`), tone: 'default' as const },
-                          { label: 'Duplicar', icon: Copy, onClick: () => duplicateWork(w), tone: 'default' as const },
-                          { label: 'Portada', icon: ImageIcon, onClick: () => changeCover(w), tone: 'default' as const },
-                          { label: 'Eliminar', icon: Trash2, onClick: () => deleteWork(w), tone: 'danger' as const },
-                          { label: 'Compartir', icon: Share2, onClick: () => shareWork(w), tone: 'default' as const },
-                        ]
-                        const processMove = (x: number, y: number) => {
-                          const dx = x - centerX
-                          const dy = y - centerY
-                          const r = Math.hypot(dx, dy)
-                          
-                          // Dead zone in center - no selection
-                          if (r < safeRadius * 0.4) {
-                            setHoverIndex(null)
-                            return
-                          }
-                          
-                          // Selection zone - highlight option
-                          if (r >= safeRadius * 0.4 && r < safeRadius * 0.8) {
-                            let deg = Math.atan2(dy, dx) * (180 / Math.PI)
-                            if (deg < 0) deg += 360
-                            const start = startDeg < 0 ? startDeg + 360 : startDeg
-                            const angleNorm = (deg - start + 360) % 360
-                            const idx = Math.floor((angleNorm + (stepDeg / 2)) / stepDeg) % actions.length
-                            
-                            if (idx !== lastHoverIndexRef.current) {
-                              try { 
-                                if (navigator.vibrate) navigator.vibrate([15])
-                              } catch {}
-                              lastHoverIndexRef.current = idx
-                            }
-                            setHoverIndex(idx)
-                          }
-                          
-                          // Activation zone - trigger action
-                          if (r >= safeRadius * 0.8 && !activationTriggeredRef.current && hoverIndex !== null) {
-                            activationTriggeredRef.current = true
-                            const a = actions[hoverIndex]
-                            try { 
-                              if (navigator.vibrate) navigator.vibrate([30])
-                            } catch {}
-                            a.onClick()
-                            setActiveWorkOverlayId(null)
-                            setActiveOverlayPos(null)
-                            setHoverIndex(null)
-                            unlockBodyScroll()
-                          }
-                        }
-                        const scheduleProcess = (x: number, y: number) => {
-                          pendingMoveRef.current = { x, y }
-                          if (rafMoveIdRef.current == null) {
-                            rafMoveIdRef.current = window.requestAnimationFrame(() => {
-                              const p = pendingMoveRef.current
-                              if (p) processMove(p.x, p.y)
-                              rafMoveIdRef.current = null
-                            })
-                          }
-                        }
-                        const handleTouchMove: React.TouchEventHandler<HTMLDivElement> = (ev) => {
-                          if (!activeOverlayPos || ev.touches.length === 0) return
-                          const t = ev.touches[0]
-                          if (t) {
-                            scheduleProcess(t.clientX, t.clientY)
-                          }
-                          ev.preventDefault()
-                          ev.stopPropagation()
-                        }
-                        const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (ev) => {
-                          ev.preventDefault()
-                          ev.stopPropagation()
-                          try { (ev.currentTarget as any).setPointerCapture(ev.pointerId) } catch {}
-                        }
-                        const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (ev) => {
-                          if (!activeOverlayPos) return
-                          scheduleProcess(ev.clientX, ev.clientY)
-                          ev.preventDefault()
-                          ev.stopPropagation()
-                        }
-                        const handlePointerUp: React.PointerEventHandler<HTMLDivElement> = (ev) => {
-                          ev.preventDefault()
-                          ev.stopPropagation()
-                          if (rafMoveIdRef.current != null) {
-                            cancelAnimationFrame(rafMoveIdRef.current)
-                            rafMoveIdRef.current = null
-                          }
-                          pendingMoveRef.current = null
-                          setActiveWorkOverlayId(null)
-                          setActiveOverlayPos(null)
-                          setHoverIndex(null)
-                          activationTriggeredRef.current = false
-                          unlockBodyScroll()
-                        }
-                        const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (ev) => {
-                          ev.preventDefault()
-                          ev.stopPropagation()
-                          if (rafMoveIdRef.current != null) {
-                            cancelAnimationFrame(rafMoveIdRef.current)
-                            rafMoveIdRef.current = null
-                          }
-                          pendingMoveRef.current = null
-                          setActiveWorkOverlayId(null)
-                          setActiveOverlayPos(null)
-                          setHoverIndex(null)
-                          activationTriggeredRef.current = false
-                          unlockBodyScroll()
-                        }
-                        return (
-                          <div className="fixed inset-0" onClick={(e) => e.stopPropagation()} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
-                            {actions.map((a, i) => {
-                              const theta = ((startDeg + i * stepDeg) * Math.PI) / 180
-                              const top = centerY + safeRadius * Math.sin(theta)
-                              const left = centerX + safeRadius * Math.cos(theta)
-                              const isActive = hoverIndex === i
-                              const common = 'absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md border text-gray-700 bg-white transition-transform duration-200 ease-out radial-pop'
-                              const tone = a.tone === 'danger' ? 'border-red-300 text-red-700 bg-red-50' : 'border-gray-200'
-                              const ring = isActive ? 'scale-110 ring-2 ring-red-400' : 'scale-100'
-                              return (
-                                <button
-                                  key={a.label}
-                                  className={`${common} ${tone} ${ring} w-10 h-10 flex items-center justify-center`}
-                                  style={{ top, left, animationDelay: `${i * 40}ms`, willChange: 'transform' }}
-                                  onClick={(e) => { e.stopPropagation(); a.onClick(); setActiveWorkOverlayId(null); setActiveOverlayPos(null); setHoverIndex(null) }}
-                                  aria-label={a.label}
-                                >
-                                  <a.icon className="h-5 w-5" />
-                                </button>
-                              )
-                            })}
-                            {/* Center hint dot */}
-                            <div className="absolute w-3.5 h-3.5 rounded-full bg-white border border-gray-300 shadow" style={{ top: centerY, left: centerX, transform: 'translate(-50%, -50%)' }} />
-                          </div>
-                        )
-                      })()}
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
+        {/* Old grid implementation removed for performance */}
 
         {activeTab === 'saved' && (
           <div className="text-sm text-gray-600">Tus obras guardadas aparecerán aquí.</div>

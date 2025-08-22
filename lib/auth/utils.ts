@@ -119,7 +119,7 @@ export async function verifyCredentials(email: string, password: string) {
     }
 
     return {
-      id: user.id,
+      id: (user as any).id,
       email: user.email,
       name: user.name,
       username: user.username,
@@ -330,7 +330,7 @@ export async function requireAuth() {
 export async function requireOwnership(resourceUserId: string) {
   const user = await requireAuth();
   
-  if (user.id !== resourceUserId) {
+  if ((user as any).id !== resourceUserId) {
     throw new Error('Unauthorized: You do not own this resource');
   }
   

@@ -90,7 +90,7 @@ export class WriterPage extends BasePage {
     
     const currentUrl = this.page.url()
     const isWorkPage = currentUrl.includes('/work/') || currentUrl.includes('/obra/')
-    const isSuccessPage = await this.page.locator('text=publicado con éxito', 'text=published successfully').isVisible()
+    const isSuccessPage = await this.page.locator('text=publicado con éxito').isVisible()
     
     expect(isWorkPage || isSuccessPage).toBeTruthy()
     
@@ -99,7 +99,7 @@ export class WriterPage extends BasePage {
 
   async expectSaveDraftSuccess() {
     // Should show draft saved message
-    const successMessage = this.page.locator('text=borrador guardado', 'text=draft saved')
+    const successMessage = this.page.locator('text=borrador guardado')
     await expect(successMessage).toBeVisible()
     
     console.log('✅ Save draft success validation passed')
@@ -144,7 +144,7 @@ export class WriterPage extends BasePage {
     await this.publishWork()
     
     // Should show validation error
-    const titleError = this.page.locator('text=título es requerido', 'text=title is required')
+    const titleError = this.page.locator('text=título es requerido')
     await expect(titleError).toBeVisible()
     
     // Clear content and try to publish without content
@@ -153,7 +153,7 @@ export class WriterPage extends BasePage {
     await this.publishWork()
     
     // Should show validation error
-    const contentError = this.page.locator('text=contenido es requerido', 'text=content is required')
+    const contentError = this.page.locator('text=contenido es requerido')
     await expect(contentError).toBeVisible()
     
     console.log('✅ Form validation test passed')
@@ -171,7 +171,7 @@ export class WriterPage extends BasePage {
     await this.page.waitForTimeout(3000)
     
     // Look for autosave indicator
-    const autosaveIndicator = this.page.locator('text=guardado automáticamente', 'text=autosaved')
+    const autosaveIndicator = this.page.locator('text=guardado automáticamente')
     if (await autosaveIndicator.isVisible()) {
       console.log('✅ Autosave indicator found')
     }
@@ -252,7 +252,7 @@ export class WriterPage extends BasePage {
       await this.page.waitForTimeout(2000)
       
       // Check for upload success indicator
-      const uploadSuccess = this.page.locator('text=subido exitosamente', 'text=uploaded successfully')
+      const uploadSuccess = this.page.locator('text=subido exitosamente')
       if (await uploadSuccess.isVisible()) {
         console.log('✅ File upload test passed')
       }

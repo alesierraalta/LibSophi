@@ -65,10 +65,16 @@ export default function SearchPage() {
 
   // Load current user and their following/saved data
   useEffect(() => {
+    const abortController = new AbortController()
+    
     const loadUserData = async () => {
       try {
+        if (abortController.signal.aborted) return
+        
         const supabase = getSupabaseBrowserClient()
         const { data: userData } = await supabase.auth.getUser()
+        
+        if (abortController.signal.aborted) return
         
         if (userData?.user) {
           setCurrentUserId(userData.user.id)
@@ -78,6 +84,9 @@ export default function SearchPage() {
             .from('follows')
             .select('followee_id')
             .eq('follower_id', userData.user.id)
+            .abortSignal(abortController.signal)
+          
+          if (abortController.signal.aborted) return
           
           if (followingData) {
             setFollowingUsers(new Set(followingData.map(f => f.followee_id)))
@@ -88,26 +97,41 @@ export default function SearchPage() {
             .from('bookmarks')
             .select('work_id')
             .eq('user_id', userData.user.id)
+            .abortSignal(abortController.signal)
+          
+          if (abortController.signal.aborted) return
           
           if (savedData) {
             setSavedWorks(new Set(savedData.map(s => s.work_id)))
           }
         }
       } catch (error) {
-        console.error('Error loading user data:', error)
+        if (!abortController.signal.aborted) {
+          console.error('Error loading user data:', error)
+        }
       }
     }
     
     loadUserData()
+    
+    return () => {
+      abortController.abort()
+    }
   }, [])
 
   // Perform search when query or type changes
   useEffect(() => {
+    const abortController = new AbortController()
+    
     if (searchQuery.trim()) {
-      performSearch()
+      performSearch(abortController.signal)
     } else {
       setResults([])
       setTotalResults(0)
+    }
+    
+    return () => {
+      abortController.abort()
     }
   }, [searchQuery, searchType])
 
@@ -119,11 +143,13 @@ export default function SearchPage() {
     }
   }, [searchParams])
 
-  const performSearch = async () => {
+  const performSearch = async (abortSignal?: AbortSignal) => {
     if (!searchQuery.trim()) return
     
     setIsLoading(true)
     try {
+      if (abortSignal?.aborted) return
+      
       const supabase = getSupabaseBrowserClient()
       const searchTerm = searchQuery.trim().toLowerCase()
       let allResults: SearchResult[] = []
@@ -149,9 +175,33 @@ export default function SearchPage() {
           .or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,genre.ilike.%${searchTerm}%`)
           .order('created_at', { ascending: false })
           .limit(searchType === 'works' ? 50 : 20)
+          .abortSignal(abortSignal)
         
         if (works) {
-          const workResults: WorkResult[] = works.map(work => ({
+          if (abortSignal?.aborted) return
+          
+          // Get real likes count for each work
+          const worksWithRealLikes = await Promise.all(
+            works.map(async (work) => {
+              if (abortSignal?.aborted) return null
+              
+              const { count: likesCount } = await supabase
+                .from('likes')
+                .select('*', { count: 'exact', head: true })
+                .eq('work_id', work.id)
+                .abortSignal(abortSignal)
+              
+              return {
+                ...work,
+                real_likes: likesCount || 0
+              }
+            })
+          )
+          
+          // Filter out null results from aborted requests
+          const validWorks = worksWithRealLikes.filter(work => work !== null)
+          
+          const workResults: WorkResult[] = validWorks.map(work => ({
             id: work.id,
             title: work.title,
             excerpt: work.content ? work.content.substring(0, 200) + '...' : '',
@@ -162,7 +212,7 @@ export default function SearchPage() {
             cover_url: work.cover_url || '/api/placeholder/300/400',
             created_at: work.created_at,
             views: work.views || 0,
-            likes: work.likes || 0,
+            likes: work.real_likes || 0, // Using real count from likes table
             published: work.published,
             type: 'work' as const
           }))
@@ -172,6 +222,8 @@ export default function SearchPage() {
       
       // Search authors
       if (searchType === 'all' || searchType === 'authors') {
+        if (abortSignal?.aborted) return
+        
         const { data: authors } = await supabase
           .from('profiles')
           .select(`
@@ -183,14 +235,19 @@ export default function SearchPage() {
           `)
           .or(`name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
           .limit(searchType === 'authors' ? 50 : 10)
+          .abortSignal(abortSignal)
         
         if (authors) {
+          if (abortSignal?.aborted) return
+          
           // Get additional stats for each author
           const authorsWithStats = await Promise.all(
             authors.map(async (author) => {
+              if (abortSignal?.aborted) return null
+              
               const [followersResult, worksResult] = await Promise.all([
-                supabase.from('follows').select('id', { count: 'exact' }).eq('followee_id', author.id),
-                supabase.from('works').select('id', { count: 'exact' }).eq('author_id', author.id).eq('published', true)
+                supabase.from('follows').select('id', { count: 'exact' }).eq('followee_id', author.id).abortSignal(abortSignal),
+                supabase.from('works').select('id', { count: 'exact' }).eq('author_id', author.id).eq('published', true).abortSignal(abortSignal)
               ])
               
               return {
@@ -207,17 +264,22 @@ export default function SearchPage() {
             })
           )
           
-          allResults.push(...authorsWithStats)
+          // Filter out null results from aborted requests
+          const validAuthors = authorsWithStats.filter(author => author !== null)
+          allResults.push(...validAuthors)
         }
       }
       
       // Search genres (unique genres from works that match)
       if (searchType === 'all' || searchType === 'genres') {
+        if (abortSignal?.aborted) return
+        
         const { data: genreWorks } = await supabase
           .from('works')
           .select('genre')
           .eq('published', true)
           .ilike('genre', `%${searchTerm}%`)
+          .abortSignal(abortSignal)
         
         if (genreWorks) {
           const genreCounts = genreWorks.reduce((acc, work) => {

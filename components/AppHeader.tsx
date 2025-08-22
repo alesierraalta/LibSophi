@@ -5,9 +5,10 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, Bell, PenTool, MessageCircle, UserPlus, AtSign, Heart } from 'lucide-react'
+import { Search, Bell, PenTool, MessageCircle, UserPlus, AtSign, Heart, User, Settings, LogOut } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
+import { useAuth } from '@/hooks/useAuth'
 
 interface AppHeaderProps {
   searchValue?: string
@@ -23,12 +24,14 @@ export default function AppHeader({
   className = ''
 }: AppHeaderProps) {
   const router = useRouter()
+  const { signOut } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loadingNotifications, setLoadingNotifications] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [internalSearchValue, setInternalSearchValue] = useState('')
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   // Use external search value if provided, otherwise use internal state
   const searchValue = externalSearchValue || internalSearchValue
@@ -36,23 +39,49 @@ export default function AppHeader({
 
   // Load user ID and unread count
   useEffect(() => {
+    const abortController = new AbortController()
+    
     const loadUser = async () => {
       try {
+        if (abortController.signal.aborted) return
+        
         const supabase = getSupabaseBrowserClient()
         const { data: userData } = await supabase.auth.getUser()
+        
+        if (abortController.signal.aborted) return
         
         if (userData?.user) {
           setUserId(userData.user.id)
           const count = await getUnreadNotificationsCount(userData.user.id)
-          setUnreadCount(count)
+          if (!abortController.signal.aborted) {
+            setUnreadCount(count)
+          }
         }
       } catch (error) {
-        console.error('Error loading user data:', error)
+        if (!abortController.signal.aborted) {
+          console.error('Error loading user data:', error)
+        }
       }
     }
     
     loadUser()
-  }, [])
+    
+    // Refresh notification count when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userId) {
+        getUnreadNotificationsCount(userId).then(count => {
+          setUnreadCount(count)
+        })
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      abortController.abort()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [userId])
 
   // Set up real-time subscription for notification updates
   useEffect(() => {
@@ -89,16 +118,24 @@ export default function AppHeader({
 
   // Load recent notifications when dropdown opens
   useEffect(() => {
+    const abortController = new AbortController()
+    
     if (showNotifications && userId && notifications.length === 0) {
-      loadRecentNotifications()
+      loadRecentNotifications(abortController.signal)
+    }
+    
+    return () => {
+      abortController.abort()
     }
   }, [showNotifications, userId])
 
-  const loadRecentNotifications = async () => {
+  const loadRecentNotifications = async (abortSignal?: AbortSignal) => {
     if (!userId) return
     
     setLoadingNotifications(true)
     try {
+      if (abortSignal?.aborted) return
+      
       const supabase = getSupabaseBrowserClient()
       const { data: rawNotifications } = await supabase
         .from('notifications')
@@ -117,7 +154,10 @@ export default function AppHeader({
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(5) // Only show recent 5 notifications in header
+        .abortSignal(abortSignal)
 
+      if (abortSignal?.aborted) return
+      
       if (rawNotifications) {
         const formattedNotifications = rawNotifications.map(n => ({
           id: n.id,
@@ -133,12 +173,18 @@ export default function AppHeader({
           time: formatTimeAgo(n.created_at)
         }))
         
-        setNotifications(formattedNotifications)
+        if (!abortSignal?.aborted) {
+          setNotifications(formattedNotifications)
+        }
       }
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      if (!abortSignal?.aborted) {
+        console.error('Error loading notifications:', error)
+      }
     } finally {
-      setLoadingNotifications(false)
+      if (!abortSignal?.aborted) {
+        setLoadingNotifications(false)
+      }
     }
   }
 
@@ -279,16 +325,55 @@ export default function AppHeader({
               Publicar
             </Button>
             
-            <button 
-              onClick={() => router.push('/profile')} 
-              aria-label="Ir a mi perfil" 
-              className="rounded-full focus:outline-none focus:ring-2 focus:ring-red-600"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/api/placeholder/32/32" />
-                <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
-              </Avatar>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                aria-label="Menú de usuario" 
+                className="rounded-full focus:outline-none focus:ring-2 focus:ring-red-600 hover:ring-2 hover:ring-red-200 transition-all"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="/api/placeholder/32/32" />
+                  <AvatarFallback className="text-xs bg-red-100 text-red-700">TU</AvatarFallback>
+                </Avatar>
+              </button>
+
+              {/* User Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false)
+                      router.push('/profile')
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors text-left"
+                  >
+                    <User className="w-4 h-4 mr-3" />
+                    Ver Perfil
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false)
+                      router.push('/notifications')
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors text-left"
+                  >
+                    <Settings className="w-4 h-4 mr-3" />
+                    Configuración
+                  </button>
+                  <hr className="my-2" />
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false)
+                      signOut()
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-red-600 hover:bg-red-50 transition-colors text-left"
+                  >
+                    <LogOut className="w-4 h-4 mr-3" />
+                    Cerrar Sesión
+                  </button>
+                </div>
+              )}
+            </div>
 
             {showNotifications && (
               <div
@@ -347,6 +432,14 @@ export default function AppHeader({
           </div>
         </div>
       </div>
+
+      {/* Click outside to close user menu */}
+      {showUserMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowUserMenu(false)}
+        />
+      )}
     </header>
   )
 }

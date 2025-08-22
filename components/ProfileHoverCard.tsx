@@ -22,6 +22,7 @@ type ProfileHoverCardProps = {
 
 export default function ProfileHoverCard({ author, position = 'right', className = '' }: ProfileHoverCardProps) {
   const [isFollowing, setIsFollowing] = useState<boolean>(false)
+  const [stats, setStats] = useState({ works: 0, followers: 0, following: 0 })
 
   useEffect(() => {
     try {
@@ -29,6 +30,52 @@ export default function ProfileHoverCard({ author, position = 'right', className
       const ids: string[] = raw ? JSON.parse(raw) : []
       setIsFollowing(ids.includes(author.username))
     } catch {}
+  }, [author.username])
+
+  // Load user statistics
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        
+        // Get user ID by username
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', author.username.replace('@', ''))
+          .single()
+        
+        if (userProfile) {
+          // Get followers count
+          const { count: followersCount } = await supabase
+            .from('follows')
+            .select('*', { count: 'exact', head: true })
+            .eq('followed_id', userProfile.id)
+          
+          // Get following count
+          const { count: followingCount } = await supabase
+            .from('follows')
+            .select('*', { count: 'exact', head: true })
+            .eq('follower_id', userProfile.id)
+          
+          // Get works count
+          const { count: worksCount } = await supabase
+            .from('works')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userProfile.id)
+          
+          setStats({
+            works: worksCount || 0,
+            followers: followersCount || 0,
+            following: followingCount || 0
+          })
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error)
+      }
+    }
+    
+    loadStats()
   }, [author.username])
 
   const toggleFollow = async () => {
@@ -114,9 +161,9 @@ export default function ProfileHoverCard({ author, position = 'right', className
               <div className="text-xs text-gray-500 truncate">{author.username}</div>
               <p className="text-xs text-gray-600 mt-2 line-clamp-2">Escritor(a) en Palabreo. Perfil en construcción.</p>
               <div className="flex items-center gap-3 text-[11px] text-gray-600 mt-3">
-                <span><strong className="text-gray-900">18</strong> obras</span>
-                <span><strong className="text-gray-900">2.4k</strong> seguidores</span>
-                <span><strong className="text-gray-900">312</strong> siguiendo</span>
+                <span><strong className="text-gray-900">{stats.works}</strong> obras</span>
+                <span><strong className="text-gray-900">{stats.followers}</strong> seguidores</span>
+                <span><strong className="text-gray-900">{stats.following}</strong> siguiendo</span>
               </div>
             </div>
           </div>

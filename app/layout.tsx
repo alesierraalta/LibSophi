@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import StructuredData from '../components/StructuredData'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import dynamic from 'next/dynamic'
 import './globals.css'
 // Import Fontsource fonts
@@ -117,6 +118,7 @@ export default function RootLayout({
           {children}
         </div>
         <MobileFooter />
+        <ConfirmDialog />
       </body>
     </html>
   )

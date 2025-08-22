@@ -183,30 +183,7 @@ Un día, el viento le susurró sobre un misterioso libro perdido en la bibliotec
 
             <div className="border-t border-gray-200 pt-6">
               <div className="space-y-6">
-                {/* Engagement Preview */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <span className="text-lg">📊</span>
-                      Vista previa de engagement
-                    </h4>
-                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">Estimado</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-lg font-bold text-red-500">❤️</div>
-                      <div className="text-xs text-gray-600">15-25 likes</div>
-                    </div>
-                    <div className="text-center bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-lg font-bold text-blue-500">💬</div>
-                      <div className="text-xs text-gray-600">3-8 comentarios</div>
-                    </div>
-                    <div className="text-center bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-lg font-bold text-green-500">📤</div>
-                      <div className="text-xs text-gray-600">2-5 shares</div>
-                    </div>
-                  </div>
-                </div>
+
 
                 {/* Publishing Options */}
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">

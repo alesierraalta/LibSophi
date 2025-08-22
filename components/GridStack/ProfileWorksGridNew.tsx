@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { WorkType } from '@/lib/validations'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Heart, MessageCircle, Repeat2, Share2, Bookmark, Edit3, Eye, MoreHorizontal } from 'lucide-react'
+import { Share2, Edit3, Eye, MoreHorizontal, Copy, Trash2, Image as ImageIcon, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ProfileWorksGridProps {
@@ -13,12 +13,18 @@ interface ProfileWorksGridProps {
   onLayoutChange?: (layout: any[]) => void
   editable?: boolean
   savedLayout?: any[]
+  onWorkEdit?: (work: WorkType) => void
+  onWorkDelete?: (workId: string) => void
+  onWorkShare?: (work: WorkType) => void
+  onWorkDuplicate?: (work: WorkType) => void
+  onWorkCoverChange?: (work: WorkType) => void
 }
 
 const getCoverImage = (work: WorkType): string => {
-  if (work.coverUrl) return work.coverUrl
-  if (work.cover) return work.cover
-  return `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000) + 1544620000}-c4fd4a3d5957?w=800&h=600&fit=crop`
+  // Use only real cover data from database
+  if (work.cover_image_url) return work.cover_image_url
+  // Use placeholder API for consistent fallback when no cover is set
+  return '/api/placeholder/400/300'
 }
 
 export default function ProfileWorksGridNew({ 
@@ -26,7 +32,12 @@ export default function ProfileWorksGridNew({
   onWorkClick, 
   onLayoutChange, 
   editable = false,
-  savedLayout = [] 
+  savedLayout = [],
+  onWorkEdit,
+  onWorkDelete,
+  onWorkShare,
+  onWorkDuplicate,
+  onWorkCoverChange
 }: ProfileWorksGridProps) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
@@ -103,10 +114,9 @@ export default function ProfileWorksGridNew({
       y: 0,
       scale: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 300,
-        damping: 24,
-        duration: 0.4
+        damping: 24
       }
     },
     exit: {
@@ -130,10 +140,9 @@ export default function ProfileWorksGridNew({
       height: "auto",
       y: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 400,
-        damping: 30,
-        duration: 0.3
+        damping: 30
       }
     },
     exit: {
@@ -308,7 +317,7 @@ export default function ProfileWorksGridNew({
                       </svg>
                     </div>
                     <span className="text-xs text-gray-500">
-                      {work.updatedAt ? new Date(work.updatedAt).toLocaleDateString('es-ES', {
+                      {work.updated_at ? new Date(work.updated_at).toLocaleDateString('es-ES', {
                         day: 'numeric',
                         month: 'short'
                       }) : 'Reciente'}
@@ -328,91 +337,117 @@ export default function ProfileWorksGridNew({
                 </p>
               </div>
 
-              {/* Work Actions */}
+              {/* Work Stats and Actions */}
               <motion.div 
                 className="px-4 pb-4 pt-3 border-t border-gray-100"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <motion.button 
-                      className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.2 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                      >
-                        <Heart className="h-4 w-4" />
-                      </motion.div>
-                      <span className="text-xs font-medium">{Math.floor(work.views * 0.1)}</span>
-                    </motion.button>
-                    <motion.button 
-                      className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.2, rotate: 5 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </motion.div>
-                      <span className="text-xs font-medium">{Math.floor(work.views * 0.05)}</span>
-                    </motion.button>
-                    <motion.button 
-                      className="flex items-center space-x-1 text-gray-500 hover:text-purple-600 transition-colors duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.2, rotate: 180 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                      >
-                        <Repeat2 className="h-4 w-4" />
-                      </motion.div>
-                      <span className="text-xs font-medium">{Math.floor(work.views * 0.02)}</span>
-                    </motion.button>
-                  </div>
+                {/* Publication Status */}
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
-                    <motion.button 
-                      className="text-gray-500 hover:text-yellow-600 transition-colors duration-200" 
-                      aria-label="Guardar"
-                      whileHover={{ scale: 1.1, y: -2 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Bookmark className="h-4 w-4" />
-                    </motion.button>
-                    <motion.button 
-                      className="text-gray-500 hover:text-gray-700 transition-colors duration-200" 
-                      aria-label="Compartir"
-                      whileHover={{ scale: 1.1, rotate: 15 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </motion.button>
+                    {work.published ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></div>
+                        Publicado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <FileText className="h-3 w-3 mr-1.5" />
+                        Borrador
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {new Date(work.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {/* Reading time only */}
+                <div className="flex items-center justify-end mb-3">
+                  <span className="text-xs text-gray-500">
+                    {work.reading_time || 0} min de lectura
+                  </span>
+                </div>
+
+                {/* Management Actions */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1">
                     {editable && (
                       <>
                         <motion.button 
-                          className="text-gray-500 hover:text-blue-600 transition-colors duration-200" 
-                          aria-label="Editar"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200" 
+                          aria-label="Editar obra"
+                          title="Editar obra"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onWorkEdit?.(work)
+                          }}
                         >
                           <Edit3 className="h-4 w-4" />
                         </motion.button>
                         <motion.button 
-                          className="text-gray-500 hover:text-green-600 transition-colors duration-200" 
-                          aria-label="Ver"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200" 
+                          aria-label="Duplicar obra"
+                          title="Duplicar obra"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onWorkDuplicate?.(work)
+                          }}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Copy className="h-4 w-4" />
+                        </motion.button>
+                        <motion.button 
+                          className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200" 
+                          aria-label="Cambiar portada"
+                          title="Cambiar portada"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onWorkCoverChange?.(work)
+                          }}
+                        >
+                          <ImageIcon className="h-4 w-4" />
                         </motion.button>
                       </>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <motion.button 
+                      className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200" 
+                      aria-label="Compartir obra"
+                      title="Compartir obra"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onWorkShare?.(work)
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </motion.button>
+                    {editable && (
+                      <motion.button 
+                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200" 
+                        aria-label="Eliminar obra"
+                        title="Eliminar obra"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => {
+                          console.log('Delete button clicked for work:', work.id, work.title)
+                          e.stopPropagation()
+                          console.log('About to call onWorkDelete with:', work.id)
+                          onWorkDelete?.(work.id)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </motion.button>
                     )}
                   </div>
                 </div>

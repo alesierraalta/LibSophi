@@ -56,12 +56,7 @@ export function DragDropList({
         dragHandle: showDragHandle ? '.drag-handle' : undefined,
         dropZoneClass: 'drop-zone-active',
         draggingClass: 'dragging',
-        dragPlaceholder: (data: any) => {
-          const placeholder = document.createElement('div');
-          placeholder.className = 'drag-placeholder';
-          placeholder.innerHTML = `<div class="bg-gray-200 border-2 border-dashed border-gray-400 rounded-lg p-4 opacity-50">Soltar aquí</div>`;
-          return placeholder;
-        },
+        dragPlaceholderClass: 'drag-placeholder',
       },
     });
 

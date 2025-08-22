@@ -95,21 +95,28 @@ export function UserProfileGrid({
 
     // Add new widgets
     gridWorks.forEach((work) => {
-      const widgetEl = createWorkWidget(work);
-      gridStackRef.current!.addWidget(widgetEl, {
-        x: work.x,
-        y: work.y,
-        w: work.w,
-        h: work.h,
-        id: work.id,
-      });
+      const position = { x: work.x, y: work.y, w: work.w, h: work.h };
+      const widgetEl = createWorkWidget(work, position);
+      gridStackRef.current!.addWidget(widgetEl);
     });
   }, [gridWorks, isInitialized]);
 
-  const createWorkWidget = (work: GridWorkItem): HTMLElement => {
+  const createWorkWidget = (work: GridWorkItem, position?: { x: number; y: number; w: number; h: number }): HTMLElement => {
     const widget = document.createElement('div');
-    widget.className = 'grid-stack-item-content bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer overflow-hidden';
+    widget.className = 'grid-stack-item';
     widget.setAttribute('data-work-id', work.id);
+    
+    // Set position attributes if provided
+    if (position) {
+      widget.setAttribute('gs-x', position.x.toString());
+      widget.setAttribute('gs-y', position.y.toString());
+      widget.setAttribute('gs-w', position.w.toString());
+      widget.setAttribute('gs-h', position.h.toString());
+      widget.setAttribute('gs-id', work.id);
+    }
+
+    const content = document.createElement('div');
+    content.className = 'grid-stack-item-content bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer overflow-hidden';
     
     // Add click handler
     widget.addEventListener('click', () => {
@@ -118,7 +125,7 @@ export function UserProfileGrid({
       }
     });
 
-    widget.innerHTML = `
+    content.innerHTML = `
       <div class="h-full flex flex-col">
         ${editable ? `
           <div class="drag-handle bg-gray-100 p-2 cursor-move border-b flex items-center justify-center">
@@ -168,6 +175,9 @@ export function UserProfileGrid({
       </div>
     `;
 
+    // Append content to widget
+    widget.appendChild(content);
+
     return widget;
   };
 
@@ -197,7 +207,7 @@ export function UserProfileGrid({
       const layout = gridStackRef.current.save();
       console.log('Layout saved:', layout);
       // Here you would typically save to backend
-      if (onLayoutChange) {
+      if (onLayoutChange && Array.isArray(layout)) {
         onLayoutChange(layout);
       }
     }

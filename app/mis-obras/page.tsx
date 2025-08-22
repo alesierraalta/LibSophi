@@ -30,12 +30,18 @@ export default function MisObrasPage() {
   const [activeTab, setActiveTab] = useState('my-stories')
 
   useEffect(() => {
+    const abortController = new AbortController()
+    
     const loadWorks = async () => {
       setIsLoading(true)
       
       try {
+        if (abortController.signal.aborted) return
+        
         const supabase = getSupabaseBrowserClient()
         const { data: userData } = await supabase.auth.getUser()
+        
+        if (abortController.signal.aborted) return
         
         if (userData?.user) {
           // User is authenticated - load their actual works
@@ -56,6 +62,9 @@ export default function MisObrasPage() {
             `)
             .eq('author_id', userData.user.id)
             .order('updated_at', { ascending: false })
+            .abortSignal(abortController.signal)
+          
+          if (abortController.signal.aborted) return
           
           if (worksError) {
             console.error('❌ Error loading user works:', worksError)
@@ -76,15 +85,22 @@ export default function MisObrasPage() {
               published: w.published || false,
               wordCount: w.content ? w.content.split(' ').length : undefined,
             }))
-            setWorks(formattedWorks)
+            if (!abortController.signal.aborted) {
+              setWorks(formattedWorks)
+            }
           } else {
             // User is authenticated but has no works
-            setWorks([])
+            if (!abortController.signal.aborted) {
+              setWorks([])
+            }
           }
         } else {
           // User not authenticated - load works from demo user for demonstration
           console.log('👤 No authenticated user, loading demo works')
           const demoUserId = '9f8ff736-aec0-458f-83ae-309b923c5556'
+          
+          if (abortController.signal.aborted) return
+          
           const { data: dbWorks, error: demoError } = await supabase
             .from('works')
             .select(`
@@ -102,6 +118,9 @@ export default function MisObrasPage() {
             .eq('author_id', demoUserId)
             .order('updated_at', { ascending: false })
             .limit(6) // Limit to show a reasonable amount
+            .abortSignal(abortController.signal)
+          
+          if (abortController.signal.aborted) return
           
           if (demoError) {
             console.error('❌ Error loading demo works:', demoError)
@@ -122,22 +141,34 @@ export default function MisObrasPage() {
               published: w.published || false,
               wordCount: w.content ? w.content.split(' ').length : undefined,
             }))
-            setWorks(formattedWorks)
+            if (!abortController.signal.aborted) {
+              setWorks(formattedWorks)
+            }
           } else {
             // No demo data found - show empty state
-            setWorks([])
+            if (!abortController.signal.aborted) {
+              setWorks([])
+            }
           }
         }
       } catch (error) {
-        console.error('Error loading works:', error)
-        // Show empty state on error instead of static fallback data
-        setWorks([])
+        if (!abortController.signal.aborted) {
+          console.error('Error loading works:', error)
+          // Show empty state on error instead of static fallback data
+          setWorks([])
+        }
       } finally {
-        setIsLoading(false)
+        if (!abortController.signal.aborted) {
+          setIsLoading(false)
+        }
       }
     }
     
     loadWorks()
+    
+    return () => {
+      abortController.abort()
+    }
   }, [])
 
   // Helper function to format numbers

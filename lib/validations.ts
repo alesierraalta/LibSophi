@@ -38,6 +38,8 @@ export const workSchema = z.object({
   reading_time: z.number().min(1, 'El tiempo de lectura debe ser mayor a 0'),
   views: z.number().default(0),
   likes: z.number().default(0),
+  comments_count: z.number().default(0),
+  reposts_count: z.number().default(0),
   created_at: z.date(),
   updated_at: z.date(),
 });
@@ -46,6 +48,8 @@ export const createWorkSchema = workSchema.omit({
   id: true,
   views: true,
   likes: true,
+  comments_count: true,
+  reposts_count: true,
   created_at: true,
   updated_at: true,
 });
@@ -106,7 +110,7 @@ export const notificationSchema = z.object({
   title: z.string(),
   message: z.string(),
   read: z.boolean().default(false),
-  data: z.record(z.any()).optional(),
+  data: z.record(z.string(), z.any()).optional(),
   created_at: z.date(),
 });
 
@@ -139,7 +143,7 @@ export const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): { succes
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.issues.map(err => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { success: false, errors: ['Error de validación desconocido'] };

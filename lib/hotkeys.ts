@@ -1,4 +1,5 @@
 import hotkeys from 'hotkeys-js';
+import React from 'react';
 
 // Global hotkey configurations
 export const HOTKEY_SCOPES = {
@@ -132,7 +133,12 @@ class HotkeyManager {
   // Set hotkey description for help system
   private setDescription(keys: string, description: string, scope: HotkeyScope) {
     if (!window.hotkeyDescriptions) {
-      window.hotkeyDescriptions = {};
+      window.hotkeyDescriptions = {
+        global: {},
+        table: {},
+        editor: {},
+        modal: {}
+      };
     }
     if (!window.hotkeyDescriptions[scope]) {
       window.hotkeyDescriptions[scope] = {};
@@ -184,10 +190,10 @@ class HotkeyManager {
 
   // Clean up all hotkeys
   destroy() {
-    for (const keyScope of this.registeredKeys) {
+    Array.from(this.registeredKeys).forEach(keyScope => {
       const [keys, scope] = keyScope.split(':');
       this.unregister(keys, scope as HotkeyScope);
-    }
+    });
     this.registeredKeys.clear();
   }
 }

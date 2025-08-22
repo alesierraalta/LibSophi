@@ -111,7 +111,7 @@ export const dateUtils = {
   },
 
   // Duration utilities
-  duration: (input: dayjs.DurationInputArg1, unit?: dayjs.DurationInputArg2) => {
+  duration: (input: any, unit?: any) => {
     return dayjs.duration(input, unit);
   },
 

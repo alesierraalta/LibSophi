@@ -81,6 +81,25 @@ export default function NotificationsPage() {
           }))
           
           setNotifications(formattedNotifications)
+          
+          // Mark all notifications as read when the page loads
+          const unreadNotifications = formattedNotifications.filter(n => !n.read)
+          if (unreadNotifications.length > 0) {
+            try {
+              const { error } = await supabase
+                .from('notifications')
+                .update({ read: true })
+                .eq('user_id', userData.user.id)
+                .eq('read', false)
+              
+              if (!error) {
+                // Update local state to reflect read status
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+              }
+            } catch (error) {
+              console.error('Error marking notifications as read:', error)
+            }
+          }
         }
       } catch (error) {
         console.error('Error loading notifications:', error)
@@ -203,12 +222,9 @@ export default function NotificationsPage() {
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border border-gray-300 bg-white text-gray-700"
                 >
                   {filter === 'all' && <Bell className="h-4 w-4" />}
-                  {filter === 'comments' && <MessageCircle className="h-4 w-4 text-blue-600" />}
                   {filter === 'follows' && <UserPlus className="h-4 w-4 text-green-600" />}
-                  {filter === 'mentions' && <AtSign className="h-4 w-4 text-orange-600" />}
-                  {filter === 'likes' && <Heart className="h-4 w-4 text-red-600" />}
                   <span>
-                    {filter === 'all' ? 'Todas' : filter === 'comments' ? 'Comentarios' : filter === 'follows' ? 'Seguidores' : filter === 'mentions' ? 'Menciones' : 'Likes'}
+                    {filter === 'all' ? 'Todas' : 'Seguidores'}
                   </span>
                 </button>
                 {showFilterMenu && (
@@ -216,17 +232,8 @@ export default function NotificationsPage() {
                     <button onClick={() => { setFilter('all'); setShowFilterMenu(false) }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 ${filter === 'all' ? 'text-red-600' : 'text-gray-700'}`}>
                       <Bell className="h-4 w-4" /> Todas
                     </button>
-                    <button onClick={() => { setFilter('comments'); setShowFilterMenu(false) }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 ${filter === 'comments' ? 'text-red-600' : 'text-gray-700'}`}>
-                      <MessageCircle className="h-4 w-4 text-blue-600" /> Comentarios
-                    </button>
                     <button onClick={() => { setFilter('follows'); setShowFilterMenu(false) }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 ${filter === 'follows' ? 'text-red-600' : 'text-gray-700'}`}>
                       <UserPlus className="h-4 w-4 text-green-600" /> Seguidores
-                    </button>
-                    <button onClick={() => { setFilter('mentions'); setShowFilterMenu(false) }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 ${filter === 'mentions' ? 'text-red-600' : 'text-gray-700'}`}>
-                      <AtSign className="h-4 w-4 text-orange-600" /> Menciones
-                    </button>
-                    <button onClick={() => { setFilter('likes'); setShowFilterMenu(false) }} className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 ${filter === 'likes' ? 'text-red-600' : 'text-gray-700'}`}>
-                      <Heart className="h-4 w-4 text-red-600" /> Likes
                     </button>
                   </div>
                 )}
@@ -236,17 +243,8 @@ export default function NotificationsPage() {
                 <button onClick={() => setFilter('all')} className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1 ${filter === 'all' ? 'bg-red-600 text-white' : 'text-gray-700 hover:text-red-700'}`} aria-pressed={filter === 'all'}>
                   <Bell className="h-4 w-4" /> Todas
                 </button>
-                <button onClick={() => setFilter('comments')} className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1 ${filter === 'comments' ? 'bg-red-600 text-white' : 'text-gray-700 hover:text-red-700'}`} aria-pressed={filter === 'comments'}>
-                  <MessageCircle className="h-4 w-4" /> Comentarios
-                </button>
                 <button onClick={() => setFilter('follows')} className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1 ${filter === 'follows' ? 'bg-red-600 text-white' : 'text-gray-700 hover:text-red-700'}`} aria-pressed={filter === 'follows'}>
                   <UserPlus className="h-4 w-4" /> Seguidores
-                </button>
-                <button onClick={() => setFilter('mentions')} className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1 ${filter === 'mentions' ? 'bg-red-600 text-white' : 'text-gray-700 hover:text-red-700'}`} aria-pressed={filter === 'mentions'}>
-                  <AtSign className="h-4 w-4" /> Menciones
-                </button>
-                <button onClick={() => setFilter('likes')} className={`px-3 py-1.5 text-xs rounded-full flex items-center gap-1 ${filter === 'likes' ? 'bg-red-600 text-white' : 'text-gray-700 hover:text-red-700'}`} aria-pressed={filter === 'likes'}>
-                  <Heart className="h-4 w-4" /> Likes
                 </button>
               </div>
             </div>

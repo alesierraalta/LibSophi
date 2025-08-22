@@ -727,29 +727,34 @@ function MainPageInner() {
           )}
         </div>
         
-        {/* Post Actions */}
+        {/* Post Stats and Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center space-x-6">
-            <button onClick={onLike} className={`flex items-center space-x-2 text-gray-500 transition-colors duration-200 group ${localIsLiked ? 'text-red-600' : 'hover:text-red-600'}`} title={localIsLiked ? 'Quitar me gusta' : 'Me gusta'}>
-              <Heart className={`h-5 w-5 group-hover:scale-110 transition-transform duration-200 ${localIsLiked ? 'text-red-600 fill-red-600' : ''}`} />
-              <span className="text-sm font-medium">{localLikes}</span>
-            </button>
-            <button onClick={() => setShowCommentBox(v => !v)} className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors duration-200 group">
-              <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
-              <span className="text-sm font-medium">{localComments}</span>
-            </button>
-            <button onClick={onRepost} className={`flex items-center space-x-2 text-gray-500 transition-colors duration-200 group ${localReposted ? 'text-purple-600' : 'hover:text-purple-600'}`} title={localReposted ? 'Quitar repost' : 'Repostear'}>
-              <Repeat2 className={`h-5 w-5 group-hover:scale-110 transition-transform duration-200 ${localReposted ? 'text-purple-600' : ''}`} />
-              <span className="text-sm font-medium">{localReposts}</span>
-            </button>
+          <div className="flex items-center space-x-4 text-sm text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {post.views || 0}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Heart className={`h-4 w-4 ${localIsLiked ? 'fill-red-500 text-red-500' : ''}`} />
+              {localLikes}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MessageCircle className="h-4 w-4" />
+              {localComments}
+            </span>
           </div>
-          <div className="flex items-center space-x-3">
-            <button onClick={toggleBookmark} className={`text-gray-500 hover:text-yellow-600 transition-colors duration-200 ${bookmarked ? 'text-yellow-600' : ''}`} aria-label="Guardar">
-              <Bookmark className={`h-5 w-5 ${bookmarked ? 'fill-yellow-500' : ''}`} />
-            </button>
-            <button onClick={onShare} className="text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Compartir" title="Compartir">
-              <Share2 className="h-5 w-5" />
-            </button>
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => router.push(`/work/${post.id}`)}
+            >
+              Leer más →
+            </Button>
           </div>
         </div>
 
@@ -815,11 +820,11 @@ function MainPageInner() {
 
   // Memoized sidebar trends data
   const sidebarTrends = useMemo(() => [
-    { tag: '#PoesíaContemporánea', posts: '2.1k' },
-    { tag: '#CuentosCortos', posts: '1.8k' },
-    { tag: '#NovelaNegra', posts: '1.5k' },
-    { tag: '#EscrituraCreativa', posts: '1.2k' },
-    { tag: '#TeatroIndependiente', posts: '890' }
+    { tag: '#PoesíaContemporánea', posts: '4' },
+    { tag: '#CuentosCortos', posts: '3' },
+    { tag: '#NovelaNegra', posts: '3' },
+    { tag: '#EscrituraCreativa', posts: '2' },
+    { tag: '#TeatroIndependiente', posts: '1' }
   ], [])
 
   // Autores sugeridos obtenidos dinámicamente (estado: suggestedAuthors)
