@@ -2,189 +2,210 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import { ArrowLeft, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowLeft, UserPlus } from 'lucide-react'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { toggleFollow } from '@/lib/supabase/follows'
 import AppHeader from '@/components/AppHeader'
-import FollowButton from '@/components/FollowButton'
-import { getOptimizedSupabaseClient, cleanupOptimizedClient } from '@/lib/supabase/optimized-client'
 
-interface Follower {
-  follower_id: string
-  follower_username: string
-  follower_name: string
-  follower_avatar: string
+interface FollowerUser {
+  id: string
+  name: string
+  username: string
+  avatar_url: string
+  bio: string
   created_at: string
 }
 
 export default function FollowersPage() {
   const router = useRouter()
-  const client = getOptimizedSupabaseClient()
-  const [followers, setFollowers] = useState<Follower[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [followers, setFollowers] = useState<FollowerUser[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [followingSet, setFollowingSet] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadFollowers()
-    
-    return () => {
-      cleanupOptimizedClient()
-    }
   }, [])
 
   const loadFollowers = async () => {
-    setIsLoading(true)
-    setError(null)
-    
     try {
-      // Get current user
-      const user = await client.getCurrentUser()
-      if (!user) {
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      
+      if (!userData?.user) {
         router.push('/login')
         return
       }
       
-      setCurrentUserId(user.id)
-      
-      // Load followers
-      const followersData = await client.getFollowers(user.id)
-      setFollowers(followersData)
-      
+      setCurrentUserId(userData.user.id)
+
+      // Get followers
+      const { data: followsData } = await supabase
+        .from('follows')
+        .select(`
+          follower_id,
+          created_at,
+          follower:profiles!follows_follower_id_fkey(
+            id,
+            name,
+            username,
+            avatar_url,
+            bio
+          )
+        `)
+        .eq('followee_id', userData.user.id)
+        .order('created_at', { ascending: false })
+
+      if (followsData) {
+        const followerUsers = followsData
+          .filter(f => f.follower)
+          .map(f => ({
+            id: (f.follower as any).id,
+            name: (f.follower as any).name || 'Usuario',
+            username: (f.follower as any).username || '@usuario',
+            avatar_url: (f.follower as any).avatar_url || '/api/placeholder/48/48',
+            bio: (f.follower as any).bio || '',
+            created_at: f.created_at
+          }))
+        
+        setFollowers(followerUsers)
+
+        // Check which users the current user is following back
+        if (followerUsers.length > 0) {
+          const { data: followingData } = await supabase
+            .from('follows')
+            .select('followee_id')
+            .eq('follower_id', userData.user.id)
+            .in('followee_id', followerUsers.map(f => f.id))
+
+          if (followingData) {
+            setFollowingSet(new Set(followingData.map(f => f.followee_id)))
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading followers:', error)
-      setError('Error al cargar seguidores')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleFollowChange = (userId: string, isFollowing: boolean) => {
-    // Update the followers list if needed
-    // This could trigger a refresh or update local state
+  const handleFollow = async (userId: string) => {
+    if (!currentUserId) return
+
+    try {
+      const result = await toggleFollow(userId)
+      if (result.success) {
+        setFollowingSet(prev => {
+          const newSet = new Set(prev)
+          if (result.following) {
+            newSet.add(userId)
+          } else {
+            newSet.delete(userId)
+          }
+          return newSet
+        })
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AppHeader />
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg p-4 flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 [font-family:var(--font-poppins)]">
+    <div className="min-h-screen bg-gray-50">
       <AppHeader />
       
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="flex items-center gap-4 mb-6">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => router.back()}
-            className="p-2"
+            className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
+            Volver
           </Button>
-          <div className="flex items-center gap-2">
-            <Users className="h-6 w-6 text-gray-700" />
-            <h1 className="text-2xl font-bold text-gray-900">Seguidores</h1>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Seguidores</h1>
         </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="p-4 animate-pulse">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-gray-200 rounded-full" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-32 mb-2" />
-                    <div className="h-3 bg-gray-200 rounded w-24" />
+        {followers.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes seguidores aún</h3>
+              <p className="text-gray-600">Cuando alguien te siga, aparecerá aquí.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {followers.map((follower) => (
+              <Card key={follower.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={follower.avatar_url}
+                      alt={follower.name}
+                      className="w-12 h-12 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-red-200 transition-all"
+                      onClick={() => router.push(`/profile/${follower.username}`)}
+                    />
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 
+                        className="font-semibold text-gray-900 truncate cursor-pointer hover:text-red-600 transition-colors"
+                        onClick={() => router.push(`/profile/${follower.username}`)}
+                      >
+                        {follower.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 truncate">{follower.username}</p>
+                      {follower.bio && (
+                        <p className="text-sm text-gray-700 mt-1 line-clamp-2">{follower.bio}</p>
+                      )}
+                    </div>
+                    
+                    {currentUserId !== follower.id && (
+                      <Button
+                        variant={followingSet.has(follower.id) ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => handleFollow(follower.id)}
+                        className={followingSet.has(follower.id) ? "" : "bg-red-600 hover:bg-red-700"}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {followingSet.has(follower.id) ? 'Siguiendo' : 'Seguir'}
+                      </Button>
+                    )}
                   </div>
-                  <div className="h-8 w-20 bg-gray-200 rounded" />
-                </div>
+                </CardContent>
               </Card>
             ))}
           </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <Card className="p-6 text-center">
-            <div className="text-red-600 mb-2">
-              <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Error</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Button onClick={loadFollowers} variant="outline">
-              Reintentar
-            </Button>
-          </Card>
-        )}
-
-        {/* Followers List */}
-        {!isLoading && !error && (
-          <>
-            {followers.length === 0 ? (
-              <Card className="p-8 text-center">
-                <div className="text-gray-400 mb-4">
-                  <Users className="h-16 w-16 mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Aún no tienes seguidores
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Cuando otros usuarios te sigan, aparecerán aquí.
-                </p>
-                <Button 
-                  onClick={() => router.push('/explore')}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Explorar usuarios
-                </Button>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600 mb-4">
-                  {followers.length} {followers.length === 1 ? 'seguidor' : 'seguidores'}
-                </p>
-                
-                {followers.map((follower) => (
-                  <Card key={follower.follower_id} className="p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => router.push(`/user/${follower.follower_username}`)}
-                        className="flex items-center gap-4 flex-1 text-left"
-                      >
-                        <div className="h-12 w-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                          <Image
-                            src={follower.follower_avatar || '/api/placeholder/48/48'}
-                            alt={follower.follower_name}
-                            width={48}
-                            height={48}
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 truncate">
-                            {follower.follower_name}
-                          </h3>
-                          <p className="text-sm text-gray-600 truncate">
-                            @{follower.follower_username}
-                          </p>
-                        </div>
-                      </button>
-                      
-                      <FollowButton
-                        currentUserId={currentUserId}
-                        targetUserId={follower.follower_id}
-                        onFollowChange={(isFollowing) => handleFollowChange(follower.follower_id, isFollowing)}
-                        size="sm"
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </>
         )}
       </div>
     </div>

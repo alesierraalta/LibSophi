@@ -739,7 +739,7 @@ export default function ExplorePage() {
             <div className="mb-6">
               <TrendingAuthors 
                 limit={6}
-                title="⭐ Autores Destacados"
+                title="Autores Destacados"
                 showFollowButton={true}
                 currentUserId={userId}
               />
@@ -754,7 +754,7 @@ export default function ExplorePage() {
                 timeframe="all"
                 limit={8}
                 showTimeframeTabs={false}
-                title="🔥 En Tendencia"
+                title="En Tendencia"
               />
             </div>
             {isLoading ? (

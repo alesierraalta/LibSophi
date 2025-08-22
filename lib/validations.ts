@@ -35,6 +35,7 @@ export const workSchema = z.object({
   tags: z.array(z.string()).default([]),
   cover_image_url: z.string().url().optional(),
   published: z.boolean().default(false),
+  archived: z.boolean().default(false),
   reading_time: z.number().min(1, 'El tiempo de lectura debe ser mayor a 0'),
   views: z.number().default(0),
   likes: z.number().default(0),

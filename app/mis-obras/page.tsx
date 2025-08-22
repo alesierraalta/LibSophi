@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { BookOpen, Edit3, Eye, Plus, Home, Compass, PenTool, Heart, FileText } from 'lucide-react'
+import { BookOpen, Edit3, Eye, Plus, Home, Compass, PenTool, Heart, FileText, Archive, ArchiveRestore, MoreHorizontal, Trash2 } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import AppHeader from '@/components/AppHeader'
 
@@ -18,6 +18,7 @@ type Work = {
   updatedAt?: string
   createdAt?: string
   published: boolean
+  archived?: boolean
   wordCount?: number
 }
 
@@ -28,6 +29,8 @@ export default function MisObrasPage() {
   const [works, setWorks] = useState<Work[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('my-stories')
+  const [showArchived, setShowArchived] = useState(false)
+  const [showMenu, setShowMenu] = useState<string | null>(null)
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -58,9 +61,11 @@ export default function MisObrasPage() {
               views,
               likes,
               published,
+              archived,
               content
             `)
             .eq('author_id', userData.user.id)
+            .eq('archived', showArchived)
             .order('updated_at', { ascending: false })
             .abortSignal(abortController.signal)
           
@@ -169,7 +174,19 @@ export default function MisObrasPage() {
     return () => {
       abortController.abort()
     }
-  }, [])
+  }, [showArchived])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowMenu(null)
+    }
+
+    if (showMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showMenu])
 
   // Helper function to format numbers
   const formatNumber = (num: number): string => {
@@ -217,6 +234,34 @@ export default function MisObrasPage() {
     }
   }, [])
 
+  // Archive toggle function
+  const toggleWorkArchive = async (workId: string, archived: boolean) => {
+    try {
+      const response = await fetch(`/api/works/${workId}/archive`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archived })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update archive status')
+      }
+
+      // Update the work in the current works list
+      setWorks(prevWorks => 
+        prevWorks.map(work => 
+          work.id === workId 
+            ? { ...work, archived } 
+            : work
+        ).filter(work => work.archived === showArchived)
+      )
+    } catch (error) {
+      console.error('Error toggling archive status:', error)
+    }
+  }
+
   // Handle navigation
   const handleTabChange = (tabId: string) => {
     if (tabId === 'explore') {
@@ -245,8 +290,35 @@ export default function MisObrasPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mis Obras</h1>
-              <p className="text-sm text-gray-600 mt-1">Administra y edita tus obras publicadas y borradores.</p>
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  {showArchived ? 'Obras Archivadas' : 'Mis Obras'}
+                </h1>
+                <Button
+                  size="sm"
+                  variant={showArchived ? "default" : "outline"}
+                  onClick={() => setShowArchived(!showArchived)}
+                  className="text-xs"
+                >
+                  {showArchived ? (
+                    <>
+                      <ArchiveRestore className="h-4 w-4 mr-1" />
+                      Ver Activas
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4 mr-1" />
+                      Ver Archivadas
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {showArchived 
+                  ? 'Gestiona tus obras archivadas.' 
+                  : 'Administra y edita tus obras publicadas y borradores.'
+                }
+              </p>
               <div className="flex flex-wrap gap-2 mt-3 text-xs">
                 <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700">
                   <strong className="text-gray-900">{stats.total}</strong> obras
@@ -380,12 +452,65 @@ export default function MisObrasPage() {
                   )}
                 </CardContent>
                 <CardFooter className="p-3 pt-0 flex items-center justify-between">
-                  <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push(`/writer?edit=${w.id}`)}>
-                    <Edit3 className="h-4 w-4 mr-1" /> Editar
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push(`/work/${w.id}`)}>
-                    <Eye className="h-4 w-4 mr-1" /> Ver
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push(`/writer?edit=${w.id}`)}>
+                      <Edit3 className="h-4 w-4 mr-1" /> Editar
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push(`/work/${w.id}`)}>
+                      <Eye className="h-4 w-4 mr-1" /> Ver
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowMenu(showMenu === w.id ? null : w.id)
+                      }}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+
+                    {/* Dropdown menu */}
+                    {showMenu === w.id && (
+                      <div className="absolute right-0 top-9 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleWorkArchive(w.id, !w.archived)
+                            setShowMenu(null)
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          {w.archived ? (
+                            <>
+                              <ArchiveRestore className="h-3 w-3" />
+                              Desarchivar
+                            </>
+                          ) : (
+                            <>
+                              <Archive className="h-3 w-3" />
+                              Archivar
+                            </>
+                          )}
+                        </button>
+                        <div className="border-t border-gray-100 my-1"></div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Add delete functionality here if needed
+                            setShowMenu(null)
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Eliminar
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </CardFooter>
               </Card>
             ))}

@@ -231,7 +231,9 @@ export default function SearchPage() {
             name,
             username,
             bio,
-            avatar_url
+            avatar_url,
+            followers_count,
+            following_count
           `)
           .or(`name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
           .limit(searchType === 'authors' ? 50 : 10)
@@ -240,15 +242,17 @@ export default function SearchPage() {
         if (authors) {
           if (abortSignal?.aborted) return
           
-          // Get additional stats for each author
+          // Get works count for each author (only additional query needed)
           const authorsWithStats = await Promise.all(
             authors.map(async (author) => {
               if (abortSignal?.aborted) return null
               
-              const [followersResult, worksResult] = await Promise.all([
-                supabase.from('follows').select('id', { count: 'exact' }).eq('followee_id', author.id).abortSignal(abortSignal),
-                supabase.from('works').select('id', { count: 'exact' }).eq('author_id', author.id).eq('published', true).abortSignal(abortSignal)
-              ])
+              const worksResult = await supabase
+                .from('works')
+                .select('id', { count: 'exact' })
+                .eq('author_id', author.id)
+                .eq('published', true)
+                .abortSignal(abortSignal)
               
               return {
                 id: author.id,
@@ -256,7 +260,7 @@ export default function SearchPage() {
                 username: author.username,
                 bio: author.bio || '',
                 avatar_url: author.avatar_url || '/api/placeholder/100/100',
-                followers_count: followersResult.count || 0,
+                followers_count: author.followers_count || 0,
                 works_count: worksResult.count || 0,
                 verified: false, // Could be implemented later
                 type: 'author' as const

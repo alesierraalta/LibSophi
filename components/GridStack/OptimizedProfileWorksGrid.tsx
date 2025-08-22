@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import { WorkType } from '@/lib/validations'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Share2, Edit3, Eye, MoreHorizontal, Copy, Trash2, Image as ImageIcon, FileText, Plus, Filter } from 'lucide-react'
+import { Share2, Edit3, Eye, MoreHorizontal, Copy, Trash2, Image as ImageIcon, FileText, Plus, Filter, Archive, ArchiveRestore } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface OptimizedProfileWorksGridProps {
@@ -17,6 +17,7 @@ interface OptimizedProfileWorksGridProps {
   onWorkShare?: (work: WorkType) => void
   onWorkDuplicate?: (work: WorkType) => void
   onWorkCoverChange?: (work: WorkType) => void
+  onWorkArchive?: (workId: string, archived: boolean) => void
   isLoading?: boolean
 }
 
@@ -33,6 +34,7 @@ const WorkCard = React.memo(({
   onWorkDelete, 
   onWorkShare, 
   onWorkDuplicate,
+  onWorkArchive,
   index,
   isEditMode,
   isDragged,
@@ -44,6 +46,7 @@ const WorkCard = React.memo(({
   onWorkDelete?: (workId: string) => void
   onWorkShare?: (work: WorkType) => void
   onWorkDuplicate?: (work: WorkType) => void
+  onWorkArchive?: (workId: string, archived: boolean) => void
   index: number
   isEditMode?: boolean
   isDragged?: boolean
@@ -143,6 +146,28 @@ const WorkCard = React.memo(({
                       <Share2 className="h-3 w-3" />
                       Compartir
                     </button>
+                    {onWorkArchive && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onWorkArchive(work.id, !(work as any).archived)
+                          setShowMenu(false)
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        {(work as any).archived ? (
+                          <>
+                            <ArchiveRestore className="h-3 w-3" />
+                            Desarchivar
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-3 w-3" />
+                            Archivar
+                          </>
+                        )}
+                      </button>
+                    )}
                     <div className="border-t border-gray-100 my-1"></div>
                     <button
                       onClick={(e) => {
@@ -234,6 +259,7 @@ export default function OptimizedProfileWorksGrid({
   onWorkShare,
   onWorkDuplicate,
   onWorkCoverChange,
+  onWorkArchive,
   isLoading = false
 }: OptimizedProfileWorksGridProps) {
   const [sortBy, setSortBy] = useState<'recent' | 'views' | 'title'>('recent')
@@ -473,6 +499,7 @@ export default function OptimizedProfileWorksGrid({
                 onWorkDelete={onWorkDelete}
                 onWorkShare={onWorkShare}
                 onWorkDuplicate={onWorkDuplicate}
+                onWorkArchive={onWorkArchive}
                 onCardClick={handleCardClick}
               />
             ))}

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon } from 'lucide-react'
+import { BookOpen, Bookmark, UserPlus, Edit3, Repeat2, Share2, Copy, Trash2, Image as ImageIcon, Archive, ArchiveRestore } from 'lucide-react'
 import ProfileImageUpload from '@/components/ProfileImageUpload'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import OptimizedProfileWorksGrid from '@/components/GridStack/OptimizedProfileWorksGrid'
@@ -19,7 +19,8 @@ import { measurePerformance, debounce, loadingStates } from '@/lib/performance-o
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = getSupabaseBrowserClient()
-  const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts'>('works')
+  const [activeTab, setActiveTab] = useState<'works' | 'saved' | 'reposts' | 'archived'>('works')
+  const [showArchived, setShowArchived] = useState(false)
   const [reposts, setReposts] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
@@ -88,13 +89,13 @@ export default function ProfilePage() {
             .single()
           
             if (profileData) {
-              const profile = {
-                name: profileData.name || user.email?.split('@')[0] || 'Usuario',
-                username: profileData.username || user.email?.split('@')[0] || 'usuario',
-                bio: profileData.bio || 'Nuevo en Palabreo',
-                avatar: profileData.avatar_url || '/api/placeholder/112/112',
-                banner: profileData.banner_url || '',
-              }
+                              const profile = {
+                  name: profileData.name || user.email?.split('@')[0] || 'Usuario',
+                  username: profileData.username || `@${user.email?.split('@')[0] || 'usuario'}`,
+                  bio: profileData.bio || 'Nuevo en Palabreo',
+                  avatar: profileData.avatar_url || '/api/placeholder/112/112',
+                  banner: profileData.banner_url || '',
+                }
               setProfile(profile)
             setHasLoadedFromDB(true)
             setHasNoProfileData(false)
@@ -125,10 +126,47 @@ export default function ProfilePage() {
       })
     }
     
-    loadProfile()
-    
-    // No cleanup needed for standard client
-  }, [])
+          loadProfile()
+      
+      // No cleanup needed for standard client
+    }, [])
+
+    // Load follow stats separately using direct queries
+    useEffect(() => {
+      const loadFollowStats = async () => {
+        if (!userId) return
+        
+        console.log('Loading follow stats for userId:', userId)
+        try {
+          const supabase = getSupabaseBrowserClient()
+          
+          // Get followers count
+          const { count: followersCount } = await supabase
+            .from('follows')
+            .select('follower_id', { count: 'exact', head: true })
+            .eq('followee_id', userId)
+          
+          // Get following count  
+          const { count: followingCount } = await supabase
+            .from('follows')
+            .select('followee_id', { count: 'exact', head: true })
+            .eq('follower_id', userId)
+          
+          console.log('Direct query results - followers:', followersCount, 'following:', followingCount)
+          
+          setStats(prev => ({
+            ...prev,
+            followers: followersCount || 0,
+            following: followingCount || 0
+          }))
+          
+        } catch (error) {
+          console.error('Error loading follow stats:', error)
+        }
+      }
+      
+      loadFollowStats()
+    }, [userId])
 
   // Optimized works loading
   useEffect(() => {
@@ -145,8 +183,9 @@ export default function ProfilePage() {
           // Load works directly from Supabase
           const { data, error } = await supabase
             .from('works')
-            .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order')
+            .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order, archived')
             .eq('author_id', userId)
+            .eq('archived', showArchived)
             .order('display_order', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: false })
             .limit(20)
@@ -176,6 +215,7 @@ export default function ProfilePage() {
                 content: work.content || '',
                 tags: work.tags || [],
                 reading_time: work.reading_time || 5,
+                archived: work.archived || false,
           }))
           
           console.log('Loaded works data:', worksData)
@@ -190,22 +230,7 @@ export default function ProfilePage() {
             setStats(prev => ({ ...prev, works: 0 }))
           }
           
-          // Load follow stats
-          try {
-            if (userId) {
-              const followStats = await getFollowStats(userId)
-              if (followStats) {
-                setStats(prev => ({
-                  ...prev,
-                  followers: followStats.followers_count,
-                  following: followStats.following_count
-                }))
-              }
-            }
-          } catch (followError) {
-            console.warn('Error loading follow stats:', followError)
-            // Don't fail the entire load for follow stats
-        }
+                    // Follow stats are loaded separately in their own useEffect
       } catch (error) {
           console.error('Works load error:', error)
           setDatabaseError('Error al cargar obras')
@@ -218,7 +243,7 @@ export default function ProfilePage() {
     }
     
     loadWorks()
-  }, [userId])
+  }, [userId, showArchived])
 
   const openEdit = () => {
     setEditProfile(profile)
@@ -263,6 +288,33 @@ export default function ProfilePage() {
     }
     
     setShowEdit(false)
+  }
+
+  const toggleWorkArchive = async (workId: string, archived: boolean) => {
+    try {
+      const response = await fetch(`/api/works/${workId}/archive`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archived })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update archive status')
+      }
+
+      // Update the work in the current works list
+      setWorks(prevWorks => 
+        prevWorks.map(work => 
+          work.id === workId 
+            ? { ...work, archived } 
+            : work
+        ).filter(work => (work as any).archived === showArchived)
+      )
+    } catch (error) {
+      console.error('Error toggling archive status:', error)
+    }
   }
 
   const resetDefaults = () => {
@@ -432,8 +484,18 @@ export default function ProfilePage() {
                   <p className="text-sm text-gray-700 whitespace-pre-line">{profile.bio}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
                     <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.works}</strong> obras</span>
-                    <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.followers}</strong> seguidores</span>
-                    <span className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700"><strong className="text-gray-900">{stats.following}</strong> siguiendo</span>
+                    <button 
+                      className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700 hover:text-red-600 hover:border-red-200 transition-colors cursor-pointer"
+                      onClick={() => router.push('/profile/followers')}
+                    >
+                      <strong className="text-gray-900">{stats.followers}</strong> seguidores
+                    </button>
+                    <button 
+                      className="px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-gray-700 hover:text-red-600 hover:border-red-200 transition-colors cursor-pointer"
+                      onClick={() => router.push('/profile/following')}
+                    >
+                      <strong className="text-gray-900">{stats.following}</strong> siguiendo
+                    </button>
                   </div>
                 </div>
               </div>
@@ -453,6 +515,16 @@ export default function ProfilePage() {
           </button>
           <button onClick={() => setActiveTab('reposts')} className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${activeTab === 'reposts' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-600 hover:text-red-600'}`}>
             <Repeat2 className="h-4 w-4"/> Reposts
+          </button>
+          <button 
+            onClick={() => {
+              setShowArchived(!showArchived)
+              setActiveTab('works')
+            }} 
+            className={`flex-1 h-12 inline-flex items-center justify-center gap-2 text-sm ${showArchived ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-600 hover:text-red-600'}`}
+          >
+            {showArchived ? <ArchiveRestore className="h-4 w-4"/> : <Archive className="h-4 w-4"/>}
+            {showArchived ? 'Archivadas' : 'Ver Archivadas'}
           </button>
         </div>
       </div>
@@ -518,6 +590,7 @@ export default function ProfilePage() {
               <OptimizedProfileWorksGrid
                   works={works}
                   isLoading={isLoadingWorks}
+                  onWorkArchive={toggleWorkArchive}
                   onWorkClick={(work) => {
                     router.push(`/work/${work.id}`)
                   }}

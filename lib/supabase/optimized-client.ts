@@ -2,6 +2,7 @@
 
 import { getSupabaseBrowserClient } from './browser'
 import { performanceConfig, createOptimizedQuery, getCached, setCache, handleError } from '../performance-optimization'
+import { getUserAllWorks, toggleWorkArchiveStatus } from './works-queries'
 
 // Optimized Supabase client with built-in performance improvements
 export class OptimizedSupabaseClient {
@@ -58,16 +59,16 @@ export class OptimizedSupabaseClient {
     }
   }
 
-    // Optimized works loading - minimal queries
-  async loadUserWorks(userId: string) {
-    console.log('loadUserWorks called with userId:', userId)
+    // Optimized works loading - minimal queries (excludes archived by default)
+  async loadUserWorks(userId: string, includeArchived = false) {
+    console.log('loadUserWorks called with userId:', userId, 'includeArchived:', includeArchived)
     
     if (!userId) {
       console.warn('No userId provided to loadUserWorks')
       return []
     }
     
-    const cacheKey = `works_${userId}`
+    const cacheKey = `works_${userId}_${includeArchived ? 'with_archived' : 'no_archived'}`
     const cached = getCached(cacheKey, [])
     
     if (cached.length > 0 && performanceConfig.USE_CACHE_FIRST) {
@@ -77,10 +78,17 @@ export class OptimizedSupabaseClient {
 
     try {
       console.log('Querying database for works...')
-      const { data, error } = await this.client
+      let query = this.client
         .from('works')
-        .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order')
+        .select('id, title, description, genre, views, likes, created_at, updated_at, cover_url, published, reading_time, tags, content, display_order, archived')
         .eq('author_id', userId)
+
+      // Only filter archived if we don't want to include them
+      if (!includeArchived) {
+        query = query.eq('archived', false)
+      }
+
+      const { data, error } = await query
         .order('display_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(performanceConfig.DEFAULT_LIMIT)
@@ -117,6 +125,25 @@ export class OptimizedSupabaseClient {
       return works
     } catch (error) {
       return handleError(error, [])
+    }
+  }
+
+  // Archive/unarchive work
+  async toggleWorkArchive(workId: string, archived: boolean) {
+    try {
+      const success = await toggleWorkArchiveStatus(workId, archived)
+      if (success) {
+        // Clear relevant caches
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('perf_cache_works_')) {
+            localStorage.removeItem(key)
+          }
+        })
+      }
+      return success
+    } catch (error) {
+      console.error('Error toggling work archive status:', error)
+      return false
     }
   }
 
