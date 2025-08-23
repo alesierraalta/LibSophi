@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle, Upload } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Quote, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Eye, Maximize, Minimize, Undo, Redo, BookPlus, BookOpen, Plus, Trash2, ChevronUp, ChevronDown, Code, Code2, SeparatorHorizontal, Eraser, IndentIncrease, IndentDecrease, HelpCircle, Upload, Save, Send } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { uploadPostImage, validateImageFile } from '@/lib/supabase/storage'
 import AppHeader from '@/components/AppHeader'
@@ -1101,6 +1101,85 @@ function WriterContent() {
     }
   }
 
+  const handleSaveDraft = async () => {
+    setIsSaving(true)
+    setError(null)
+    
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { data: userData } = await supabase.auth.getUser()
+      
+      if (!userData?.user) {
+        setError('Debes iniciar sesión para guardar tu obra')
+        router.push('/login')
+        return
+      }
+
+      const finalChapters = useChapters ? chapters.map((ch, index) => ({ ...ch, content: index === currentChapterIndex ? content : ch.content })) : []
+      
+      if (currentWorkId) {
+        // Update existing work as draft
+        const { error } = await supabase
+          .from('works')
+          .update({
+            title: title.trim(),
+            content: useChapters ? null : content,
+            genre,
+            cover_url: coverUrl || null,
+            tags: tags || [],
+            chapters: finalChapters,
+            published: false, // Keep as draft
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentWorkId)
+          .eq('author_id', userData.user.id)
+          
+        if (error) {
+          console.error('❌ Error saving draft:', error)
+          setError(`Error al guardar borrador: ${error.message}`)
+          return
+        }
+      } else {
+        // Create new work as draft
+        const { data, error } = await supabase
+          .from('works')
+          .insert({
+            title: title.trim(),
+            content: useChapters ? null : content,
+            genre,
+            cover_url: coverUrl || null,
+            tags: tags || [],
+            chapters: finalChapters,
+            published: false, // Save as draft
+            author_id: userData.user.id,
+            views: 0,
+            likes: 0
+          })
+          .select('id')
+          .single()
+          
+        if (error) {
+          console.error('❌ Error creating draft:', error)
+          setError(`Error al crear borrador: ${error.message}`)
+          return
+        }
+        
+        if (data) {
+          setCurrentWorkId(data.id)
+        }
+      }
+
+      console.log('✅ Draft saved successfully')
+      setLastSavedAt(new Date())
+      
+    } catch (error) {
+      console.error('❌ Unexpected error saving draft:', error)
+      setError('Error inesperado al guardar el borrador')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader 
@@ -1153,7 +1232,15 @@ function WriterContent() {
               <span className="text-sm">{focusMode ? 'Salir enfoque' : 'Enfoque'}</span>
             </div>
           </button>
-          <button className={`h-10 px-3 rounded-md border ${isPublishDisabled ? 'bg-gray-200 border-gray-300 text-gray-500' : 'bg-red-600 border-red-600 text-white active:scale-95'}`} onClick={handlePublish} aria-label="Publicar" disabled={isPublishDisabled}>
+          <button 
+            className={`h-10 px-3 rounded-md border ${isSaving || !title.trim() || (!content.trim() && chapters.every(ch => !ch.content.trim())) ? 'bg-gray-200 border-gray-300 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 active:scale-95'}`} 
+            onClick={handleSaveDraft} 
+            aria-label="Guardar borrador" 
+            disabled={isSaving || !title.trim() || (!content.trim() && chapters.every(ch => !ch.content.trim()))}
+          >
+            <span className="text-sm">Borrador</span>
+          </button>
+          <button className={`h-10 px-3 rounded-md border ${isSaving || !title.trim() || (!content.trim() && chapters.every(ch => !ch.content.trim())) ? 'bg-gray-200 border-gray-300 text-gray-500' : 'bg-red-600 border-red-600 text-white active:scale-95'}`} onClick={handlePublish} aria-label="Publicar" disabled={isSaving || !title.trim() || (!content.trim() && chapters.every(ch => !ch.content.trim()))}>
             <span className="text-sm">Publicar</span>
           </button>
 
@@ -1522,6 +1609,8 @@ function WriterContent() {
                   <li>Revisa ortografía y ritmo</li>
                 </ul>
               </div>
+
+
               
             </CardContent>
           </Card>
@@ -1547,6 +1636,50 @@ function WriterContent() {
               <Button variant="outline" size="sm" onClick={addChapter} className="w-full"><Plus className="h-4 w-4 mr-1"/>Agregar capítulo</Button>
             </CardContent>
           </Card>
+          )}
+          
+          {/* Action Buttons - Under chapters section */}
+          {!focusMode && (
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-lg">
+              <CardContent className="p-4 sm:p-6 space-y-3">
+                <Button
+                  onClick={handleSaveDraft}
+                  disabled={isSaving || !title.trim() || (!content.trim() && chapters.every(ch => !ch.content.trim()))}
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 h-12 text-gray-700 border-gray-300 hover:bg-gray-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-5 w-5" />
+                      Guardar como Borrador
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={handlePublish}
+                  disabled={isSaving || !title.trim() || (!content.trim() && chapters.every(ch => !ch.content.trim()))}
+                  className="w-full flex items-center justify-center gap-2 h-12 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Publicando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5" />
+                      Publicar Obra
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </aside>
       </main>

@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Search, Filter, Users, BookOpen, Tag, Eye, Heart, MessageCircle, Clock, User, Bookmark } from 'lucide-react'
 import AppHeader from '@/components/AppHeader'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { getFollowStats } from '@/lib/supabase/follows'
 
 type SearchResultType = 'all' | 'works' | 'authors' | 'genres'
 
@@ -224,6 +225,15 @@ function SearchContent() {
       if (searchType === 'all' || searchType === 'authors') {
         if (abortSignal?.aborted) return
         
+        // Debug: Check follows table structure and total count
+        console.log('Checking follows table for debugging...')
+        const { data: followsDebug, count: totalFollows } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact' })
+          .limit(5)
+        console.log('Sample follows data:', followsDebug)
+        console.log('Total follows in database:', totalFollows)
+        
         const { data: authors } = await supabase
           .from('profiles')
           .select(`
@@ -231,9 +241,7 @@ function SearchContent() {
             name,
             username,
             bio,
-            avatar_url,
-            followers_count,
-            following_count
+            avatar_url
           `)
           .or(`name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
           .limit(searchType === 'authors' ? 50 : 10)
@@ -254,13 +262,23 @@ function SearchContent() {
                 .eq('published', true)
                 .abortSignal(abortSignal)
               
+              // Get followers count using the same function as profile pages
+              const followStats = await getFollowStats(author.id)
+              const followersCount = followStats?.followers_count || 0
+              
+              console.log(`Author ${author.username} - Follow stats:`, {
+                followStats,
+                finalCount: followersCount,
+                authorId: author.id
+              })
+              
               return {
                 id: author.id,
                 name: author.name || author.username,
                 username: author.username,
                 bio: author.bio || '',
                 avatar_url: author.avatar_url || '/api/placeholder/100/100',
-                followers_count: author.followers_count || 0,
+                followers_count: followersCount || 0,
                 works_count: worksResult.count || 0,
                 verified: false, // Could be implemented later
                 type: 'author' as const
@@ -344,6 +362,17 @@ function SearchContent() {
           newSet.delete(userId)
           return newSet
         })
+        
+        // Update followers count in results
+        setResults(prev => prev.map(result => {
+          if (result.type === 'author' && result.id === userId) {
+            return {
+              ...result,
+              followers_count: Math.max(0, result.followers_count - 1)
+            }
+          }
+          return result
+        }))
       } else {
         await supabase
           .from('follows')
@@ -353,6 +382,17 @@ function SearchContent() {
           })
         
         setFollowingUsers(prev => new Set(prev).add(userId))
+        
+        // Update followers count in results
+        setResults(prev => prev.map(result => {
+          if (result.type === 'author' && result.id === userId) {
+            return {
+              ...result,
+              followers_count: result.followers_count + 1
+            }
+          }
+          return result
+        }))
       }
     } catch (error) {
       console.error('Error toggling follow:', error)
@@ -631,6 +671,7 @@ function WorkResultCard({ work, onSave, isSaved }: { work: WorkResult; onSave: (
 // Author Result Card Component
 function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorResult; onFollow: (id: string) => void; isFollowing: boolean }) {
   const router = useRouter()
+  const [isUpdating, setIsUpdating] = useState(false)
   
   // Format numbers for display
   const formatNumber = (num: number): string => {
@@ -640,6 +681,12 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
       return `${(num / 1000).toFixed(1)}k`
     }
     return num.toString()
+  }
+  
+  const handleFollowClick = async () => {
+    setIsUpdating(true)
+    await onFollow(author.id)
+    setIsUpdating(false)
   }
   
   return (
@@ -684,7 +731,7 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
               <p className="text-sm text-gray-700 mt-2 line-clamp-2 leading-relaxed">{author.bio}</p>
             )}
             <div className="flex items-center gap-4 mt-3 text-xs">
-              <span className="flex items-center gap-1 text-gray-600 hover:text-blue-600 transition-colors">
+              <span className={`flex items-center gap-1 transition-colors ${isUpdating ? 'text-blue-500 animate-pulse' : 'text-gray-600 hover:text-blue-600'}`}>
                 <Users className="h-4 w-4" />
                 <span className="font-semibold">{formatNumber(author.followers_count)}</span> seguidores
               </span>
@@ -708,14 +755,20 @@ function AuthorResultCard({ author, onFollow, isFollowing }: { author: AuthorRes
               <Button
                 variant={isFollowing ? "outline" : "default"}
                 size="sm"
-                onClick={() => onFollow(author.id)}
+                onClick={handleFollowClick}
+                disabled={isUpdating}
                 className={`text-xs transition-all ${
                   isFollowing 
                     ? "text-gray-700 hover:text-red-600 hover:border-red-200" 
                     : "bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg"
-                }`}
+                } ${isUpdating ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {isFollowing ? (
+                {isUpdating ? (
+                  <>
+                    <div className="w-3 h-3 mr-1 border border-current border-t-transparent rounded-full animate-spin" />
+                    Actualizando...
+                  </>
+                ) : isFollowing ? (
                   <>
                     <Users className="h-3 w-3 mr-1" />
                     Siguiendo

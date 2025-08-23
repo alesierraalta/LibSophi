@@ -314,39 +314,92 @@ export default function ProfilePage() {
     setErrors(currentErrors)
     if (Object.keys(currentErrors).length > 0) return
     
-    const cleaned: Profile = {
-      name: editProfile.name.trim(),
-      username: editProfile.username.replace(/^@+/, '').trim(),
-      bio: editProfile.bio.trim(),
-      avatar: editProfile.avatar.trim(),
-      banner: editProfile.banner.trim(),
-    }
-    
-    setProfile(cleaned)
-    
+    try {
+      setDatabaseError(null)
+      
+      const cleaned: Profile = {
+        name: editProfile.name.trim(),
+        username: editProfile.username.startsWith('@') 
+          ? editProfile.username.trim() 
+          : `@${editProfile.username.replace(/^@+/, '').trim()}`,
+        bio: editProfile.bio.trim(),
+        avatar: editProfile.avatar.trim(),
+        banner: editProfile.banner.trim(),
+      }
+      
       if (userId) {
-      // Update profile directly with Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: cleaned.name,
-          username: cleaned.username,
-          bio: cleaned.bio,
+        // Verify user session
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          setDatabaseError('Sesión expirada. Por favor, inicia sesión nuevamente.')
+          return
+        }
+        
+        // Check if username is already taken by another user
+        if (cleaned.username !== profile.username) {
+          const { data: existingUser } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('username', cleaned.username)
+            .neq('id', userId)
+            .single()
+          
+          if (existingUser) {
+            setDatabaseError('El nombre de usuario ya está en uso')
+            return
+          }
+        }
+        
+        // Log the update attempt
+        console.log('Attempting to update profile:', {
+          userId,
+          updateData: {
+            name: cleaned.name,
+            username: cleaned.username,
+            bio: cleaned.bio,
+            avatar_url: cleaned.avatar,
+            banner_url: cleaned.banner
+          }
         })
-        .eq('id', userId)
-      
-      const success = !error
-      if (error) {
-        console.error('Profile update error:', error)
+        
+        // Update profile directly with Supabase including all fields
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({
+            name: cleaned.name,
+            username: cleaned.username,
+            bio: cleaned.bio,
+            avatar_url: cleaned.avatar,
+            banner_url: cleaned.banner,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select()
+        
+        console.log('Update result:', { data, error })
+        
+        if (error) {
+          console.error('Profile update error:', error)
+          setDatabaseError(`Error al actualizar perfil: ${error.message || 'Error desconocido'}`)
+          return
+        }
+        
+        if (!data || data.length === 0) {
+          console.error('No data returned from update')
+          setDatabaseError('No se pudo actualizar el perfil - sin datos devueltos')
+          return
+        }
+        
+        // Update local state only after successful database update
+        setProfile(cleaned)
+        setShowEdit(false)
+      } else {
+        setDatabaseError('No se pudo obtener el ID de usuario')
       }
-      
-      if (!success) {
-        setDatabaseError('Error al actualizar perfil')
-        return
-      }
+    } catch (error) {
+      console.error('Profile update exception:', error)
+      setDatabaseError('Error interno al actualizar perfil')
     }
-    
-    setShowEdit(false)
   }
 
   const toggleWorkArchive = async (workId: string, archived: boolean) => {
